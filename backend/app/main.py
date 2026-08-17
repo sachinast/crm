@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.bookings import router as bookings_router
 from app.api.v1.health import router as health_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.users import router as users_router
@@ -23,6 +24,7 @@ app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(users_router, prefix=settings.api_v1_prefix)
 app.include_router(leads_router, prefix=settings.api_v1_prefix)
+app.include_router(bookings_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/")

@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 2 complete
+## Status: Phase 3 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -59,7 +59,29 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   placeholders. Verified end-to-end in-browser, including the duplicate-detection prompt
   firing correctly on a matching phone number and the "dup" badge showing in the list.
 
-Next: **Phase 3 — Booking modules** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 3 — Booking modules:**
+
+- ✅ `POST/GET/PATCH /leads/{id}/{car,hotel,flight}-booking` — all three modules, generated
+  from one factory (`backend/app/api/v1/bookings.py`) since the three are structurally
+  identical (1:1 with the lead, gated on the lead's `service_type` matching).
+- ✅ Guards: 409 if the lead's service type doesn't match the module being booked, 409 if a
+  booking already exists for that lead (use PATCH instead), 422 if return-before-pickup
+  (car) or checkout-before-checkin (hotel) — the latter also DB-enforced (`ck_hotel_dates`).
+- ✅ `total_amount` is never client-settable — it's the DB-generated
+  `prepaid_amount + pay_at_counter_amount` column on every *Read schema.
+- ✅ 10 new passing pytest tests (35 total) covering all three modules' full lifecycle,
+  the service-type/duplicate-booking guards, and that booking endpoints inherit the same
+  lead-visibility 404s as the lead itself.
+- ✅ Frontend: real Car/Hotel/Flight forms (`app/(dashboard)/leads/[id]/booking/{car,hotel,
+  flight}`) matching every PRD §5 field, including the full 18-option standardized vehicle-type
+  dropdown. Lead detail page shows a "Complete {type} booking" CTA until one exists, then a
+  summary with an Edit link (same form, pre-filled, PATCHes instead of POSTs).
+- ✅ Verified end-to-end in-browser: created a lead, selected Car Rental, filled and submitted
+  the full booking form, and the lead detail page rendered the persisted booking with the
+  correct DB-computed total (150 + 50 = 200) — then reopened via Edit and confirmed the form
+  came back pre-filled from the saved data.
+
+Next: **Phase 4 — Status engine** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 

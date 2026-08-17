@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Shared form input styling for the booking-module forms (car/hotel/flight). */
+@layer components {
+  .input {
+    @apply w-full rounded border px-3 py-2 text-sm;
+  }
+}
