@@ -797,7 +797,7 @@ would have given you for free.
 | 5 — Payments & consent | `authorization_records`, `payment_transactions`, Billing screens | "I Authorize" capture works; Billing can charge/decline, driving status transitions |
 | 6 — Modifications/cancellations/credits | `booking_modifications`, `cancellations`, `future_credits` w/ role restriction | Original-vs-revised diff UI; refund math verified against PRD §7.2 formulas |
 | 7 — Security & audit | Masking everywhere, `/reveal` endpoint + `pii_reveal_audit_log`, `booking_process_log` (admin-only, insert-only), `access_notification_log` | PII never appears unmasked outside a logged reveal; Admin can view full process log |
-| 8 — Integrations | Google Sheets sync worker + status dashboard, `/leads/capture` external endpoint | New lead via external POST appears correctly; sheet reflects DB within the sync interval |
+| 8 — Integrations | ~~Google Sheets sync worker + status dashboard~~ **Re-scoped:** API-key-authenticated `/leads/capture` open to Zapier/Make/any external API or form, plus Admin key management UI (Google Sheets sync dropped — not needed) | New lead via external POST appears correctly, attributed to the right agent, PII still masked |
 | 9 — Hardening & deploy | Rate limiting, refresh-token rotation/reuse detection, load test on `/leads` list, prod docker images, CI/CD to hosting targets from §12 of the PRD | Passes a basic security review checklist before go-live |
 
 Each phase should ship as its own PR/branch against `main` with the relevant Alembic migration(s)
@@ -810,4 +810,5 @@ and tests — don't let the schema and the app code drift into a single mega-mig
 - Final wording/scope of "any authorized role" for the `tag_*` transitions (§3.1) — needs an explicit role list before Phase 4.
 - Card payment processor choice (Stripe/Braintree/other) — affects `payment_transactions.card_token` format and PCI scope.
 - Whether ad-hoc Super Admin grants (§3.2 of PRD) need to persist as rows (`lead_access_grants` table, added in §4.1 above) or are session-only — recommend persisting for auditability.
-- Google Sheets sync interval/latency target (true real-time via webhook vs. periodic batch).
+- ~~Google Sheets sync interval/latency target~~ — moot: Phase 8 dropped Google Sheets sync in
+  favor of a general Zapier/Make/API-key external-capture surface (`POST /leads/capture`).

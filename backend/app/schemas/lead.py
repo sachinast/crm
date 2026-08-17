@@ -28,6 +28,7 @@ class LeadRead(BaseModel):
     is_duplicate: bool
     duplicate_of_id: uuid.UUID | None
     duplicate_override_reason: str | None
+    source: str | None  # set for leads captured externally via POST /leads/capture (Phase 8)
     created_at: datetime
     updated_at: datetime
 

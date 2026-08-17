@@ -47,6 +47,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/admin/audit" className="hover:underline">
                 Admin · Audit Log
               </Link>
+              <Link href="/admin/integrations" className="hover:underline">
+                Admin · Integrations
+              </Link>
             </>
           )}
         </nav>

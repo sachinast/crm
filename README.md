@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 7 complete
+## Status: Phase 8 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -208,7 +208,41 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   reason text), the lead's `created` process-log entry, and the earlier record-open access-log
   entry, all correctly filtered to that one lead.
 
-Next: **Phase 8 — Integrations** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 8 — Integrations (Zapier / Make / any external API or form):**
+
+Re-scoped from the original plan's Google Sheets sync (not needed) to a general external-capture
+surface — the more broadly useful piece anyway, and what TECHNICAL_SPEC.md §10.3 already called
+"a standardized mapping layer" for external booking engines, website forms, or third-party APIs.
+
+- ✅ `api_keys` table (migration `0004`) + `leads.source` column — a completely separate
+  credential space from staff JWTs. Keys are SHA-256 hashed (not bcrypt — deliberately: bcrypt's
+  slowness defends a low-entropy human password, not a 32-byte random token, where a fast exact
+  hash is the correct tool), shown once at creation, never retrievable again.
+- ✅ `POST/GET /integrations/api-keys`, `PATCH .../{id}` — Admin/Super Admin manage keys, each one
+  bound to an `assigned_agent_id`: leads captured through that key are owned by that agent, the
+  same ownership model every other lead already uses. Revocation is a soft `is_active=false`
+  toggle, never a hard delete, so the audit trail of what existed survives.
+- ✅ `POST /leads/capture` — the external capture endpoint, `X-API-Key` authenticated. Runs through
+  the *same* lead-creation path as the in-app intake flow (PRD §4.1) — same duplicate detection,
+  same `booking_process_log` write (`action="external_capture"`) — not a parallel implementation
+  that could quietly drift from it. Returns a deliberately slim confirmation shape decoupled from
+  the internal `LeadRead`, so external integrations don't break if that shape changes later.
+- ✅ The endpoint's contract is fixed (`name`/`phone`/`email`/optional `source`/`notes`) — Zapier's
+  or Make's own field-mapping UI is what translates an arbitrary external form onto it, which is
+  *why* new integrations don't require a rewrite (§10.3's actual point).
+- ✅ 8 new passing pytest tests (87 total): key creation/listing/revocation, capture rejecting a
+  missing/invalid/revoked key, correct agent attribution, the `source` override, and duplicate
+  detection working identically to internal intake.
+- ✅ Frontend: Admin → Integrations page — create a key (one-time raw-key reveal, copy-to-clipboard),
+  a list with masked prefixes and Revoke/Reactivate, and an inline Zapier/Make setup snippet with
+  the actual endpoint URL and example payload.
+- ✅ Verified end-to-end, not mocked: created a real API key through the UI, used the actual raw key
+  in a `curl` call simulating a Zapier webhook, watched the lead appear correctly in the assigned
+  agent's queue with `source` set to the override value and PII still masked, confirmed "last used"
+  updated on the admin page, revoked the key through the UI, and confirmed the exact same `curl`
+  call then got a clean 401.
+
+Next: **Phase 9 — Hardening & deploy** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 

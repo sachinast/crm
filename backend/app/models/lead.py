@@ -28,6 +28,10 @@ class Lead(UUIDPKMixin, TimestampMixin, Base):
     is_duplicate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id"))
     duplicate_override_reason: Mapped[str | None] = mapped_column(Text)
+    # Where this lead came from — NULL for normal in-app agent intake; set to
+    # the originating integration's label for leads created via POST
+    # /leads/capture (TECHNICAL_SPEC.md §10.3). Phase 8.
+    source: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("idx_leads_agent_id", "agent_id"),

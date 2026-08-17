@@ -1,10 +1,10 @@
 """Shared FastAPI dependencies — auth, RBAC, IP whitelisting. TECHNICAL_SPEC.md §4.2."""
+import uuid
 from collections.abc import Callable, Coroutine
+from datetime import datetime, timezone
 from typing import Any
 
-import uuid
-
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy import Select, false, select
@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.domain.api_keys import hash_api_key
 from app.domain.status_machine import ROLE_RELEVANT_STATUSES
 from app.models.enums import UserRole
+from app.models.integration import ApiKey
 from app.models.lead import Lead
 from app.models.user import User, UserWhitelistedIP
 
@@ -117,6 +119,29 @@ def apply_lead_visibility(stmt: Select, user: User) -> Select:
     if relevant_statuses:
         return stmt.where(Lead.status.in_(relevant_statuses))
     return stmt.where(false())
+
+
+async def require_api_key(
+    db: AsyncSession = Depends(get_db),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> ApiKey:
+    """Auth for external integrations (Zapier/Make/any external form or API)
+    — TECHNICAL_SPEC.md §10.3. A completely separate credential space from
+    staff JWTs: a header, not a Bearer token, and it authenticates an
+    integration, not a person. Rate limiting this endpoint is a Phase 9
+    hardening item (TECHNICAL_SPEC.md §10), same as /auth/login.
+    """
+    if not x_api_key:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing X-API-Key header")
+
+    result = await db.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(x_api_key)))
+    api_key = result.scalar_one_or_none()
+    if api_key is None or not api_key.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or revoked API key")
+
+    api_key.last_used_at = datetime.now(timezone.utc)
+    await db.commit()
+    return api_key
 
 
 async def get_visible_lead_or_404(db: AsyncSession, user: User, lead_id: uuid.UUID) -> Lead:

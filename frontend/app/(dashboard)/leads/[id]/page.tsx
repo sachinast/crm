@@ -30,6 +30,7 @@ interface LeadDetail {
   is_duplicate: boolean;
   duplicate_of_id: string | null;
   duplicate_override_reason: string | null;
+  source: string | null; // set for leads captured externally via POST /leads/capture (Phase 8)
   created_at: string;
   updated_at: string;
 }
@@ -247,6 +248,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
         <dt className="text-neutral-500">Service type</dt>
         <dd>{lead.service_type ?? "not selected yet"}</dd>
+
+        {lead.source && (
+          <>
+            <dt className="text-neutral-500">Source</dt>
+            <dd>{lead.source}</dd>
+          </>
+        )}
 
         <dt className="text-neutral-500">Duplicate match</dt>
         <dd>
