@@ -98,6 +98,34 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
 # client per TECHNICAL_SPEC.md §11 "Open Items".
 ANY_AUTHORIZED_ROLES = frozenset(UserRole) - {UserRole.agent}
 
+# PRD §3.2 "Status-Based Sharing": visibility expands to a department the moment
+# a lead's status becomes relevant to it. This is deliberately hand-written
+# rather than derived from TRANSITIONS[...].notifies — notification fires once,
+# on the transition into a status, but a department needs to keep *seeing* the
+# lead for the whole stretch of statuses that belong to its stage (e.g. Billing
+# should still see a lead sitting at 'card_charged', even though that status's
+# notifies set is {agent}, not {billing}). Used by app/api/deps.py:apply_lead_visibility.
+ROLE_RELEVANT_STATUSES: dict[UserRole, frozenset[BookingStatus]] = {
+    UserRole.billing: frozenset(
+        {
+            BookingStatus.transferred_to_billing,
+            BookingStatus.card_charged,
+            BookingStatus.card_declined,
+            BookingStatus.tag_refund,
+            BookingStatus.tag_rdr,
+            BookingStatus.tag_chargeback,
+        }
+    ),
+    UserRole.change_dep: frozenset({BookingStatus.tag_change_dep}),
+    UserRole.cr_booking: frozenset({BookingStatus.tag_cr_booking}),
+    UserRole.auditor: frozenset({BookingStatus.tag_auditor, BookingStatus.qc_done}),
+    UserRole.chargeback_dep: frozenset({BookingStatus.tag_rdr, BookingStatus.tag_chargeback}),
+    # CS isn't wired to a lead status yet — its PRD role (Future Credits,
+    # modification/cancellation support) doesn't hook into the status engine
+    # until Phase 6, so it correctly has no lead visibility here yet.
+    UserRole.cs: frozenset(),
+}
+
 
 def can_transition(current: BookingStatus, target: BookingStatus) -> bool:
     return target in TRANSITIONS[current].next

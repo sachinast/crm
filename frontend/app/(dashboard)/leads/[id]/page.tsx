@@ -4,6 +4,9 @@ import { Fragment } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import { statusColor } from "@/lib/status-colors";
+
+import StatusActions from "./StatusActions";
 
 interface LeadDetail {
   id: string;
@@ -24,6 +27,20 @@ interface BookingSummary {
   booking_reference: string;
   total_amount: number;
   [key: string]: unknown;
+}
+
+interface Transition {
+  status: string;
+  label: string;
+  ui_color: string;
+}
+
+interface StatusHistoryEntry {
+  id: string;
+  from_status: string | null;
+  to_status: string;
+  changed_by: string;
+  changed_at: string;
 }
 
 async function fetchLead(id: string): Promise<LeadDetail | null> {
@@ -50,6 +67,26 @@ async function fetchBooking(id: string, serviceType: string): Promise<BookingSum
   }
 }
 
+async function fetchAvailableTransitions(id: string): Promise<Transition[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<Transition[]>(`/leads/${id}/available-transitions`, { token });
+  } catch {
+    return [];
+  }
+}
+
+async function fetchStatusHistory(id: string): Promise<StatusHistoryEntry[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<StatusHistoryEntry[]>(`/leads/${id}/status-history`, { token });
+  } catch {
+    return [];
+  }
+}
+
 const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> = {
   car: [
     { key: "car_provider", label: "Provider" },
@@ -71,12 +108,38 @@ const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> =
   ],
 };
 
+function formatStatus(status: string): string {
+  return status.replace(/_/g, " ");
+}
+
+// Falls back to a neutral color for statuses this page doesn't otherwise know
+// the PRD §6.1 color for (only reachable if status_lookup and BookingStatus
+// ever drift out of sync).
+const STATUS_COLOR_HINTS: Record<string, string> = {
+  authorization_pending: "grey",
+  client_approved: "blue",
+  transferred_to_billing: "purple",
+  card_charged: "green",
+  card_declined: "red",
+  tag_change_dep: "yellow",
+  tag_cr_booking: "orange",
+  tag_auditor: "cyan",
+  qc_done: "dark_green",
+  tag_refund: "red",
+  tag_rdr: "black",
+  tag_chargeback: "black",
+};
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const lead = await fetchLead(id);
   if (!lead) notFound();
 
-  const booking = lead.service_type ? await fetchBooking(id, lead.service_type) : null;
+  const [booking, transitions, history] = await Promise.all([
+    lead.service_type ? fetchBooking(id, lead.service_type) : Promise.resolve(null),
+    fetchAvailableTransitions(id),
+    fetchStatusHistory(id),
+  ]);
 
   return (
     <div className="max-w-lg">
@@ -90,7 +153,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
         <dt className="text-neutral-500">Status</dt>
-        <dd>{lead.status}</dd>
+        <dd>
+          <span
+            className="rounded px-2 py-0.5 text-xs text-white"
+            style={{ backgroundColor: statusColor(STATUS_COLOR_HINTS[lead.status] ?? "grey") }}
+          >
+            {formatStatus(lead.status)}
+          </span>
+        </dd>
 
         <dt className="text-neutral-500">Service type</dt>
         <dd>{lead.service_type ?? "not selected yet"}</dd>
@@ -112,6 +182,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <dt className="text-neutral-500">Created</dt>
         <dd>{new Date(lead.created_at).toLocaleString()}</dd>
       </dl>
+
+      <div className="mt-4 rounded-lg border p-4">
+        <h2 className="mb-2 text-sm font-medium">Status actions</h2>
+        <StatusActions leadId={id} transitions={transitions} />
+      </div>
 
       {!lead.service_type && (
         <p className="mt-4 text-sm text-neutral-500">
@@ -157,6 +232,20 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             <dt className="text-neutral-500">Total</dt>
             <dd>{booking.total_amount}</dd>
           </dl>
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-4 rounded-lg border p-4 text-sm">
+          <h2 className="mb-2 font-medium">Status history</h2>
+          <ul className="flex flex-col gap-1 text-xs text-neutral-500">
+            {history.map((h) => (
+              <li key={h.id}>
+                {h.from_status ? `${formatStatus(h.from_status)} → ` : ""}
+                {formatStatus(h.to_status)} · {new Date(h.changed_at).toLocaleString()}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

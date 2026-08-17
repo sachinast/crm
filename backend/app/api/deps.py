@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.domain.status_machine import ROLE_RELEVANT_STATUSES
 from app.models.enums import UserRole
 from app.models.lead import Lead
 from app.models.user import User, UserWhitelistedIP
@@ -108,11 +109,13 @@ def apply_lead_visibility(stmt: Select, user: User) -> Select:
         return stmt
     if user.role == UserRole.agent:
         return stmt.where(Lead.agent_id == user.id)
-    # Billing/Auditor/CS/Change Dep/Chargeback Dep/CR Booking: visibility is meant
-    # to expand automatically once a lead's status is relevant to that department
-    # (PRD §3.2 "Status-Based Sharing") — that requires the status workflow, which
-    # is Phase 4. Until then nothing has been transferred to their queue, so an
-    # honest answer is "nothing visible yet", not "everything".
+    # Billing/Auditor/CS/Change Dep/Chargeback Dep/CR Booking: visibility expands
+    # to whatever statuses are currently relevant to that department (PRD §3.2
+    # "Status-Based Sharing" — ROLE_RELEVANT_STATUSES in status_machine.py).
+    # A role with nothing mapped yet (CS, pre-Phase 6) legitimately sees nothing.
+    relevant_statuses = ROLE_RELEVANT_STATUSES.get(user.role)
+    if relevant_statuses:
+        return stmt.where(Lead.status.in_(relevant_statuses))
     return stmt.where(false())
 
 

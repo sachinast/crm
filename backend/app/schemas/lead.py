@@ -74,3 +74,32 @@ class LeadListFilters(BaseModel):
     date_to: date | None = None
     email: str | None = None
     mobile: str | None = None
+
+
+class StatusUpdate(BaseModel):
+    """PATCH /leads/{id}/status — TECHNICAL_SPEC.md §3.2. Validated against the
+    status_machine transition table, not just any enum value."""
+
+    new_status: BookingStatus
+
+
+class AvailableTransition(BaseModel):
+    """One row of GET /leads/{id}/available-transitions — drives the status
+    action buttons on the frontend without duplicating the transition graph
+    or the role rules there."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    status: BookingStatus
+    label: str
+    ui_color: str
+
+
+class StatusHistoryEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    from_status: BookingStatus | None
+    to_status: BookingStatus
+    changed_by: uuid.UUID
+    changed_at: datetime

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import LogoutButton from "@/components/ui/LogoutButton";
+import NotificationBell from "@/components/ui/NotificationBell";
 import { getCurrentUser, isAdminRole } from "@/lib/auth";
 
 /**
@@ -46,7 +47,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </nav>
         <LogoutButton />
       </aside>
-      <div className="flex-1 p-6">{children}</div>
+      <div className="flex-1">
+        <header className="flex justify-end border-b p-3">
+          <NotificationBell />
+        </header>
+        <div className="p-6">{children}</div>
+      </div>
     </div>
   );
 }

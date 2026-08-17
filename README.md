@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 3 complete
+## Status: Phase 4 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -81,7 +81,40 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   correct DB-computed total (150 + 50 = 200) — then reopened via Edit and confirmed the form
   came back pre-filled from the saved data.
 
-Next: **Phase 4 — Status engine** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 4 — Status engine:**
+
+- ✅ `PATCH /leads/{id}/status` — the state-machine endpoint (`backend/app/domain/status_machine.py`,
+  built back in Phase 0, finally wired up). Row-locks the lead (`SELECT ... FOR UPDATE`),
+  validates the transition edge and the actor's role against the same table, writes
+  `status_history` + `notifications` in the same transaction, then pushes over WebSocket.
+  `client_approved`/`authorization_pending` are CUSTOMER/SYSTEM-only in that table, so no
+  staff Bearer token can ever set them here — that's Phase 5's "I Authorize" flow.
+- ✅ **Status-based visibility is now real**: `ROLE_RELEVANT_STATUSES` (status_machine.py) plus
+  `apply_lead_visibility` (deps.py) mean Billing/Auditor/Change Dep/CR Booking/Chargeback Dep
+  see a lead exactly while it's relevant to their stage — visibility (and the ability to act)
+  both arrive *and leave* automatically as the status moves. (This closed a real gap: Phase 2
+  had these roles seeing nothing at all, since nothing routed statuses to them yet.)
+- ✅ `GET /leads/{id}/available-transitions` — drives the frontend's action buttons from the
+  same transition graph and role rules, so the UI never duplicates that logic.
+- ✅ `GET /leads/{id}/status-history` and a real `WS /ws/notifications` endpoint
+  (`backend/app/api/v1/websocket.py`) — in-memory connection registry, correct for the single
+  uvicorn worker this runs in; noted where it'd need Redis Pub/Sub for multi-worker prod.
+- ✅ 8 new passing pytest tests (43 total): the full standard flow end-to-end, role checks at
+  every hop, history ordering, and that a lead already moved on by a racing request 409s
+  instead of being silently overwritten.
+- ✅ Frontend: status badge (PRD §6.1 colors), role-filtered action buttons, a status-history
+  audit trail, and a live notification bell (`NotificationBell` + `lib/ws-client.ts`) fed by
+  the WebSocket.
+- ✅ Verified end-to-end: walked a lead through the *entire* PRD §6.2 standard flow through the
+  real UI — client_approved → transferred_to_billing (Agent/Admin) → card_charged (Billing
+  only, Agent correctly 403'd) → tag_auditor → qc_done (Auditor only) — with the status badge,
+  action buttons, and audit trail all updating correctly at each hop, and each role's Leads
+  list only showing the lead while it was actually theirs to act on. Live WebSocket delivery
+  confirmed with a standalone listener (browser tabs share cookies/sessions, so a same-browser
+  two-tab test can't show two concurrent *users* — a Billing-authenticated WS client received
+  the `transferred_to_billing` push the instant an unrelated session triggered it).
+
+Next: **Phase 5 — Payments & consent** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 

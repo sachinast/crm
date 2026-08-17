@@ -6,13 +6,26 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import apply_lead_visibility, get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.v1.websocket import connection_manager
 from app.db.session import get_db
 from app.domain.duplicate_check import find_duplicate_candidates
-from app.models.audit import AccessNotificationLog, Notification
+from app.domain.status_machine import can_set, can_transition, roles_to_notify
+from app.models.audit import AccessNotificationLog, Notification, StatusHistory
 from app.models.enums import BookingStatus, ServiceType, UserRole
 from app.models.lead import Lead
+from app.models.status import StatusLookup
 from app.models.user import User
-from app.schemas.lead import DuplicateCheckResult, LeadConfirm, LeadCreate, LeadRead, LeadSummary, ServiceTypeUpdate
+from app.schemas.lead import (
+    AvailableTransition,
+    DuplicateCheckResult,
+    LeadConfirm,
+    LeadCreate,
+    LeadRead,
+    LeadSummary,
+    ServiceTypeUpdate,
+    StatusHistoryEntry,
+    StatusUpdate,
+)
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -169,4 +182,88 @@ async def get_lead(
 
     await db.commit()
     await db.refresh(lead)
+    return lead
+
+
+@router.get("/{lead_id}/available-transitions", response_model=list[AvailableTransition])
+async def get_available_transitions(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> list[StatusLookup]:
+    """Drives the status-action buttons on the frontend without duplicating
+    the transition graph or role rules there — TECHNICAL_SPEC.md §3."""
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+
+    reachable = [s for s in BookingStatus if can_transition(lead.status, s) and can_set(s, current_user.role)]
+    if not reachable:
+        return []
+
+    result = await db.execute(select(StatusLookup).where(StatusLookup.status.in_(reachable)))
+    lookups = {row.status: row for row in result.scalars().all()}
+    # Preserve the transition-table order rather than whatever order the DB returns.
+    return [lookups[s] for s in reachable if s in lookups]
+
+
+@router.get("/{lead_id}/status-history", response_model=list[StatusHistoryEntry])
+async def get_status_history(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> list[StatusHistory]:
+    await get_visible_lead_or_404(db, current_user, lead_id)
+    result = await db.execute(
+        select(StatusHistory).where(StatusHistory.lead_id == lead_id).order_by(StatusHistory.changed_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.patch("/{lead_id}/status", response_model=LeadRead)
+async def update_status(
+    lead_id: uuid.UUID,
+    payload: StatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> Lead:
+    """The state-machine endpoint — TECHNICAL_SPEC.md §3.2. Every transition:
+    1. Row-locks the lead (SELECT ... FOR UPDATE) so two racing requests can't
+       both apply a transition from the same starting status.
+    2. Validates the transition against status_machine.TRANSITIONS, then the
+       actor's role against the same table (`client_approved`/
+       `authorization_pending` are SYSTEM/CUSTOMER-only in that table, so a
+       staff Bearer token can never set them here — see PRD §6.1; the
+       customer-facing "I Authorize" flow that does is Phase 5).
+    3. Writes status_history + notifications rows in the same transaction as
+       the status change itself.
+    4. Pushes to any connected WebSocket clients after commit.
+    """
+    stmt = apply_lead_visibility(select(Lead).where(Lead.id == lead_id), current_user).with_for_update()
+    lead = (await db.execute(stmt)).scalar_one_or_none()
+    if lead is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
+
+    target = payload.new_status
+    if not can_transition(lead.status, target):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"Cannot move from '{lead.status.value}' to '{target.value}'"
+        )
+    if not can_set(target, current_user.role):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Your role cannot set status to '{target.value}'")
+
+    previous_status = lead.status
+    lead.status = target
+    db.add(StatusHistory(lead_id=lead.id, from_status=previous_status, to_status=target, changed_by=current_user.id))
+
+    notify_roles = roles_to_notify(target)
+    message = f"Lead {lead.id} moved from {previous_status.value} to {target.value}"
+    for role in notify_roles:
+        db.add(Notification(lead_id=lead.id, recipient_role=role, type="status_change", message=message))
+
+    await db.commit()
+    await db.refresh(lead)
+
+    payload_out = {"type": "status_change", "lead_id": str(lead.id), "status": target.value, "message": message}
+    for role in notify_roles:
+        await connection_manager.send_to_role(role, payload_out)
+
     return lead
