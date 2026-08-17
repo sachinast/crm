@@ -1,0 +1,58 @@
+# Full containerized dev stack. Host ports for postgres/redis are offset (5433/6380)
+# so this can run alongside the natively-installed Postgres/Redis on this machine
+# without a port clash — containers still talk to each other as postgres:5432 / redis:6379
+# on the internal Docker network regardless of the host-side mapping.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: crm
+      POSTGRES_DB: crm
+    ports: ["5433:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: ./backend/.env.docker
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ["8000:8000"]
+    volumes: ["./backend:/app"]
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  celery_worker:
+    build: ./backend
+    command: celery -A app.workers.celery_app worker -l info
+    env_file: ./backend/.env.docker
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes: ["./backend:/app"]
+
+  frontend:
+    build: ./frontend
+    env_file: ./frontend/.env.local
+    depends_on: [backend]
+    ports: ["3000:3000"]
+    volumes: ["./frontend:/app", "/app/node_modules", "/app/.next"]
+
+volumes:
+  pgdata:
