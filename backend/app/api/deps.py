@@ -2,15 +2,18 @@
 from collections.abc import Callable, Coroutine
 from typing import Any
 
+import uuid
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
-from sqlalchemy import select
+from sqlalchemy import Select, false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.enums import UserRole
+from app.models.lead import Lead
 from app.models.user import User, UserWhitelistedIP
 
 # tokenUrl is documentation-only here (used for the OpenAPI "Authorize" button) —
@@ -88,3 +91,37 @@ async def require_ip_whitelisted(
     if client_ip not in allowed_ips:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Request IP is not whitelisted for this account")
     return user
+
+
+# Roles with unrestricted lead visibility — TECHNICAL_SPEC.md §4.1 "Global View" /
+# "TL (Team Lead) | Full departmental oversight".
+FULL_LEAD_VISIBILITY_ROLES = (UserRole.super_admin, UserRole.admin, UserRole.tl)
+
+
+def apply_lead_visibility(stmt: Select, user: User) -> Select:
+    """Row-level visibility filter — TECHNICAL_SPEC.md §4.1 layer 2. Applied to
+    every leads query so "can't see" and "can't act on" collapse to the same
+    filtered query, rather than a separate check that's easy to forget on one
+    endpoint.
+    """
+    if user.role in FULL_LEAD_VISIBILITY_ROLES:
+        return stmt
+    if user.role == UserRole.agent:
+        return stmt.where(Lead.agent_id == user.id)
+    # Billing/Auditor/CS/Change Dep/Chargeback Dep/CR Booking: visibility is meant
+    # to expand automatically once a lead's status is relevant to that department
+    # (PRD §3.2 "Status-Based Sharing") — that requires the status workflow, which
+    # is Phase 4. Until then nothing has been transferred to their queue, so an
+    # honest answer is "nothing visible yet", not "everything".
+    return stmt.where(false())
+
+
+async def get_visible_lead_or_404(db: AsyncSession, user: User, lead_id: uuid.UUID) -> Lead:
+    stmt = apply_lead_visibility(select(Lead).where(Lead.id == lead_id), user)
+    result = await db.execute(stmt)
+    lead = result.scalar_one_or_none()
+    if lead is None:
+        # 404, not 403, whether the lead doesn't exist or just isn't visible to
+        # this user — avoids leaking record existence across the RBAC boundary.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
+    return lead

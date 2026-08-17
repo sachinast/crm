@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 1 complete
+## Status: Phase 2 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -38,7 +38,28 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - ✅ End-to-end verified in-browser: unauthenticated redirect → login → role-aware dashboard →
   create a user through the UI → new user logs in successfully.
 
-Next: **Phase 2 — Lead-first flow** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 2 — Lead-first flow:**
+
+- ✅ `POST /leads` (Step 1) creates the lead and runs duplicate detection inline — exact match
+  on phone/email, trigram fuzzy match on name (`backend/app/domain/duplicate_check.py`).
+- ✅ `GET /leads/{id}/duplicate-check` (Step 2) returns the candidate list; `POST
+  /leads/{id}/confirm` (Step 3) captures the agent's override reason; `PATCH
+  /leads/{id}/service-type` (Step 4) unlocks the booking form and 409s until a flagged
+  duplicate is confirmed.
+- ✅ Row-level RBAC visibility (`apply_lead_visibility` in `backend/app/api/deps.py`): Agents
+  see only their own leads, Super Admin/Admin/TL see all, everyone else sees nothing yet
+  (correct — status-based sharing to Billing/Auditor/etc. is Phase 4). 404s (not 403s) for
+  leads outside a user's visibility, so existence isn't leaked across the RBAC boundary.
+- ✅ `GET /leads/{id}` logs `access_notification_log` + writes `notifications` rows for the
+  admin role and the owning agent (real-time delivery lands in Phase 4).
+- ✅ 10 new passing pytest tests (35 total) covering duplicate detection, the confirm/unlock
+  gate, RBAC visibility across roles, and the email/mobile filters.
+- ✅ Frontend: a real multi-step lead intake flow (`app/(dashboard)/leads/new`), a live leads
+  list with email/mobile filters, and a lead detail page — all wired to the backend, no
+  placeholders. Verified end-to-end in-browser, including the duplicate-detection prompt
+  firing correctly on a matching phone number and the "dup" badge showing in the list.
+
+Next: **Phase 3 — Booking modules** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 
