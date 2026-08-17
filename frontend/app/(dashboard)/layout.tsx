@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import LogoutButton from "@/components/ui/LogoutButton";
@@ -25,22 +26,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <p className="text-xs text-neutral-500">{user.role}</p>
         </div>
         <nav className="flex flex-col gap-2">
-          <a href="/leads" className="hover:underline">
+          <Link href="/leads" className="hover:underline">
             Leads
-          </a>
-          <a href="/billing" className="hover:underline">
+          </Link>
+          <Link href="/billing" className="hover:underline">
             Billing
-          </a>
-          <a href="/audit" className="hover:underline">
+          </Link>
+          <Link href="/audit" className="hover:underline">
             Audit / QC
-          </a>
-          <a href="/future-credits" className="hover:underline">
+          </Link>
+          <Link href="/future-credits" className="hover:underline">
             Future Credits
-          </a>
+          </Link>
           {showAdminLink && (
-            <a href="/admin/users" className="hover:underline">
+            <Link href="/admin/users" className="hover:underline">
               Admin · Users
-            </a>
+            </Link>
           )}
         </nav>
         <LogoutButton />
