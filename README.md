@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 5 complete
+## Status: Phase 6 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -146,8 +146,34 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   `card_charged`, with both the payment history ("charged · $125.00 · ****4242") and status
   history showing the complete, correctly-ordered chain.
 
-Next: **Phase 6 — Modifications, cancellations & future credits** (see TECHNICAL_SPEC.md §10
-for the full phase breakdown).
+**Phase 6 — Modifications, cancellations & future credits:**
+
+- ✅ `POST/GET /leads/{id}/modifications` — the PRD §7.1 "Original vs. Revised" paired snapshot.
+  Deliberately doesn't also update the live booking row (staff use the existing booking edit
+  form for that, from Phase 3) — this endpoint's job is only the audit trail + the $ impact.
+  Auto-computes the modification amount when both sides are numbers (e.g. a price change);
+  otherwise requires or defaults it, since the system can't infer a dollar impact from e.g. a
+  location change.
+- ✅ `POST/GET /leads/{id}/cancellation` — PRD §7.2 refund math. `refund_amount`/
+  `final_retained_amount` are DB-generated columns (`GREATEST`/`LEAST` over prepaid vs. penalty,
+  built back in Phase 0) — the backend only ever supplies the two inputs; Postgres does the
+  "system calculates" part, including the edge case where the penalty exceeds what was ever paid.
+- ✅ `POST/GET /future-credits` — PRD §7.3: creation restricted to TL/CS, read access for
+  Billing/CS/Change Dep/Chargeback Dep/Auditor. Not scoped by lead visibility like everything
+  else in this API — the PRD frames it as a company-wide voucher ledger with its own role list.
+- ✅ 12 new passing pytest tests (67 total), including the exact PRD refund formula (150 prepaid,
+  40 penalty → 110 refund / 40 retained) and the clamping case (penalty exceeding prepaid).
+- ✅ Frontend: a Modifications panel (record + history) and Cancellation panel (form that becomes
+  a read-only summary once cancelled) on the lead detail page, gated to Change Dep/CS/Admin/Super
+  Admin; a real Future Credits page (was a Phase-0 placeholder) with role-gated create form and
+  a friendly "no access" message for roles outside the PRD's read list, instead of a crash.
+- ✅ Verified end-to-end in-browser: walked a lead through the full chain to `tag_change_dep`,
+  recorded a modification as Change Dep (`pickup_location: LAX → SFO (+$15.00)`), cancelled the
+  same booking (`$150 prepaid, $50 penalty → $100 refund / $50 retained` — matches the formula
+  exactly), created a future credit as TL, confirmed Billing could read it, and confirmed Agent
+  got a clean "no access" message rather than an error.
+
+Next: **Phase 7 — Security & audit** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 

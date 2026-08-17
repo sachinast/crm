@@ -3,11 +3,20 @@ import { notFound } from "next/navigation";
 import { Fragment } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
-import { getAccessToken } from "@/lib/auth";
+import { getAccessToken, getCurrentUser } from "@/lib/auth";
 import { statusColor } from "@/lib/status-colors";
 
+import CancellationPanel from "./CancellationPanel";
+import ModificationsPanel from "./ModificationsPanel";
 import PaymentActions from "./PaymentActions";
 import StatusActions from "./StatusActions";
+
+// PRD groups "modification/cancellation requests" under Change Dep/CS, with
+// Admin/Super Admin oversight — mirrors MODIFICATION_ROLES/CANCELLATION_ROLES
+// in the backend (backend/app/api/v1/modifications.py, cancellations.py).
+// This only controls whether the *form* renders; the backend is still the
+// actual authority (403s regardless of what this hides).
+const MODIFICATION_ROLES = new Set(["change_dep", "cs", "admin", "super_admin"]);
 
 interface LeadDetail {
   id: string;
@@ -50,6 +59,23 @@ interface PaymentEntry {
   card_last_four: string | null;
   total_amount: number;
   processed_at: string | null;
+  created_at: string;
+}
+
+interface ModificationEntry {
+  id: string;
+  field_name: string;
+  original_value: unknown;
+  revised_value: unknown;
+  modification_amount: number;
+  created_at: string;
+}
+
+interface CancellationEntry {
+  original_prepaid_amount: number;
+  cancellation_penalty_fee: number;
+  refund_amount: number;
+  final_retained_amount: number;
   created_at: string;
 }
 
@@ -107,6 +133,27 @@ async function fetchPayments(id: string): Promise<PaymentEntry[]> {
   }
 }
 
+async function fetchModifications(id: string): Promise<ModificationEntry[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<ModificationEntry[]>(`/leads/${id}/modifications`, { token });
+  } catch {
+    return [];
+  }
+}
+
+async function fetchCancellation(id: string): Promise<CancellationEntry | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+  try {
+    return await apiFetch<CancellationEntry>(`/leads/${id}/cancellation`, { token });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    return null;
+  }
+}
+
 const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> = {
   car: [
     { key: "car_provider", label: "Provider" },
@@ -155,12 +202,17 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await fetchLead(id);
   if (!lead) notFound();
 
-  const [booking, allTransitions, history, payments] = await Promise.all([
+  const [booking, allTransitions, history, payments, modifications, cancellation, currentUser] = await Promise.all([
     lead.service_type ? fetchBooking(id, lead.service_type) : Promise.resolve(null),
     fetchAvailableTransitions(id),
     fetchStatusHistory(id),
     fetchPayments(id),
+    fetchModifications(id),
+    fetchCancellation(id),
+    getCurrentUser(),
   ]);
+
+  const canModify = currentUser !== null && MODIFICATION_ROLES.has(currentUser.role) && booking !== null;
 
   // card_charged/card_declined are handled by the dedicated PaymentActions
   // form below (which also records a PaymentTransaction), not the generic
@@ -296,6 +348,18 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {(canModify || modifications.length > 0) && (
+        <div className="mt-4">
+          <ModificationsPanel leadId={id} canModify={canModify} history={modifications} />
+        </div>
+      )}
+
+      {(canModify || cancellation) && (
+        <div className="mt-4">
+          <CancellationPanel leadId={id} canCancel={canModify && !cancellation} cancellation={cancellation} />
         </div>
       )}
 
