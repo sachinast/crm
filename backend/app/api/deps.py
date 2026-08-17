@@ -1,0 +1,90 @@
+"""Shared FastAPI dependencies — auth, RBAC, IP whitelisting. TECHNICAL_SPEC.md §4.2."""
+from collections.abc import Callable, Coroutine
+from typing import Any
+
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import decode_token
+from app.db.session import get_db
+from app.models.enums import UserRole
+from app.models.user import User, UserWhitelistedIP
+
+# tokenUrl is documentation-only here (used for the OpenAPI "Authorize" button) —
+# the actual login endpoint takes a JSON body, not form-encoded credentials.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+CREDENTIALS_EXCEPTION = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Could not validate credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
+async def get_current_user(
+    token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    if not token:
+        raise CREDENTIALS_EXCEPTION
+    try:
+        payload = decode_token(token)
+    except JWTError:
+        raise CREDENTIALS_EXCEPTION
+    if payload.get("type") != "access":
+        raise CREDENTIALS_EXCEPTION
+    user_id = payload.get("sub")
+    if not user_id:
+        raise CREDENTIALS_EXCEPTION
+
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        raise CREDENTIALS_EXCEPTION
+    return user
+
+
+def require_role(
+    *roles: UserRole,
+) -> Callable[[User], Coroutine[Any, Any, User]]:
+    """Coarse role check — TECHNICAL_SPEC.md §4.1 layer 1 (role -> action)."""
+
+    async def dependency(user: User = Depends(get_current_user)) -> User:
+        if user.role not in roles:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient role for this action")
+        return user
+
+    return dependency
+
+
+def get_client_ip(request: Request) -> str:
+    """Best-effort client IP. Only trust X-Forwarded-For once this sits behind a
+    known reverse proxy that sets it — until then it's spoofable and should stay
+    unused in production. Swap this for the proxy-verified header at deploy time.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "0.0.0.0"
+
+
+async def require_ip_whitelisted(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """IP whitelist enforcement — TECHNICAL_SPEC.md §8. No-op for users who don't
+    have ip_whitelist_enabled set; otherwise the request's client IP must match
+    one of that user's user_whitelisted_ips rows.
+    """
+    if not user.ip_whitelist_enabled:
+        return user
+
+    client_ip = get_client_ip(request)
+    result = await db.execute(select(UserWhitelistedIP).where(UserWhitelistedIP.user_id == user.id))
+    allowed_ips = {str(row.ip_address).split("/")[0] for row in result.scalars().all()}
+    if client_ip not in allowed_ips:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Request IP is not whitelisted for this account")
+    return user

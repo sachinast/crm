@@ -48,5 +48,11 @@ class SystemSettings(Base):
 
     id: Mapped[bool] = mapped_column(Boolean, primary_key=True, default=True)
     registration_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    # SET NULL (not the default RESTRICT) — this is a "who last touched this config"
+    # pointer on a single mutable row, not an audit-log entry, so it shouldn't block
+    # deleting the referenced user. Contrast with booking_process_log/status_history/
+    # pii_reveal_audit_log, which stay RESTRICT by design (§9.3 "immutable audit trail").
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
