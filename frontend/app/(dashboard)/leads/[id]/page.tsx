@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 import { statusColor } from "@/lib/status-colors";
 
+import PaymentActions from "./PaymentActions";
 import StatusActions from "./StatusActions";
 
 interface LeadDetail {
@@ -41,6 +42,15 @@ interface StatusHistoryEntry {
   to_status: string;
   changed_by: string;
   changed_at: string;
+}
+
+interface PaymentEntry {
+  id: string;
+  outcome: string;
+  card_last_four: string | null;
+  total_amount: number;
+  processed_at: string | null;
+  created_at: string;
 }
 
 async function fetchLead(id: string): Promise<LeadDetail | null> {
@@ -82,6 +92,16 @@ async function fetchStatusHistory(id: string): Promise<StatusHistoryEntry[]> {
   if (!token) return [];
   try {
     return await apiFetch<StatusHistoryEntry[]>(`/leads/${id}/status-history`, { token });
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPayments(id: string): Promise<PaymentEntry[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<PaymentEntry[]>(`/leads/${id}/payments`, { token });
   } catch {
     return [];
   }
@@ -135,11 +155,19 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await fetchLead(id);
   if (!lead) notFound();
 
-  const [booking, transitions, history] = await Promise.all([
+  const [booking, allTransitions, history, payments] = await Promise.all([
     lead.service_type ? fetchBooking(id, lead.service_type) : Promise.resolve(null),
     fetchAvailableTransitions(id),
     fetchStatusHistory(id),
+    fetchPayments(id),
   ]);
+
+  // card_charged/card_declined are handled by the dedicated PaymentActions
+  // form below (which also records a PaymentTransaction), not the generic
+  // one-click status button — both would otherwise offer the same transition
+  // through two different code paths.
+  const canProcessPayment = allTransitions.some((t) => t.status === "card_charged" || t.status === "card_declined");
+  const transitions = allTransitions.filter((t) => t.status !== "card_charged" && t.status !== "card_declined");
 
   return (
     <div className="max-w-lg">
@@ -188,6 +216,24 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <StatusActions leadId={id} transitions={transitions} />
       </div>
 
+      {canProcessPayment && (
+        <div className="mt-4">
+          <PaymentActions leadId={id} />
+        </div>
+      )}
+
+      {lead.status === "authorization_pending" && booking && (
+        <div className="mt-4 rounded-lg border border-dashed p-4 text-sm">
+          <h2 className="mb-2 font-medium">Send for customer authorization</h2>
+          <p className="mb-2 text-neutral-500">
+            Share this link with the customer to collect their &ldquo;I Authorize&rdquo; consent (PRD §8):
+          </p>
+          <a href={`/authorize/${id}`} target="_blank" rel="noreferrer" className="break-all text-blue-600 underline">
+            /authorize/{id}
+          </a>
+        </div>
+      )}
+
       {!lead.service_type && (
         <p className="mt-4 text-sm text-neutral-500">
           Booking form is locked until a service type is selected —{" "}
@@ -232,6 +278,24 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             <dt className="text-neutral-500">Total</dt>
             <dd>{booking.total_amount}</dd>
           </dl>
+        </div>
+      )}
+
+      {payments.length > 0 && (
+        <div className="mt-4 rounded-lg border p-4 text-sm">
+          <h2 className="mb-2 font-medium">Payment history</h2>
+          <ul className="flex flex-col gap-1 text-xs text-neutral-500">
+            {payments.map((p) => (
+              <li key={p.id}>
+                <span className={p.outcome === "charged" ? "text-green-700" : "text-red-700"}>{p.outcome}</span>
+                {" · $"}
+                {p.total_amount.toFixed(2)}
+                {p.card_last_four ? ` · ****${p.card_last_four}` : ""}
+                {" · "}
+                {new Date(p.processed_at ?? p.created_at).toLocaleString()}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

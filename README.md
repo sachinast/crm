@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 4 complete
+## Status: Phase 5 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -114,7 +114,40 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   two-tab test can't show two concurrent *users* — a Billing-authenticated WS client received
   the `transferred_to_billing` push the instant an unrelated session triggered it).
 
-Next: **Phase 5 — Payments & consent** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 5 — Payments & consent:**
+
+- ✅ **`client_approved` is real now.** The one status that's been unreachable since Phase 4
+  (CUSTOMER-only, no staff endpoint can set it) has an actual customer-facing flow:
+  `GET/POST /leads/{id}/authorization` (PRD §8). Deliberately the one *unauthenticated* part of
+  this API — no Bearer token, the lead's own UUID is the capability link (documented tradeoff
+  in `app/schemas/authorization.py`: a production hardening pass would swap in a dedicated,
+  expiring, single-use token instead).
+- ✅ Full PRD §8.2 consent package (6 checkboxes, all required True — 422 otherwise) plus
+  metadata capture (IP, user-agent, timestamp) into `authorization_records`. Blocked with a
+  clear 409 until a booking actually exists, and can't be submitted twice.
+- ✅ `POST /payments` — Billing charge/decline. Pulls prepaid/pay-at-counter amounts off the
+  lead's *booking* rather than re-collecting them from the caller, and drives the
+  `card_charged`/`card_declined` status transition through the same shared service
+  (`app/services/status_transitions.py`, factored out of Phase 4's endpoint so both callers
+  share one row-lock/validate/notify/push implementation instead of two copies drifting apart).
+  Card data: last-4 + opaque processor token only, never a raw PAN (TECHNICAL_SPEC.md §8) —
+  and the token is never echoed back in API responses.
+- ✅ 12 new passing pytest tests (55 total), including the full authorize-then-charge flow
+  driven entirely through real endpoints (no direct DB writes standing in for a missing step).
+- ✅ Frontend: a public `/authorize/[id]` page (booking summary, payment breakdown, consent
+  form) that talks straight to the backend — no session, nothing to proxy. Staff side: the lead
+  detail page now offers a shareable authorization link once a booking exists, and Billing gets
+  a dedicated payment-processing form (last-4 + Charge/Decline) instead of a bare status button,
+  plus a payment history section.
+- ✅ Verified end-to-end in-browser, full loop: created a lead → booked a car → shared the
+  `/authorize/{id}` link, opened it in a separate tab with no login at all, checked all 6
+  consent boxes, submitted → status flipped to `client_approved` on the agent's view →
+  transferred to Billing → Billing charged the card with a last-4 → status became
+  `card_charged`, with both the payment history ("charged · $125.00 · ****4242") and status
+  history showing the complete, correctly-ordered chain.
+
+Next: **Phase 6 — Modifications, cancellations & future credits** (see TECHNICAL_SPEC.md §10
+for the full phase breakdown).
 
 ## Local Development
 

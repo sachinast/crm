@@ -6,10 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import apply_lead_visibility, get_visible_lead_or_404, require_ip_whitelisted, require_role
-from app.api.v1.websocket import connection_manager
 from app.db.session import get_db
 from app.domain.duplicate_check import find_duplicate_candidates
-from app.domain.status_machine import can_set, can_transition, roles_to_notify
+from app.domain.status_machine import can_set, can_transition
 from app.models.audit import AccessNotificationLog, Notification, StatusHistory
 from app.models.enums import BookingStatus, ServiceType, UserRole
 from app.models.lead import Lead
@@ -26,6 +25,7 @@ from app.schemas.lead import (
     StatusHistoryEntry,
     StatusUpdate,
 )
+from app.services.status_transitions import apply_status_transition
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -225,45 +225,15 @@ async def update_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_ip_whitelisted),
 ) -> Lead:
-    """The state-machine endpoint — TECHNICAL_SPEC.md §3.2. Every transition:
-    1. Row-locks the lead (SELECT ... FOR UPDATE) so two racing requests can't
-       both apply a transition from the same starting status.
-    2. Validates the transition against status_machine.TRANSITIONS, then the
-       actor's role against the same table (`client_approved`/
-       `authorization_pending` are SYSTEM/CUSTOMER-only in that table, so a
-       staff Bearer token can never set them here — see PRD §6.1; the
-       customer-facing "I Authorize" flow that does is Phase 5).
-    3. Writes status_history + notifications rows in the same transaction as
-       the status change itself.
-    4. Pushes to any connected WebSocket clients after commit.
+    """The state-machine endpoint — TECHNICAL_SPEC.md §3.2. `client_approved`/
+    `authorization_pending` are SYSTEM/CUSTOMER-only in status_machine's
+    transition table, so a staff Bearer token can never set them here — see
+    PRD §6.1; the customer-facing "I Authorize" flow that does is
+    app/api/v1/authorization.py. See app/services/status_transitions.py for
+    the row-lock/validate/history/notify/push mechanics, shared with
+    POST /payments (Billing charging/declining is the same kind of transition).
     """
-    stmt = apply_lead_visibility(select(Lead).where(Lead.id == lead_id), current_user).with_for_update()
-    lead = (await db.execute(stmt)).scalar_one_or_none()
-    if lead is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
-
-    target = payload.new_status
-    if not can_transition(lead.status, target):
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, f"Cannot move from '{lead.status.value}' to '{target.value}'"
-        )
-    if not can_set(target, current_user.role):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Your role cannot set status to '{target.value}'")
-
-    previous_status = lead.status
-    lead.status = target
-    db.add(StatusHistory(lead_id=lead.id, from_status=previous_status, to_status=target, changed_by=current_user.id))
-
-    notify_roles = roles_to_notify(target)
-    message = f"Lead {lead.id} moved from {previous_status.value} to {target.value}"
-    for role in notify_roles:
-        db.add(Notification(lead_id=lead.id, recipient_role=role, type="status_change", message=message))
-
+    lead = await apply_status_transition(db, lead_id=lead_id, target=payload.new_status, actor=current_user)
     await db.commit()
     await db.refresh(lead)
-
-    payload_out = {"type": "status_change", "lead_id": str(lead.id), "status": target.value, "message": message}
-    for role in notify_roles:
-        await connection_manager.send_to_role(role, payload_out)
-
     return lead
