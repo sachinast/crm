@@ -1,19 +1,22 @@
 import uuid
 from datetime import date, datetime, time, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import apply_lead_visibility, get_visible_lead_or_404, require_ip_whitelisted, require_role
 from app.db.session import get_db
 from app.domain.duplicate_check import find_duplicate_candidates
+from app.domain.process_log import log_process_event
 from app.domain.status_machine import can_set, can_transition
-from app.models.audit import AccessNotificationLog, Notification, StatusHistory
-from app.models.enums import BookingStatus, ServiceType, UserRole
+from app.models.audit import AccessNotificationLog, Notification, PiiRevealAuditLog, StatusHistory
+from app.models.enums import BookingStatus, PiiField, ServiceType, UserRole
 from app.models.lead import Lead
+from app.models.payment import PaymentTransaction
 from app.models.status import StatusLookup
 from app.models.user import User
+from app.schemas.audit import RevealRequest, RevealResult
 from app.schemas.lead import (
     AvailableTransition,
     DuplicateCheckResult,
@@ -55,6 +58,8 @@ async def create_lead(
         lead.is_duplicate = True
         lead.duplicate_of_id = candidates[0].id
 
+    log_process_event(db, lead_id=lead.id, actor_id=current_user.id, action="created")
+
     await db.commit()
     await db.refresh(lead)
     return lead
@@ -89,6 +94,15 @@ async def confirm_duplicate(
     PATCH .../service-type will unlock a lead flagged is_duplicate."""
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
     lead.duplicate_override_reason = payload.reason
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=current_user.id,
+        action="field_update",
+        field_changed="duplicate_override_reason",
+        old_value=None,
+        new_value=payload.reason,
+    )
     await db.commit()
     await db.refresh(lead)
     return lead
@@ -109,7 +123,17 @@ async def set_service_type(
             status.HTTP_409_CONFLICT,
             "This lead matched an existing record — confirm via POST /leads/{id}/confirm before continuing",
         )
+    old_service_type = lead.service_type
     lead.service_type = payload.service_type
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=current_user.id,
+        action="field_update",
+        field_changed="service_type",
+        old_value=old_service_type.value if old_service_type else None,
+        new_value=payload.service_type.value,
+    )
     await db.commit()
     await db.refresh(lead)
     return lead
@@ -237,3 +261,55 @@ async def update_status(
     await db.commit()
     await db.refresh(lead)
     return lead
+
+
+@router.post("/{lead_id}/reveal", response_model=RevealResult)
+async def reveal_pii(
+    lead_id: uuid.UUID,
+    payload: RevealRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> RevealResult:
+    """PRD §9.1 "Click-to-Reveal" / §9.2 reveal audit log. Anyone who can
+    already see the lead can reveal its masked fields — masking is
+    presentation, not an extra permission gate; the reason + logged access
+    (agent, field, timestamp, IP, device, CRM ID) is the actual control an
+    Admin reviews after the fact."""
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+
+    if payload.field == PiiField.email:
+        raw_value = lead.email
+    elif payload.field == PiiField.phone:
+        raw_value = lead.phone
+    else:
+        # There is no more to "reveal" beyond the last-4 on file — this system
+        # never stores a full PAN (TECHNICAL_SPEC.md §8) — but the action is
+        # still logged like any other reveal, for one consistent audit trail.
+        result = await db.execute(
+            select(PaymentTransaction)
+            .where(PaymentTransaction.lead_id == lead.id)
+            .order_by(PaymentTransaction.created_at.desc())
+            .limit(1)
+        )
+        payment = result.scalar_one_or_none()
+        if payment is None or not payment.card_last_four:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "No card on file for this lead")
+        raw_value = payment.card_last_four
+
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+        request.client.host if request.client else "0.0.0.0"
+    )
+    db.add(
+        PiiRevealAuditLog(
+            lead_id=lead.id,
+            agent_id=current_user.id,
+            field_revealed=payload.field,
+            reason=payload.reason,
+            ip_address=client_ip,
+            user_agent=request.headers.get("user-agent", "unknown"),
+        )
+    )
+    await db.commit()
+
+    return RevealResult(field=payload.field, value=raw_value)

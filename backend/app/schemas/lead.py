@@ -1,8 +1,9 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
+from app.domain.masking import mask_email, mask_phone
 from app.models.enums import BookingStatus, ServiceType
 
 
@@ -20,7 +21,7 @@ class LeadRead(BaseModel):
     id: uuid.UUID
     name: str
     phone: str
-    email: EmailStr
+    email: str
     service_type: ServiceType | None
     status: BookingStatus
     agent_id: uuid.UUID
@@ -30,22 +31,37 @@ class LeadRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # NOTE: email/phone are NOT masked yet — click-to-reveal masking is Phase 7
-    # (TECHNICAL_SPEC.md §10). Raw values are intentionally still visible here.
+    # PRD §9.1 "masked by default in every view" — raw values only ever leave
+    # the API via POST /leads/{id}/reveal, which logs the access (§9.2).
+    # `email`/`phone` are plain `str` here (not EmailStr) since the masked
+    # form ("exa***@mail.com") isn't guaranteed to validate as a real address.
+    @model_validator(mode="after")
+    def _mask_pii(self) -> "LeadRead":
+        self.email = mask_email(self.email)
+        self.phone = mask_phone(self.phone)
+        return self
 
 
 class LeadSummary(BaseModel):
     """Slim shape used for duplicate-check candidates — enough for an agent to
-    recognize a match without pulling the full lead record."""
+    recognize a match without pulling the full lead record. Masked for the
+    same reason as LeadRead; an agent unsure whether it's a real match can
+    open the candidate and reveal there."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     name: str
     phone: str
-    email: EmailStr
+    email: str
     status: BookingStatus
     created_at: datetime
+
+    @model_validator(mode="after")
+    def _mask_pii(self) -> "LeadSummary":
+        self.email = mask_email(self.email)
+        self.phone = mask_phone(self.phone)
+        return self
 
 
 class DuplicateCheckResult(BaseModel):

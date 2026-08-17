@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 6 complete
+## Status: Phase 7 complete
 
 **Phase 0 — Scaffolding:**
 
@@ -173,7 +173,42 @@ Secure, role-based, audit-ready lead-to-booking CRM.
   exactly), created a future credit as TL, confirmed Billing could read it, and confirmed Agent
   got a clean "no access" message rather than an error.
 
-Next: **Phase 7 — Security & audit** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
+**Phase 7 — Security & audit:**
+
+- ✅ **Masking is real now.** `LeadRead`/`LeadSummary` mask email/phone by default (`exa***@mail.
+  com`, `*******1234`) via a Pydantic `model_validator` — this closes a gap flagged in code
+  comments since Phase 2 ("raw values are intentionally still visible here"). `PaymentRead` masks
+  card details the same way (`****-****-****-4242`), replacing the old `card_last_four` field
+  with `card_display` so a masked value can never accidentally serialize under a name that
+  implies it's raw.
+- ✅ `POST /leads/{id}/reveal` — click-to-reveal for email/phone/card, PRD §9.1/§9.2. Anyone who
+  can already see the lead can reveal it (masking is presentation, not an extra permission gate);
+  the mandatory reason + logged access (agent, field, timestamp, IP, device, CRM ID) is the actual
+  control. "Card" reveal is honest about there being nothing more to unmask beyond the last-4
+  already on file — this system never stores a full PAN (a decision from Phase 5, carried through
+  consistently rather than re-litigated here).
+- ✅ `booking_process_log` finally has writers — `app/domain/process_log.py`, called from lead
+  creation, duplicate-confirm, service-type selection, and every status transition (both the
+  shared staff service and the customer-facing authorize flow). The admin-only master "Log Report
+  of Booking Process" PRD §9.3 describes now actually has something to report.
+- ✅ `GET /audit/{pii-reveals,process-log,access-log}` — Admin/Super Admin only, each with an
+  optional `lead_id` filter. `access_notification_log` (written since Phase 2) finally has a read
+  endpoint too.
+- ✅ Closed a Phase 5 loose end: `GET /leads/{id}/authorization-record` — the staff-facing view of
+  captured "I Authorize" consent that was documented but never built.
+- ✅ 12 new passing pytest tests (79 total): masking in create/list/get/duplicate-check responses,
+  reveal logging the exact reason and respecting lead visibility (a second agent gets a 404, not
+  the data), Admin-only audit endpoints, and confirmation that nothing in this codebase ever
+  updates or deletes a `booking_process_log` row once written.
+- ✅ Frontend: `RevealField` (masked value + inline reveal-with-reason prompt) on the lead detail
+  page's phone/email; a new Admin → Audit Log page showing all three logs with a lead-ID filter.
+- ✅ Verified end-to-end in-browser: created a lead, confirmed both phone and email showed masked
+  in the list *and* detail view, clicked Reveal on phone, entered a reason, watched it flip to the
+  real number in place — then logged in as Super Admin and found that exact reveal (with the exact
+  reason text), the lead's `created` process-log entry, and the earlier record-open access-log
+  entry, all correctly filtered to that one lead.
+
+Next: **Phase 8 — Integrations** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 
 ## Local Development
 

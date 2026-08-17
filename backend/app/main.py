@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.authorization import router as authorization_router
 from app.api.v1.bookings import router as bookings_router
@@ -36,6 +37,7 @@ app.include_router(payments_router, prefix=settings.api_v1_prefix)
 app.include_router(modifications_router, prefix=settings.api_v1_prefix)
 app.include_router(cancellations_router, prefix=settings.api_v1_prefix)
 app.include_router(future_credits_router, prefix=settings.api_v1_prefix)
+app.include_router(audit_router, prefix=settings.api_v1_prefix)
 app.include_router(websocket_router, prefix="/ws")
 
 

@@ -7,7 +7,9 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.domain.masking import mask_card
 
 
 class PaymentCreate(BaseModel):
@@ -25,8 +27,22 @@ class PaymentRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
-    card_last_four: str | None
+    # Populated straight from the ORM column, then immediately masked and
+    # never serialized under this name — see _mask_card below. Kept as a
+    # normal field (not excluded) so `from_attributes` can populate it; the
+    # `exclude=True` is what actually keeps the raw last-4 out of the response.
+    card_last_four: str | None = Field(default=None, exclude=True)
+    # PRD §9.1: masked by default ("****-****-****-1234"). The raw last-4 is
+    # already the least-sensitive part of what's stored (never a full PAN —
+    # see the module docstring), but still goes through POST /leads/{id}/reveal
+    # like email/phone, for one consistent audit trail across all three fields.
+    card_display: str = ""
     outcome: str
     processed_by: uuid.UUID | None
     processed_at: datetime | None
     created_at: datetime
+
+    @model_validator(mode="after")
+    def _mask_card(self) -> "PaymentRead":
+        self.card_display = mask_card(self.card_last_four)
+        return self

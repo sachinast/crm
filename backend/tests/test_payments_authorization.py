@@ -275,7 +275,10 @@ async def test_billing_can_charge_card(api_client, agent, billing):
     assert body["pay_at_counter_amount"] == pytest.approx(50.00)
     assert body["total_amount"] == pytest.approx(200.00)
     assert body["outcome"] == "charged"
-    assert body["card_last_four"] == "4242"
+    # PRD §9.1: masked by default — the raw last-4 doesn't appear under its
+    # own field name at all (Phase 7); card_display carries the masked form.
+    assert body["card_display"] == "****-****-****-4242"
+    assert "card_last_four" not in body
     assert "card_token" not in body  # never echoed back, even though nullable here
 
     async with AsyncSessionLocal() as db:

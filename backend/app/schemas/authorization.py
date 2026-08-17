@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.models.enums import BookingStatus, ServiceType
 
@@ -77,3 +77,9 @@ class AuthorizationRecordRead(BaseModel):
     customer_ip: str
     user_agent: str
     authorized_at: datetime
+
+    @field_validator("customer_ip", mode="before")
+    @classmethod
+    def _stringify_ip(cls, value: object) -> str:
+        # asyncpg maps INET columns to ipaddress.IPv4Address/IPv6Address, not str.
+        return str(value)

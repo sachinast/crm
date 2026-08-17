@@ -40,9 +40,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
             Future Credits
           </Link>
           {showAdminLink && (
-            <Link href="/admin/users" className="hover:underline">
-              Admin · Users
-            </Link>
+            <>
+              <Link href="/admin/users" className="hover:underline">
+                Admin · Users
+              </Link>
+              <Link href="/admin/audit" className="hover:underline">
+                Admin · Audit Log
+              </Link>
+            </>
           )}
         </nav>
         <LogoutButton />

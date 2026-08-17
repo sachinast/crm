@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 
+import RevealField from "@/components/pii/RevealField";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
 import { statusColor } from "@/lib/status-colors";
@@ -56,7 +57,7 @@ interface StatusHistoryEntry {
 interface PaymentEntry {
   id: string;
   outcome: string;
-  card_last_four: string | null;
+  card_display: string; // masked by default (PRD §9.1) — e.g. "****-****-****-4242"
   total_amount: number;
   processed_at: string | null;
   created_at: string;
@@ -227,8 +228,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         ← Leads
       </Link>
       <h1 className="mb-1 mt-2 text-lg font-semibold">{lead.name}</h1>
-      <p className="mb-6 text-sm text-neutral-500">
-        {lead.phone} · {lead.email}
+      <p className="mb-6 flex flex-wrap items-center gap-x-2 text-sm text-neutral-500">
+        <RevealField leadId={id} field="phone" maskedValue={lead.phone} />
+        <span>·</span>
+        <RevealField leadId={id} field="email" maskedValue={lead.email} />
       </p>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
@@ -342,7 +345,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <span className={p.outcome === "charged" ? "text-green-700" : "text-red-700"}>{p.outcome}</span>
                 {" · $"}
                 {p.total_amount.toFixed(2)}
-                {p.card_last_four ? ` · ****${p.card_last_four}` : ""}
+                {` · ${p.card_display}`}
                 {" · "}
                 {new Date(p.processed_at ?? p.created_at).toLocaleString()}
               </li>

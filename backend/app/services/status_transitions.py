@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import apply_lead_visibility
 from app.api.v1.websocket import connection_manager
+from app.domain.process_log import log_process_event
 from app.domain.status_machine import can_set, can_transition, roles_to_notify
 from app.models.audit import Notification, StatusHistory
 from app.models.enums import BookingStatus, UserRole
@@ -54,6 +55,15 @@ async def apply_status_transition(
     previous_status = lead.status
     lead.status = target
     db.add(StatusHistory(lead_id=lead.id, from_status=previous_status, to_status=target, changed_by=actor.id))
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=actor.id,
+        action="status_change",
+        field_changed="status",
+        old_value=previous_status.value,
+        new_value=target.value,
+    )
 
     notify_roles = roles_to_notify(target)
     message = f"Lead {lead.id} moved from {previous_status.value} to {target.value}"

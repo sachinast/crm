@@ -7,16 +7,25 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
+from app.domain.process_log import log_process_event
 from app.domain.status_machine import can_transition, roles_to_notify
 from app.models.audit import Notification, StatusHistory
 from app.models.booking import AuthorizationRecord
 from app.models.enums import BookingStatus
 from app.models.lead import Lead
-from app.schemas.authorization import AuthorizationCreate, AuthorizationResult, AuthorizationSummary
+from app.models.user import User
+from app.schemas.authorization import (
+    AuthorizationCreate,
+    AuthorizationRecordRead,
+    AuthorizationResult,
+    AuthorizationSummary,
+)
 
 router = APIRouter(prefix="/leads/{lead_id}", tags=["authorization"])
 
@@ -107,6 +116,15 @@ async def submit_authorization(
             changed_by=lead.agent_id,
         )
     )
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=lead.agent_id,
+        action="status_change",
+        field_changed="status",
+        old_value=previous_status.value,
+        new_value=BookingStatus.client_approved.value,
+    )
 
     notify_roles = roles_to_notify(BookingStatus.client_approved)
     message = f"Lead {lead.id} moved from {previous_status.value} to client_approved (customer authorized)"
@@ -131,3 +149,26 @@ async def submit_authorization(
         await connection_manager.send_to_role(role, payload_out)
 
     return AuthorizationResult(lead_id=lead.id, status=lead.status, authorized_at=record.authorized_at)
+
+
+@router.get("/authorization-record", response_model=AuthorizationRecordRead)
+async def get_authorization_record(
+    lead_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> AuthorizationRecord:
+    """Staff-facing view of the captured consent — the evidence trail PRD §8
+    exists to build against chargebacks/disputes. Same visibility rules as
+    every other lead sub-resource (unlike the two endpoints above, which are
+    the public customer-facing side of this same flow)."""
+    await get_visible_lead_or_404(db, current_user, lead_id)
+    result = await db.execute(
+        select(AuthorizationRecord)
+        .where(AuthorizationRecord.lead_id == lead_id)
+        .order_by(AuthorizationRecord.authorized_at.desc())
+        .limit(1)
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No authorization record for this lead")
+    return record
