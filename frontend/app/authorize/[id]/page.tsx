@@ -60,9 +60,9 @@ function Shell({ children }: { children: React.ReactNode }) {
             className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
             style={{ background: "var(--navy)", color: "var(--accent)" }}
           >
-            T
+            P
           </div>
-          <span className="text-sm font-semibold tracking-tight">Travel CRM</span>
+          <span className="text-sm font-semibold tracking-tight">CRM PRO</span>
         </div>
         {children}
       </div>

@@ -47,9 +47,9 @@ export default function LoginPage() {
             className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl text-base font-bold"
             style={{ background: "var(--navy)", color: "var(--accent)" }}
           >
-            T
+            P
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">Travel CRM</h1>
+          <h1 className="text-xl font-semibold tracking-tight">CRM PRO</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
             Car · Hotel · Flight Booking Management
           </p>

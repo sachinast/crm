@@ -99,11 +99,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
               className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold"
               style={{ background: "var(--accent)", color: "var(--navy)" }}
             >
-              T
+              P
             </div>
             <div>
               <p className="text-sm font-semibold tracking-wide" style={{ color: "#f3f0e6" }}>
-                Travel CRM
+                CRM PRO
               </p>
               <p className="text-[11px]" style={{ color: "#7d84a0" }}>
                 Booking Management
