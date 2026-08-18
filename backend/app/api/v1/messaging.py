@@ -19,7 +19,9 @@ from app.api.v1.websocket import connection_manager
 from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.domain.activity_log import log_activity
 from app.domain.file_validation import FileValidationError, validate_attachment
+from app.domain.settings import get_setting_value
 from app.models.audit import Notification
 from app.models.messaging import Conversation, ConversationParticipant, Message, MessageAttachment, MessageMention
 from app.models.user import User
@@ -36,6 +38,20 @@ from app.schemas.messaging import (
 
 router = APIRouter(prefix="/messaging", tags=["messaging"])
 settings = get_settings()
+
+DEFAULT_QUICK_REPLIES = ["👍 Got it", "✅ On it", "🙏 Thanks!", "⏳ One sec"]
+
+
+@router.get("/quick-replies", response_model=list[str])
+async def get_quick_replies(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[str]:
+    """Composer chip presets — app_settings-driven (admin-editable, no
+    deploy) instead of hardcoded in frontend/lib/emoji-data.ts. Open to any
+    authenticated user (not admin-gated) since every messaging user needs
+    these to render the composer, same posture as the rest of this router."""
+    return await get_setting_value(db, "messaging.quick_replies", DEFAULT_QUICK_REPLIES)
 
 
 async def _get_participant(
@@ -127,7 +143,11 @@ async def search_users(
     Only name/email/role are exposed (see UserSearchResult), same fields as
     everyone can already see about a lead's assigned agent elsewhere.
     """
-    stmt = select(User).where(User.is_active.is_(True), User.id != current_user.id)
+    stmt = (
+        select(User)
+        .options(selectinload(User.role))
+        .where(User.is_active.is_(True), User.id != current_user.id)
+    )
     if query:
         like = f"%{query}%"
         stmt = stmt.where(or_(User.name.ilike(like), User.email.ilike(like)))
@@ -185,6 +205,19 @@ async def create_conversation(
     for uid in {current_user.id, *other_ids}:
         db.add(ConversationParticipant(conversation_id=conversation.id, user_id=uid))
 
+    # Milestone-level only (conversation started) — not per-message, per this
+    # feature's scope decision to keep private conversation content out of a
+    # general-admin-visible log.
+    log_activity(
+        db,
+        actor_id=current_user.id,
+        action="conversation_started",
+        category="messaging",
+        target_type="conversation",
+        target_id=conversation.id,
+        metadata={"is_group": is_group, "participant_count": len(other_ids) + 1},
+    )
+
     await db.commit()
     return await _load_conversation(db, conversation.id, current_user.id)
 
@@ -202,9 +235,9 @@ async def _load_conversation(db: AsyncSession, conversation_id: uuid.UUID, viewe
 
     participants: list[ParticipantRead] = []
     for p in conversation.participants:
-        u = await db.get(User, p.user_id)
+        u = await db.get(User, p.user_id, options=[selectinload(User.role)])
         if u:
-            participants.append(ParticipantRead(id=u.id, name=u.name, email=u.email, role=u.role))
+            participants.append(ParticipantRead(id=u.id, name=u.name, email=u.email, role=u.role.name))
 
     last_msg_row = await db.execute(
         select(Message)
@@ -471,12 +504,15 @@ async def upload_attachment(
     db: AsyncSession = Depends(get_db),
 ) -> MessageAttachment:
     data = await file.read()
+    # app_settings-driven now (admin-editable, no deploy) — falls back to the
+    # env-var default (core/config.py) if the key's been deleted.
+    max_file_size_mb = await get_setting_value(db, "messaging.max_file_size_mb", settings.messaging_max_file_size_mb)
     try:
         kind = validate_attachment(
             file_name=file.filename or "upload",
             content_type=file.content_type or "application/octet-stream",
             data=data,
-            max_size_bytes=settings.messaging_max_file_size_bytes,
+            max_size_bytes=int(max_file_size_mb) * 1024 * 1024,
         )
     except FileValidationError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))

@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.enums import AttachmentKind, UserRole
+from app.models.enums import AttachmentKind
 
 MessageStatus = Literal["sent", "delivered", "read"]
 
@@ -15,14 +15,19 @@ class UserSearchResult(BaseModel):
     id: uuid.UUID
     name: str
     email: str
-    role: UserRole
+    role: str
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def _role_name(cls, v: object) -> object:
+        return v.name if hasattr(v, "name") else v
 
 
 class ParticipantRead(BaseModel):
     id: uuid.UUID
     name: str
     email: str
-    role: UserRole
+    role: str
 
 
 class AttachmentRead(BaseModel):

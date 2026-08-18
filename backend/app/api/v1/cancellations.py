@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_permission
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
 from app.models.booking import Cancellation
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.cancellation import CancellationCreate, CancellationRead
 
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/leads/{lead_id}/cancellation", tags=["cancellations"
 
 # Same actors as modifications (app/api/v1/modifications.py) — PRD groups
 # "modification/cancellation requests" together under CS/Change Dep.
-CANCELLATION_ROLES = (UserRole.change_dep, UserRole.cs, UserRole.admin, UserRole.super_admin)
+CANCELLATION_PERMISSIONS = ("cancellations.manage",)
 
 
 @router.post("", response_model=CancellationRead, status_code=status.HTTP_201_CREATED)
@@ -25,7 +24,7 @@ async def create_cancellation(
     lead_id: uuid.UUID,
     payload: CancellationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*CANCELLATION_ROLES)),
+    current_user: User = Depends(require_permission(*CANCELLATION_PERMISSIONS)),
 ) -> Cancellation:
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
     booking = await get_booking_for_lead(db, lead)

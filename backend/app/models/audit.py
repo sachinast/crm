@@ -6,13 +6,12 @@ from sqlalchemy.dialects.postgresql import ENUM as PGEnum, INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.models.enums import BookingStatus, PiiField, SyncStatus, UserRole
+from app.models.enums import BookingStatus, PiiField, SyncStatus
 from app.models.mixins import UUIDPKMixin
 
 booking_status_enum = PGEnum(BookingStatus, name="booking_status", create_type=False)
 pii_field_enum = PGEnum(PiiField, name="pii_field", create_type=False)
 sync_status_enum = PGEnum(SyncStatus, name="sync_status", create_type=False)
-user_role_enum = PGEnum(UserRole, name="user_role", create_type=False)
 
 
 class StatusHistory(UUIDPKMixin, Base):
@@ -34,7 +33,7 @@ class Notification(UUIDPKMixin, Base):
 
     lead_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"))
     recipient_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    recipient_role: Mapped[UserRole | None] = mapped_column(user_role_enum)
+    recipient_role_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("roles.id"))
     type: Mapped[str] = mapped_column(Text, nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

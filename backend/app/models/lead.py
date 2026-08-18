@@ -1,7 +1,8 @@
 import uuid
+from typing import Any
 
 from sqlalchemy import Boolean, ForeignKey, Index, Text
-from sqlalchemy.dialects.postgresql import CITEXT, ENUM as PGEnum, UUID
+from sqlalchemy.dialects.postgresql import CITEXT, ENUM as PGEnum, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -32,6 +33,10 @@ class Lead(UUIDPKMixin, TimestampMixin, Base):
     # the originating integration's label for leads created via POST
     # /leads/capture (TECHNICAL_SPEC.md §10.3). Phase 8.
     source: Mapped[str | None] = mapped_column(Text)
+    # Admin-defined extra fields (migration 0010) — schema lives in
+    # custom_field_definitions (app/models/custom_fields.py), validated
+    # against it on write by app/domain/custom_fields.py.
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_leads_agent_id", "agent_id"),

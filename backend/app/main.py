@@ -1,11 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.admin_activity import router as admin_activity_router
+from app.api.v1.admin_roles import router as admin_roles_router
+from app.api.v1.admin_settings import router as admin_settings_router
+from app.api.v1.admin_status_permissions import router as admin_status_permissions_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.authorization import router as authorization_router
 from app.api.v1.bookings import router as bookings_router
 from app.api.v1.cancellations import router as cancellations_router
+from app.api.v1.custom_fields import router as custom_fields_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.future_credits import router as future_credits_router
 from app.api.v1.health import router as health_router
@@ -45,6 +50,11 @@ app.include_router(integration_keys_router, prefix=settings.api_v1_prefix)
 app.include_router(capture_router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard_router, prefix=settings.api_v1_prefix)
 app.include_router(messaging_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_roles_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_status_permissions_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_activity_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_settings_router, prefix=settings.api_v1_prefix)
+app.include_router(custom_fields_router, prefix=settings.api_v1_prefix)
 app.include_router(websocket_router, prefix="/ws")
 
 

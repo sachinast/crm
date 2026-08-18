@@ -2,6 +2,7 @@ import { Gift } from "lucide-react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 import CreateFutureCreditForm from "./CreateFutureCreditForm";
 
@@ -14,11 +15,6 @@ interface FutureCreditEntry {
   created_by: string;
   created_at: string;
 }
-
-// PRD §7.3: creation restricted to TL/CS; read access for Billing/CS/Change
-// Dep/Chargeback Dep/Auditor (+ TL/Admin/Super Admin) — see
-// backend/app/api/v1/future_credits.py for the authoritative role lists.
-const CREATE_ROLES = new Set(["tl", "cs", "admin", "super_admin"]);
 
 async function fetchFutureCredits(): Promise<{ credits: FutureCreditEntry[]; forbidden: boolean }> {
   const token = await getAccessToken();
@@ -33,7 +29,7 @@ async function fetchFutureCredits(): Promise<{ credits: FutureCreditEntry[]; for
 
 export default async function FutureCreditsPage() {
   const [{ credits, forbidden }, currentUser] = await Promise.all([fetchFutureCredits(), getCurrentUser()]);
-  const canCreate = currentUser !== null && CREATE_ROLES.has(currentUser.role);
+  const canCreate = hasPermission(currentUser, "future_credits.create");
 
   if (forbidden) {
     return (

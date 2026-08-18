@@ -4,7 +4,8 @@ import FloatingChatWidget from "@/components/messaging/FloatingChatWidget";
 import LogoutButton from "@/components/ui/LogoutButton";
 import NotificationBell from "@/components/ui/NotificationBell";
 import SidebarNav from "@/components/ui/SidebarNav";
-import { getCurrentUser, isAdminRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 const BASE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
@@ -13,12 +14,6 @@ const BASE_NAV = [
   { href: "/billing", label: "Billing", icon: "billing" as const },
   { href: "/audit", label: "Audit / QC", icon: "audit" as const },
   { href: "/future-credits", label: "Future Credits", icon: "credits" as const },
-];
-
-const ADMIN_NAV = [
-  { href: "/admin/users", label: "Users", icon: "users" as const },
-  { href: "/admin/audit", label: "Audit Log", icon: "log" as const },
-  { href: "/admin/integrations", label: "Integrations", icon: "integrations" as const },
 ];
 
 function initials(name: string): string {
@@ -38,7 +33,59 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  const showAdminNav = isAdminRole(user.role);
+  // Each admin nav item gated on the specific permission it needs — not a
+  // single "is this an admin role" blanket check — so a custom role granted
+  // e.g. only audit.view sees just the Audit Log link, not the whole section.
+  const adminNav = [
+    hasPermission(user, "admin.manage_users") && { href: "/admin/users", label: "Users", icon: "users" as const },
+    hasPermission(user, "admin.manage_roles", "admin.manage_users") && {
+      href: "/admin/roles",
+      label: "Roles",
+      icon: "roles" as const,
+    },
+    hasPermission(user, "admin.manage_roles") && {
+      href: "/admin/status-permissions",
+      label: "Status Workflow",
+      icon: "statusPermissions" as const,
+    },
+    hasPermission(user, "audit.view") && { href: "/admin/audit", label: "Audit Log", icon: "log" as const },
+    hasPermission(user, "admin.view_activity_log") && {
+      href: "/admin/activity",
+      label: "Activity Log",
+      icon: "activity" as const,
+    },
+    hasPermission(user, "integrations.manage") && {
+      href: "/admin/integrations",
+      label: "Integrations",
+      icon: "integrations" as const,
+    },
+    hasPermission(user, "admin.view_settings") && {
+      href: "/admin/settings",
+      label: "Settings",
+      icon: "settings" as const,
+    },
+    hasPermission(user, "admin.manage_custom_fields") && {
+      href: "/admin/custom-fields",
+      label: "Custom Fields",
+      icon: "customFields" as const,
+    },
+  ].filter(
+    (
+      item,
+    ): item is {
+      href: string;
+      label: string;
+      icon:
+        | "users"
+        | "roles"
+        | "statusPermissions"
+        | "log"
+        | "activity"
+        | "integrations"
+        | "settings"
+        | "customFields";
+    } => Boolean(item),
+  );
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--background)" }}>
@@ -66,12 +113,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
           <SidebarNav items={BASE_NAV} />
 
-          {showAdminNav && (
+          {adminNav.length > 0 && (
             <>
               <p className="section-label mb-1 mt-6 px-3" style={{ color: "#6c7288" }}>
                 Admin
               </p>
-              <SidebarNav items={ADMIN_NAV} />
+              <SidebarNav items={adminNav} />
             </>
           )}
         </div>

@@ -13,10 +13,11 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_permission
 from app.db.session import get_db
+from app.domain.custom_fields import validate_custom_fields
 from app.models.booking import CarBooking, FlightBooking, HotelBooking
-from app.models.enums import ServiceType, UserRole
+from app.models.enums import ServiceType
 from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.booking import (
@@ -36,7 +37,7 @@ router = APIRouter(prefix="/leads/{lead_id}", tags=["bookings"])
 # Same actors as lead intake (app/api/v1/leads.py) — a booking is filled in as
 # part of the same PRD §4.1 flow the agent (or admin/super_admin on their
 # behalf) is already driving.
-INTAKE_ROLES = (UserRole.agent, UserRole.admin, UserRole.super_admin)
+INTAKE_PERMISSIONS = ("leads.create",)
 
 
 async def _get_booking_or_404(db: AsyncSession, model: type, lead_id: uuid.UUID) -> Any:
@@ -61,6 +62,7 @@ def _register_booking_routes(
     path: str,
     model: type,
     service_type: ServiceType,
+    entity_type: str,
     create_schema: type[BaseModel],
     update_schema: type[BaseModel],
     read_schema: type[BaseModel],
@@ -69,7 +71,7 @@ def _register_booking_routes(
         lead_id: uuid.UUID,
         payload: create_schema,  # type: ignore[valid-type]
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(require_role(*INTAKE_ROLES)),
+        current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
     ) -> Any:
         lead = await get_visible_lead_or_404(db, current_user, lead_id)
         _ensure_service_type(lead, service_type, path)
@@ -80,7 +82,9 @@ def _register_booking_routes(
                 status.HTTP_409_CONFLICT, f"A {path.replace('-', ' ')} already exists for this lead — use PATCH"
             )
 
-        booking = model(lead_id=lead_id, **payload.model_dump())
+        data = payload.model_dump()
+        data["custom_fields"] = await validate_custom_fields(db, entity_type, data["custom_fields"])
+        booking = model(lead_id=lead_id, **data)
         db.add(booking)
         await db.commit()
         await db.refresh(booking)
@@ -98,11 +102,14 @@ def _register_booking_routes(
         lead_id: uuid.UUID,
         payload: update_schema,  # type: ignore[valid-type]
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(require_role(*INTAKE_ROLES)),
+        current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
     ) -> Any:
         await get_visible_lead_or_404(db, current_user, lead_id)
         booking = await _get_booking_or_404(db, model, lead_id)
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        updates = payload.model_dump(exclude_unset=True)
+        if "custom_fields" in updates and updates["custom_fields"] is not None:
+            updates["custom_fields"] = await validate_custom_fields(db, entity_type, updates["custom_fields"])
+        for field, value in updates.items():
             setattr(booking, field, value)
         await db.commit()
         await db.refresh(booking)
@@ -124,6 +131,7 @@ _register_booking_routes(
     path="car-booking",
     model=CarBooking,
     service_type=ServiceType.car,
+    entity_type="car_booking",
     create_schema=CarBookingCreate,
     update_schema=CarBookingUpdate,
     read_schema=CarBookingRead,
@@ -132,6 +140,7 @@ _register_booking_routes(
     path="hotel-booking",
     model=HotelBooking,
     service_type=ServiceType.hotel,
+    entity_type="hotel_booking",
     create_schema=HotelBookingCreate,
     update_schema=HotelBookingUpdate,
     read_schema=HotelBookingRead,
@@ -140,6 +149,7 @@ _register_booking_routes(
     path="flight-booking",
     model=FlightBooking,
     service_type=ServiceType.flight,
+    entity_type="flight_booking",
     create_schema=FlightBookingCreate,
     update_schema=FlightBookingUpdate,
     read_schema=FlightBookingRead,

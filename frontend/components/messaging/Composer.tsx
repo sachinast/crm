@@ -3,8 +3,7 @@
 import { AlertTriangle, FileText, Paperclip, Send, Smile, X, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { QUICK_REPLIES } from "@/lib/emoji-data";
-import { searchUsers, sendMessage, uploadAttachment, type ParticipantRead, type UserSearchResult } from "@/lib/messaging-api";
+import { fetchQuickReplies, searchUsers, sendMessage, uploadAttachment, type ParticipantRead, type UserSearchResult } from "@/lib/messaging-api";
 import { mentionMarkup } from "@/lib/mentions";
 
 import EmojiPicker from "./EmojiPicker";
@@ -59,9 +58,23 @@ export default function Composer({
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Admin-editable (GET /messaging/quick-replies -> app_settings) — this
+  // default only covers the gap before that fetch resolves, so the chips
+  // don't flash empty on first render.
+  const [quickReplies, setQuickReplies] = useState<string[]>(["👍 Got it", "✅ On it", "🙏 Thanks!", "⏳ One sec"]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchQuickReplies().then((replies) => {
+      if (!cancelled) setQuickReplies(replies);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (mentionQuery === null) {
@@ -192,7 +205,7 @@ export default function Composer({
   return (
     <div className="border-t px-4 py-3" style={{ borderColor: "var(--hairline)" }}>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {QUICK_REPLIES.map((reply) => (
+        {quickReplies.map((reply) => (
           <button
             key={reply}
             onClick={() => doSend(reply)}

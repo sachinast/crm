@@ -3,36 +3,50 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.api.deps import require_ip_whitelisted, require_role
+from app.api.deps import require_ip_whitelisted, require_permission
 from app.core.security import hash_password
 from app.db.session import get_db
-from app.models.enums import UserRole
-from app.models.user import SystemSettings, User, UserWhitelistedIP
-from app.schemas.system_settings import SystemSettingsRead, SystemSettingsUpdate
-from app.schemas.user import UserCreate, UserRead, UserUpdate, WhitelistedIPCreate, WhitelistedIPRead
+from app.domain.activity_log import log_activity
+from app.models.rbac import Role
+from app.models.user import User, UserWhitelistedIP
+from app.schemas.user import MeRead, UserCreate, UserRead, UserUpdate, WhitelistedIPCreate, WhitelistedIPRead
 
 router = APIRouter(tags=["users"])
 
-# Provisioning/administration is Admin+ only — there is no public self-registration
-# (PRD §3: "all users are provisioned manually by an Admin or Super Admin").
-ADMIN_ROLES = (UserRole.super_admin, UserRole.admin)
+# Provisioning/administration — PRD §3: "all users are provisioned manually
+# by an Admin or Super Admin". Data-driven now (app/models/rbac.py) instead
+# of a hardcoded role tuple: whichever roles hold admin.manage_users.
+MANAGE_USERS_PERMISSIONS = ("admin.manage_users",)
 
 
-@router.get("/users/me", response_model=UserRead)
-async def read_current_user(current_user: User = Depends(require_ip_whitelisted)) -> User:
-    return current_user
+async def _resolve_role(db: AsyncSession, role_name: str) -> Role:
+    role = await db.scalar(select(Role).where(Role.name == role_name))
+    if role is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown role: {role_name}")
+    return role
+
+
+@router.get("/users/me", response_model=MeRead)
+async def read_current_user(current_user: User = Depends(require_ip_whitelisted)) -> dict:
+    # role.permissions is already eager-loaded by get_current_user — flatten
+    # to codes here rather than serializing the full Permission objects.
+    return {
+        **UserRead.model_validate(current_user).model_dump(),
+        "permissions": sorted(p.code for p in current_user.role.permissions),
+    }
 
 
 @router.get("/users", response_model=list[UserRead])
 async def list_users(
-    role: UserRole | None = None,
+    role_name: str | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*ADMIN_ROLES)),
+    _: User = Depends(require_permission(*MANAGE_USERS_PERMISSIONS)),
 ) -> list[User]:
-    stmt = select(User).order_by(User.created_at)
-    if role is not None:
-        stmt = stmt.where(User.role == role)
+    stmt = select(User).options(selectinload(User.role)).order_by(User.created_at)
+    if role_name is not None:
+        stmt = stmt.join(Role, User.role_id == Role.id).where(Role.name == role_name)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -41,23 +55,35 @@ async def list_users(
 async def create_user(
     payload: UserCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*ADMIN_ROLES)),
+    current_user: User = Depends(require_permission(*MANAGE_USERS_PERMISSIONS)),
 ) -> User:
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "A user with this email already exists")
 
+    role = await _resolve_role(db, payload.role_name)
+
     user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
-        role=payload.role,
+        role_id=role.id,
         ip_whitelist_enabled=payload.ip_whitelist_enabled,
         created_by=current_user.id,
     )
     db.add(user)
+    await db.flush()
+    log_activity(
+        db,
+        actor_id=current_user.id,
+        action="user_created",
+        category="admin",
+        target_type="user",
+        target_id=user.id,
+        metadata={"email": user.email, "role_name": role.name},
+    )
     await db.commit()
-    await db.refresh(user)
+    await db.refresh(user, attribute_names=["role"])
     return user
 
 
@@ -66,15 +92,35 @@ async def update_user(
     user_id: uuid.UUID,
     payload: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*ADMIN_ROLES)),
+    current_user: User = Depends(require_permission(*MANAGE_USERS_PERMISSIONS)),
 ) -> User:
-    user = await db.get(User, user_id)
+    # Explicit select, not db.get() — this request may later touch user.role
+    # (the role-change branch below, or the response's eager-loaded role),
+    # and db.get() silently skips loader options whenever the row is already
+    # in the session's identity map (same pitfall documented in deps.py).
+    result = await db.execute(select(User).options(selectinload(User.role)).where(User.id == user_id))
+    user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    role_name = updates.pop("role_name", None)
+    if role_name is not None and role_name != user.role.name:
+        old_role_name = user.role.name
+        role = await _resolve_role(db, role_name)
+        user.role_id = role.id
+        log_activity(
+            db,
+            actor_id=current_user.id,
+            action="user_role_changed",
+            category="admin",
+            target_type="user",
+            target_id=user.id,
+            metadata={"email": user.email, "old_role": old_role_name, "new_role": role.name},
+        )
+    for field, value in updates.items():
         setattr(user, field, value)
     await db.commit()
-    await db.refresh(user)
+    await db.refresh(user, attribute_names=["role"])
     return user
 
 
@@ -87,7 +133,7 @@ async def add_whitelisted_ip(
     user_id: uuid.UUID,
     payload: WhitelistedIPCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*ADMIN_ROLES)),
+    _: User = Depends(require_permission(*MANAGE_USERS_PERMISSIONS)),
 ) -> UserWhitelistedIP:
     user = await db.get(User, user_id)
     if user is None:
@@ -109,7 +155,7 @@ async def remove_whitelisted_ip(
     user_id: uuid.UUID,
     ip_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*ADMIN_ROLES)),
+    _: User = Depends(require_permission(*MANAGE_USERS_PERMISSIONS)),
 ) -> None:
     entry = await db.get(UserWhitelistedIP, ip_id)
     if entry is None or entry.user_id != user_id:
@@ -117,25 +163,7 @@ async def remove_whitelisted_ip(
     await db.delete(entry)
     await db.commit()
 
-
-@router.get("/system-settings", response_model=SystemSettingsRead)
-async def get_system_settings(
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*ADMIN_ROLES)),
-) -> SystemSettings:
-    return await db.get(SystemSettings, True)
-
-
-@router.patch("/system-settings", response_model=SystemSettingsRead)
-async def update_system_settings(
-    payload: SystemSettingsUpdate,
-    db: AsyncSession = Depends(get_db),
-    # Only Super Admin owns the registration toggle — PRD §3.
-    current_user: User = Depends(require_role(UserRole.super_admin)),
-) -> SystemSettings:
-    settings_row = await db.get(SystemSettings, True)
-    settings_row.registration_enabled = payload.registration_enabled
-    settings_row.updated_by = current_user.id
-    await db.commit()
-    await db.refresh(settings_row)
-    return settings_row
+# GET/PATCH /system-settings (the old single-boolean registration_enabled
+# toggle) removed in migration 0009 — replaced by the generic app_settings
+# store: GET/POST/PATCH/DELETE /admin/settings (app/api/v1/admin_settings.py),
+# still gated on the same admin.view_settings/admin.manage_settings codes.

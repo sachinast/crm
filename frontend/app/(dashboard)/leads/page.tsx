@@ -96,7 +96,7 @@ export default async function LeadsPage({
         <table className="table-modern">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Customer Name</th>
               <th>Phone</th>
               <th>Email</th>
               <th>Service</th>

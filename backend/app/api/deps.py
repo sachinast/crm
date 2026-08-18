@@ -9,14 +9,15 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy import Select, false, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.domain.api_keys import hash_api_key
-from app.domain.status_machine import ROLE_RELEVANT_STATUSES
-from app.models.enums import UserRole
+from app.domain.status_permissions import get_relevant_statuses
 from app.models.integration import ApiKey
 from app.models.lead import Lead
+from app.models.rbac import Role
 from app.models.user import User, UserWhitelistedIP
 
 # tokenUrl is documentation-only here (used for the OpenAPI "Authorize" button) —
@@ -46,20 +47,53 @@ async def get_current_user(
     if not user_id:
         raise CREDENTIALS_EXCEPTION
 
-    user = await db.get(User, user_id)
+    # Explicit select (not db.get()) with role+permissions eager-loaded —
+    # every permission check on this request reads user.role.permissions,
+    # and db.get() silently skips loader options whenever the row is already
+    # in the session's identity map, which trips a sync lazy-load later
+    # (same pitfall documented in frontend messaging.py's _load_conversation).
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.role).selectinload(Role.permissions))
+        .where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise CREDENTIALS_EXCEPTION
     return user
 
 
 def require_role(
-    *roles: UserRole,
+    *roles: str,
 ) -> Callable[[User], Coroutine[Any, Any, User]]:
-    """Coarse role check — TECHNICAL_SPEC.md §4.1 layer 1 (role -> action)."""
+    """Role-*name* check — for the handful of places that are genuinely about
+    a specific named role rather than a grantable capability (nothing should
+    reach for this over require_permission for new code; kept only where a
+    permission code would be overkill for something inherently tied to one
+    specific system role name, e.g. "the seed super_admin bootstrap").
+    """
 
     async def dependency(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles:
+        if user.role.name not in roles:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient role for this action")
+        return user
+
+    return dependency
+
+
+def require_permission(
+    *codes: str,
+) -> Callable[[User], Coroutine[Any, Any, User]]:
+    """Coarse permission check — TECHNICAL_SPEC.md §4.1 layer 1 (role -> action),
+    now backed by the data-driven roles/permissions engine (app/models/rbac.py)
+    instead of a hardcoded role tuple, so a custom role created through the
+    admin UI can be granted any of these without a code change. "Any of these
+    codes" semantics, same as the old require_role(*roles).
+    """
+
+    async def dependency(user: User = Depends(get_current_user)) -> User:
+        if not user.role.has_permission(*codes):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient permission for this action")
         return user
 
     return dependency
@@ -96,26 +130,22 @@ async def require_ip_whitelisted(
     return user
 
 
-# Roles with unrestricted lead visibility — TECHNICAL_SPEC.md §4.1 "Global View" /
-# "TL (Team Lead) | Full departmental oversight".
-FULL_LEAD_VISIBILITY_ROLES = (UserRole.super_admin, UserRole.admin, UserRole.tl)
-
-
-def apply_lead_visibility(stmt: Select, user: User) -> Select:
+async def apply_lead_visibility(db: AsyncSession, stmt: Select, user: User) -> Select:
     """Row-level visibility filter — TECHNICAL_SPEC.md §4.1 layer 2. Applied to
     every leads query so "can't see" and "can't act on" collapse to the same
     filtered query, rather than a separate check that's easy to forget on one
     endpoint.
     """
-    if user.role in FULL_LEAD_VISIBILITY_ROLES:
+    if user.role.has_permission("leads.view_all"):
         return stmt
-    if user.role == UserRole.agent:
+    if user.role.has_permission("leads.view_own"):
         return stmt.where(Lead.agent_id == user.id)
     # Billing/Auditor/CS/Change Dep/Chargeback Dep/CR Booking: visibility expands
     # to whatever statuses are currently relevant to that department (PRD §3.2
-    # "Status-Based Sharing" — ROLE_RELEVANT_STATUSES in status_machine.py).
-    # A role with nothing mapped yet (CS, pre-Phase 6) legitimately sees nothing.
-    relevant_statuses = ROLE_RELEVANT_STATUSES.get(user.role)
+    # "Status-Based Sharing" — status_role_permissions' 'relevant' rows,
+    # admin-editable via /admin/status-permissions). A role with nothing
+    # granted here legitimately sees nothing.
+    relevant_statuses = await get_relevant_statuses(db, user.role_id)
     if relevant_statuses:
         return stmt.where(Lead.status.in_(relevant_statuses))
     return stmt.where(false())
@@ -145,7 +175,7 @@ async def require_api_key(
 
 
 async def get_visible_lead_or_404(db: AsyncSession, user: User, lead_id: uuid.UUID) -> Lead:
-    stmt = apply_lead_visibility(select(Lead).where(Lead.id == lead_id), user)
+    stmt = await apply_lead_visibility(db, select(Lead).where(Lead.id == lead_id), user)
     result = await db.execute(stmt)
     lead = result.scalar_one_or_none()
     if lead is None:

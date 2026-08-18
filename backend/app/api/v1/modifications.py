@@ -6,11 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_permission
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
 from app.models.booking import BookingModification
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.modification import ModificationCreate, ModificationRead
 
@@ -19,7 +18,7 @@ router = APIRouter(prefix="/leads/{lead_id}/modifications", tags=["modifications
 # Change Dep "handles the Original vs. Revised modification workflow" (PRD
 # §3.1); CS "supports modification/cancellation requests". Admin/Super Admin
 # retain oversight, matching every other domain action in this API.
-MODIFICATION_ROLES = (UserRole.change_dep, UserRole.cs, UserRole.admin, UserRole.super_admin)
+MODIFICATION_PERMISSIONS = ("modifications.manage",)
 
 
 def _is_number(value: object) -> bool:
@@ -31,7 +30,7 @@ async def create_modification(
     lead_id: uuid.UUID,
     payload: ModificationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*MODIFICATION_ROLES)),
+    current_user: User = Depends(require_permission(*MODIFICATION_PERMISSIONS)),
 ) -> BookingModification:
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
     booking = await get_booking_for_lead(db, lead)

@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     ARRAY,
@@ -51,6 +52,9 @@ class CarBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
+    # Admin-defined extra fields (migration 0010) — see app/models/lead.py's
+    # custom_fields for the full explanation; same shape here.
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 
 class HotelBooking(UUIDPKMixin, TimestampMixin, Base):
@@ -71,6 +75,7 @@ class HotelBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (CheckConstraint("check_out_date > check_in_date", name="ck_hotel_dates"),)
 
@@ -93,6 +98,7 @@ class FlightBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 
 class BookingModification(UUIDPKMixin, Base):

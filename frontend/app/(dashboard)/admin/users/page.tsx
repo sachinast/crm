@@ -2,6 +2,7 @@ import { UserCog } from "lucide-react";
 
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import type { RoleDef } from "@/lib/roles-api";
 
 import CreateUserForm from "./CreateUserForm";
 
@@ -24,11 +25,24 @@ async function fetchUsers(): Promise<UserRow[]> {
   }
 }
 
+async function fetchRoles(): Promise<RoleDef[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<RoleDef[]>("/admin/roles", { token });
+  } catch {
+    // Plain admins (not super_admin) can still read the role list — see
+    // admin_roles.py's READ_PERMISSIONS — but fall back gracefully if this
+    // account somehow can't, rather than breaking user creation entirely.
+    return [];
+  }
+}
+
 // User provisioning (Phase 1). The dashboard layout already redirects non-admins
 // away before this renders, but GET/POST /api/admin/users also 403 server-side
 // via the backend's require_role — this page has no privileged access of its own.
 export default async function AdminUsersPage() {
-  const users = await fetchUsers();
+  const [users, roles] = await Promise.all([fetchUsers(), fetchRoles()]);
 
   return (
     <div className="max-w-3xl">
@@ -44,7 +58,7 @@ export default async function AdminUsersPage() {
         </div>
       </div>
 
-      <CreateUserForm />
+      <CreateUserForm roles={roles} />
 
       <div className="card-flat mt-6 overflow-x-auto p-0">
         <table className="table-modern">

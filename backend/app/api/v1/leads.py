@@ -5,20 +5,25 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import apply_lead_visibility, get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.deps import apply_lead_visibility, get_visible_lead_or_404, require_ip_whitelisted, require_permission
 from app.db.session import get_db
+from app.domain.activity_log import log_activity
+from app.domain.custom_fields import validate_custom_fields
 from app.domain.duplicate_check import find_duplicate_candidates
 from app.domain.process_log import log_process_event
-from app.domain.status_machine import can_set, can_transition
+from app.domain.status_machine import can_transition
+from app.domain.status_permissions import get_settable_statuses
 from app.models.audit import AccessNotificationLog, Notification, PiiRevealAuditLog, StatusHistory
-from app.models.enums import BookingStatus, PiiField, ServiceType, UserRole
+from app.models.enums import BookingStatus, PiiField, ServiceType
 from app.models.lead import Lead
 from app.models.payment import PaymentTransaction
+from app.models.rbac import Role
 from app.models.status import StatusLookup
 from app.models.user import User
 from app.schemas.audit import RevealRequest, RevealResult
 from app.schemas.lead import (
     AvailableTransition,
+    CustomFieldsUpdate,
     DuplicateCheckResult,
     LeadConfirm,
     LeadCreate,
@@ -33,21 +38,29 @@ from app.services.status_transitions import apply_status_transition
 router = APIRouter(prefix="/leads", tags=["leads"])
 
 # Lead intake is an Agent action; Admin/Super Admin can act on an agent's behalf
-# for support purposes. Everyone else only reads (subject to apply_lead_visibility).
-INTAKE_ROLES = (UserRole.agent, UserRole.admin, UserRole.super_admin)
+# for support purposes (they hold leads.create too). Everyone else only reads
+# (subject to apply_lead_visibility).
+INTAKE_PERMISSIONS = ("leads.create",)
 
 
 @router.post("", response_model=LeadRead, status_code=status.HTTP_201_CREATED)
 async def create_lead(
     payload: LeadCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*INTAKE_ROLES)),
+    current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
 ) -> Lead:
     """PRD §4.1 Step 1 + Step 2 — create the lead, then immediately run the
     duplicate search so is_duplicate/duplicate_of_id are already known by the
     time the response comes back (GET .../duplicate-check re-runs it to return
     the full candidate list for the UI's confirmation prompt)."""
-    lead = Lead(name=payload.name, phone=payload.phone, email=payload.email, agent_id=current_user.id)
+    custom_fields = await validate_custom_fields(db, "lead", payload.custom_fields)
+    lead = Lead(
+        name=payload.name,
+        phone=payload.phone,
+        email=payload.email,
+        agent_id=current_user.id,
+        custom_fields=custom_fields,
+    )
     db.add(lead)
     await db.flush()  # assigns lead.id without committing
 
@@ -88,7 +101,7 @@ async def confirm_duplicate(
     lead_id: uuid.UUID,
     payload: LeadConfirm,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*INTAKE_ROLES)),
+    current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
 ) -> Lead:
     """PRD §4.1 Step 3 — the agent's explicit override. Required before
     PATCH .../service-type will unlock a lead flagged is_duplicate."""
@@ -113,7 +126,7 @@ async def set_service_type(
     lead_id: uuid.UUID,
     payload: ServiceTypeUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*INTAKE_ROLES)),
+    current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
 ) -> Lead:
     """PRD §4.1 Step 4 — unlocks the service-specific booking form. Blocked
     until an is_duplicate lead has gone through POST .../confirm."""
@@ -139,6 +152,23 @@ async def set_service_type(
     return lead
 
 
+@router.patch("/{lead_id}/custom-fields", response_model=LeadRead)
+async def update_custom_fields(
+    lead_id: uuid.UUID,
+    payload: CustomFieldsUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
+) -> Lead:
+    """Full replace of this lead's admin-defined extra fields — separate from
+    the fixed intake fields (name/phone/email), which have no PATCH endpoint
+    of their own yet."""
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+    lead.custom_fields = await validate_custom_fields(db, "lead", payload.custom_fields)
+    await db.commit()
+    await db.refresh(lead)
+    return lead
+
+
 @router.get("", response_model=list[LeadRead])
 async def list_leads(
     status_: BookingStatus | None = None,
@@ -152,7 +182,7 @@ async def list_leads(
 ) -> list[Lead]:
     """TECHNICAL_SPEC.md §5 — filters: Date, Email, Mobile (+ status/service_type),
     row-filtered per apply_lead_visibility (§4.1)."""
-    stmt = apply_lead_visibility(select(Lead), current_user)
+    stmt = await apply_lead_visibility(db, select(Lead), current_user)
 
     if status_ is not None:
         stmt = stmt.where(Lead.status == status_)
@@ -186,14 +216,16 @@ async def get_lead(
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
 
     db.add(AccessNotificationLog(lead_id=lead.id, opened_by=current_user.id))
-    db.add(
-        Notification(
-            lead_id=lead.id,
-            recipient_role=UserRole.admin,
-            type="record_opened",
-            message=f"{current_user.name} opened lead {lead.id}",
+    admin_role_id = await db.scalar(select(Role.id).where(Role.name == "admin"))
+    if admin_role_id is not None:
+        db.add(
+            Notification(
+                lead_id=lead.id,
+                recipient_role_id=admin_role_id,
+                type="record_opened",
+                message=f"{current_user.name} opened lead {lead.id}",
+            )
         )
-    )
     if current_user.id != lead.agent_id:
         db.add(
             Notification(
@@ -219,7 +251,8 @@ async def get_available_transitions(
     the transition graph or role rules there — TECHNICAL_SPEC.md §3."""
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
 
-    reachable = [s for s in BookingStatus if can_transition(lead.status, s) and can_set(s, current_user.role)]
+    settable = await get_settable_statuses(db, current_user.role_id)
+    reachable = [s for s in BookingStatus if can_transition(lead.status, s) and s in settable]
     if not reachable:
         return []
 
@@ -276,7 +309,33 @@ async def reveal_pii(
     presentation, not an extra permission gate; the reason + logged access
     (agent, field, timestamp, IP, device, CRM ID) is the actual control an
     Admin reviews after the fact."""
-    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+        request.client.host if request.client else "0.0.0.0"
+    )
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    try:
+        lead = await get_visible_lead_or_404(db, current_user, lead_id)
+    except HTTPException:
+        # Someone tried to reveal PII on a lead they can't see (or that
+        # doesn't exist) — the "tried to reveal masked information" gap the
+        # existing pii_reveal_audit_log doesn't cover, since that table only
+        # ever records a *successful* reveal. Same "don't leak which" 404
+        # posture as get_visible_lead_or_404 itself — this log entry doesn't
+        # distinguish "no such lead" from "not visible to you" either.
+        log_activity(
+            db,
+            actor_id=current_user.id,
+            action="reveal_denied",
+            category="pii",
+            target_type="lead",
+            target_id=lead_id,
+            metadata={"field": payload.field.value},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        await db.commit()
+        raise
 
     if payload.field == PiiField.email:
         raw_value = lead.email
@@ -297,9 +356,6 @@ async def reveal_pii(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "No card on file for this lead")
         raw_value = payment.card_last_four
 
-    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
-        request.client.host if request.client else "0.0.0.0"
-    )
     db.add(
         PiiRevealAuditLog(
             lead_id=lead.id,
@@ -307,7 +363,7 @@ async def reveal_pii(
             field_revealed=payload.field,
             reason=payload.reason,
             ip_address=client_ip,
-            user_agent=request.headers.get("user-agent", "unknown"),
+            user_agent=user_agent,
         )
     )
     await db.commit()

@@ -10,6 +10,11 @@ import {
   ScrollText,
   Plug,
   MessageCircle,
+  KeyRound,
+  Workflow,
+  History,
+  Sliders,
+  ListPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,6 +31,11 @@ const ICONS = {
   log: ScrollText,
   integrations: Plug,
   messages: MessageCircle,
+  roles: KeyRound,
+  statusPermissions: Workflow,
+  activity: History,
+  settings: Sliders,
+  customFields: ListPlus,
 } as const;
 
 interface NavItem {

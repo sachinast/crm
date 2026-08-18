@@ -13,23 +13,22 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_role
+from app.api.deps import require_permission
 from app.db.session import get_db
 from app.models.audit import AccessNotificationLog, BookingProcessLog, PiiRevealAuditLog
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.audit import AccessLogRead, PiiRevealLogRead, ProcessLogRead
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
-AUDIT_ROLES = (UserRole.admin, UserRole.super_admin)
+AUDIT_PERMISSIONS = ("audit.view",)
 
 
 @router.get("/pii-reveals", response_model=list[PiiRevealLogRead])
 async def list_pii_reveals(
     lead_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*AUDIT_ROLES)),
+    _: User = Depends(require_permission(*AUDIT_PERMISSIONS)),
 ) -> list[PiiRevealAuditLog]:
     stmt = select(PiiRevealAuditLog)
     if lead_id is not None:
@@ -43,7 +42,7 @@ async def list_pii_reveals(
 async def list_process_log(
     lead_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*AUDIT_ROLES)),
+    _: User = Depends(require_permission(*AUDIT_PERMISSIONS)),
 ) -> list[BookingProcessLog]:
     """The master "Log Report of Booking Process" — TECHNICAL_SPEC.md §9.3.
     Covers the Lead/Booking_Core record's own lifecycle (created, service
@@ -61,7 +60,7 @@ async def list_process_log(
 async def list_access_log(
     lead_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*AUDIT_ROLES)),
+    _: User = Depends(require_permission(*AUDIT_PERMISSIONS)),
 ) -> list[AccessNotificationLog]:
     stmt = select(AccessNotificationLog)
     if lead_id is not None:

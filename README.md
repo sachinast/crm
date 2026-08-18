@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Floating chat widget + universal message notifications complete
+## Status: Master Admin (dynamic roles, status workflow, activity log, settings, custom fields) complete
 
 **Phase 0 — Scaffolding:**
 
@@ -376,6 +376,52 @@ feature above):
   Floating widget itself verified in-browser: bubble persists across page navigation, opens a
   working compact panel, starts a new conversation, sends a message, and stays out of the way
   on `/messages`. `npm run lint`, `npm run build`, and the full 108-test backend suite all clean.
+
+**Master Admin** (roles, status workflow, activity log, settings, and custom fields all made
+runtime-editable — no deploy needed to add a role, change who can do what, add a config value, or
+add a form field):
+
+- ✅ **Roles & Permissions engine** — replaced the fixed `user_role` Postgres enum + ~20 hardcoded
+  role-tuple constants across 12 backend files with data-driven `permissions`/`roles`/
+  `role_permissions` tables (`0006_roles_permissions.py`). Zero-behavior-change seed: every
+  existing role starts with exactly the permission set it already had. `require_permission(*codes)`
+  replaces `require_role(*roles)` everywhere; a custom role created through `/admin/roles` can be
+  granted any combination of the 20-code catalog immediately — no token refresh needed, since
+  permissions are read fresh from the DB on every request. The 10 original roles are protected
+  (`is_system_role`) from deletion/rename, only their permissions can be edited. Frontend:
+  `/admin/roles` — two-pane role list + permission-grid editor, create/delete custom roles.
+- ✅ **Status-machine role permissions** — finished wiring up `status_lookup`'s
+  Phase-0 scaffolding into a real `status_role_permissions` join table (`0007`), so who can set a
+  booking status, who gets notified, and whose visibility it's relevant to (PRD §3.2
+  "Status-Based Sharing") are all admin-editable at `/admin/status-permissions`, per status, per
+  role. The transition graph itself (which status can follow which) stays a code-level concern —
+  only the role-gating around it moved to the DB.
+- ✅ **Activity log** — a general-purpose, milestone-level `activity_log` table (`0008`) covering
+  logins (success + failed, with IP/UA), admin config changes (roles, settings, custom fields),
+  conversations started, and — closing a real gap — **denied PII-reveal attempts**, not just
+  successful ones (the existing `pii_reveal_audit_log` only ever recorded successes). `/admin/activity`
+  is filterable + paginated, with a dedicated "PII Reveal Activity" section merging both sources.
+- ✅ **Generic settings store** — replaced the single-row, single-boolean `system_settings` table
+  with a typed `app_settings` key-value store (`0009`) an admin can add arbitrary entries to at
+  `/admin/settings`. Seeded two real values to prove it: messaging's attachment size cap (was a
+  `Settings` env var) and the composer's quick-reply chip presets (was hardcoded in
+  `lib/emoji-data.ts`) — both take effect immediately, verified live via the actual
+  `/messaging/quick-replies` endpoint the Composer fetches from on mount.
+- ✅ **Custom form fields** — `custom_field_definitions` (`0010`) + a `custom_fields` JSONB column
+  on Leads and all three booking types. One shared validator
+  (`app/domain/custom_fields.py`) — unknown keys rejected, required fields enforced, per-type
+  checked (text/number/date/select/checkbox) — backs all four entities' create/update endpoints.
+  One reusable `<DynamicFieldsBlock>` component, dropped into the lead intake form, the lead
+  detail page (with its own PATCH-backed edit panel), and all three booking forms — renders
+  nothing for an entity type with no fields defined yet. Admin UI at `/admin/custom-fields`
+  (per-entity-type tabs, inline CRUD).
+- ✅ Small bundled fix: the lead form's "Name" field is now labeled "Customer Name" (copy-only).
+- ✅ 138 passing pytest tests (30 new: `test_rbac.py`, `test_status_admin.py`,
+  `test_activity_log.py`, `test_settings_admin.py`, `test_custom_fields.py`), `npm run lint` +
+  `npm run build` clean, and every sub-system verified live in-browser against a real backend —
+  including two real bugs caught and fixed along the way: a circular-import ordering bug in
+  `seed_superadmin.py`, and the frontend's shared backend-proxy helper crashing on any 204
+  (no-body) response instead of relaying it.
 
 Next: **Phase 9 — Hardening & deploy** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 

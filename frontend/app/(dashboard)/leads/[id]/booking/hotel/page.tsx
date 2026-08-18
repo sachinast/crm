@@ -23,6 +23,7 @@ interface HotelBooking {
   prepaid_amount: number;
   pay_at_counter_amount: number;
   total_amount: number;
+  custom_fields: Record<string, unknown>;
 }
 
 export default async function HotelBookingPage({ params }: { params: Promise<{ id: string }> }) {

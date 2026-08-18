@@ -14,7 +14,8 @@ from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
 from app.domain.process_log import log_process_event
-from app.domain.status_machine import can_transition, roles_to_notify
+from app.domain.status_machine import can_transition
+from app.domain.status_permissions import roles_to_notify
 from app.models.audit import Notification, StatusHistory
 from app.models.booking import AuthorizationRecord
 from app.models.enums import BookingStatus
@@ -126,10 +127,10 @@ async def submit_authorization(
         new_value=BookingStatus.client_approved.value,
     )
 
-    notify_roles = roles_to_notify(BookingStatus.client_approved)
+    notify_role_ids = await roles_to_notify(db, BookingStatus.client_approved)
     message = f"Lead {lead.id} moved from {previous_status.value} to client_approved (customer authorized)"
-    for role in notify_roles:
-        db.add(Notification(lead_id=lead.id, recipient_role=role, type="status_change", message=message))
+    for role_id in notify_role_ids:
+        db.add(Notification(lead_id=lead.id, recipient_role_id=role_id, type="status_change", message=message))
 
     await db.commit()
     await db.refresh(lead)
@@ -145,8 +146,8 @@ async def submit_authorization(
         "status": BookingStatus.client_approved.value,
         "message": message,
     }
-    for role in notify_roles:
-        await connection_manager.send_to_role(role, payload_out)
+    for role_id in notify_role_ids:
+        await connection_manager.send_to_role(role_id, payload_out)
 
     return AuthorizationResult(lead_id=lead.id, status=lead.status, authorized_at=record.authorized_at)
 

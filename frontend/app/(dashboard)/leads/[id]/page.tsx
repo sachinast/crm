@@ -6,20 +6,21 @@ import { Fragment } from "react";
 import RevealField from "@/components/pii/RevealField";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { statusBadgeStyle } from "@/lib/status-colors";
 import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
 
 import CancellationPanel from "./CancellationPanel";
+import LeadCustomFieldsPanel from "./LeadCustomFieldsPanel";
 import ModificationsPanel from "./ModificationsPanel";
 import PaymentActions from "./PaymentActions";
 import StatusActions from "./StatusActions";
 
-// PRD groups "modification/cancellation requests" under Change Dep/CS, with
-// Admin/Super Admin oversight — mirrors MODIFICATION_ROLES/CANCELLATION_ROLES
-// in the backend (backend/app/api/v1/modifications.py, cancellations.py).
-// This only controls whether the *form* renders; the backend is still the
-// actual authority (403s regardless of what this hides).
-const MODIFICATION_ROLES = new Set(["change_dep", "cs", "admin", "super_admin"]);
+// mirrors modifications.manage / cancellations.manage in the backend
+// (backend/app/api/v1/modifications.py, cancellations.py) — whichever roles
+// currently hold those permissions, not a hardcoded role list. This only
+// controls whether the *form* renders; the backend is still the actual
+// authority (403s regardless of what this hides).
 
 interface LeadDetail {
   id: string;
@@ -33,6 +34,7 @@ interface LeadDetail {
   duplicate_of_id: string | null;
   duplicate_override_reason: string | null;
   source: string | null; // set for leads captured externally via POST /leads/capture (Phase 8)
+  custom_fields: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -196,7 +198,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     getCurrentUser(),
   ]);
 
-  const canModify = currentUser !== null && MODIFICATION_ROLES.has(currentUser.role) && booking !== null;
+  const canModify =
+    currentUser !== null &&
+    hasPermission(currentUser, "modifications.manage", "cancellations.manage") &&
+    booking !== null;
 
   // card_charged/card_declined are handled by the dedicated PaymentActions
   // form below (which also records a PaymentTransaction), not the generic
@@ -260,6 +265,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <dt style={{ color: "var(--ink-faint)" }}>Created</dt>
         <dd>{new Date(lead.created_at).toLocaleString()}</dd>
       </dl>
+
+      <LeadCustomFieldsPanel
+        leadId={id}
+        initialCustomFields={lead.custom_fields}
+        canEdit={hasPermission(currentUser, "leads.create")}
+      />
 
       <div className="card mb-4">
         <h2 className="section-label mb-3">Status actions</h2>

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import { VEHICLE_TYPES } from "@/lib/vehicle-types";
 
 interface CarBooking {
@@ -20,6 +21,7 @@ interface CarBooking {
   return_location: string;
   prepaid_amount: number;
   pay_at_counter_amount: number;
+  custom_fields: Record<string, unknown>;
 }
 
 const EMPTY: CarBooking = {
@@ -37,6 +39,7 @@ const EMPTY: CarBooking = {
   return_location: "",
   prepaid_amount: 0,
   pay_at_counter_amount: 0,
+  custom_fields: {},
 };
 
 // datetime-local inputs give "YYYY-MM-DDTHH:mm" with no timezone. Treating that
@@ -147,6 +150,12 @@ export default function CarBookingForm({
       <Field label="Pay-at-counter amount">
         <input required type="number" min={0} step="0.01" value={form.pay_at_counter_amount} onChange={(e) => setForm({ ...form, pay_at_counter_amount: Number(e.target.value) })} className="input" />
       </Field>
+
+      <DynamicFieldsBlock
+        entityType="car_booking"
+        value={form.custom_fields}
+        onChange={(next) => setForm({ ...form, custom_fields: next })}
+      />
 
       <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(form.prepaid_amount) + Number(form.pay_at_counter_amount)).toFixed(2)} (computed)

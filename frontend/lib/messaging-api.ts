@@ -67,6 +67,11 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   return json(resp);
 }
 
+export async function fetchQuickReplies(): Promise<string[]> {
+  const resp = await fetch("/api/messaging/quick-replies");
+  return json(resp);
+}
+
 export async function fetchConversations(): Promise<ConversationRead[]> {
   const resp = await fetch("/api/messaging/conversations");
   return json(resp);

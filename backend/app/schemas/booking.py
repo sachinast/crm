@@ -6,6 +6,7 @@ appears on the *Read schemas.
 """
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -29,6 +30,9 @@ class CarBookingCreate(BaseModel):
     return_location: str = Field(min_length=1)
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
+    # Admin-defined extra fields (migration 0010) — validated against
+    # custom_field_definitions by app/domain/custom_fields.py.
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _return_after_pickup(self) -> "CarBookingCreate":
@@ -52,6 +56,7 @@ class CarBookingUpdate(BaseModel):
     return_location: str | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    custom_fields: dict[str, Any] | None = None
 
 
 class CarBookingRead(BaseModel):
@@ -74,6 +79,7 @@ class CarBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime
 
@@ -91,6 +97,7 @@ class HotelBookingCreate(BaseModel):
     check_out_date: date
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _checkout_after_checkin(self) -> "HotelBookingCreate":
@@ -111,6 +118,7 @@ class HotelBookingUpdate(BaseModel):
     check_out_date: date | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    custom_fields: dict[str, Any] | None = None
 
 
 class HotelBookingRead(BaseModel):
@@ -128,6 +136,7 @@ class HotelBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime
 
@@ -145,6 +154,7 @@ class FlightBookingCreate(BaseModel):
     cabin_class: str = Field(min_length=1)
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class FlightBookingUpdate(BaseModel):
@@ -157,6 +167,7 @@ class FlightBookingUpdate(BaseModel):
     cabin_class: str | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    custom_fields: dict[str, Any] | None = None
 
 
 class FlightBookingRead(BaseModel):
@@ -174,5 +185,6 @@ class FlightBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime

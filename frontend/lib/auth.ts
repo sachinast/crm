@@ -16,6 +16,12 @@ export interface CurrentUser {
   name: string;
   email: string;
   role: string;
+  // Flattened permission codes for the caller's role (app/domain/permissions.py
+  // is the canonical catalog) — GET /users/me only, not the general UserRead
+  // shape used when listing other users. Drives UI gating in lib/permissions.ts
+  // instead of hardcoded role-name checks, so a custom role created through
+  // Admin → Roles works everywhere without a frontend code change.
+  permissions: string[];
   ip_whitelist_enabled: boolean;
   is_active: boolean;
   created_at: string;
@@ -37,8 +43,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   } catch {
     return null;
   }
-}
-
-export function isAdminRole(role: string): boolean {
-  return role === "admin" || role === "super_admin";
 }

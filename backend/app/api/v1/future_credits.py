@@ -10,33 +10,23 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_role
+from app.api.deps import require_permission
 from app.db.session import get_db
 from app.models.booking import FutureCredit
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.future_credit import FutureCreditCreate, FutureCreditRead
 
 router = APIRouter(prefix="/future-credits", tags=["future-credits"])
 
-CREATE_ROLES = (UserRole.tl, UserRole.cs, UserRole.admin, UserRole.super_admin)
-READ_ROLES = (
-    UserRole.billing,
-    UserRole.cs,
-    UserRole.change_dep,
-    UserRole.chargeback_dep,
-    UserRole.auditor,
-    UserRole.tl,
-    UserRole.admin,
-    UserRole.super_admin,
-)
+CREATE_PERMISSIONS = ("future_credits.create",)
+READ_PERMISSIONS = ("future_credits.view",)
 
 
 @router.post("", response_model=FutureCreditRead, status_code=201)
 async def create_future_credit(
     payload: FutureCreditCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*CREATE_ROLES)),
+    current_user: User = Depends(require_permission(*CREATE_PERMISSIONS)),
 ) -> FutureCredit:
     credit = FutureCredit(
         source_lead_id=payload.source_lead_id,
@@ -55,7 +45,7 @@ async def create_future_credit(
 async def list_future_credits(
     source_lead_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*READ_ROLES)),
+    _: User = Depends(require_permission(*READ_PERMISSIONS)),
 ) -> list[FutureCredit]:
     stmt = select(FutureCredit)
     if source_lead_id is not None:

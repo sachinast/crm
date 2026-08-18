@@ -15,11 +15,12 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.main import app
-from app.models.enums import UserRole
+from app.models.rbac import Role
 from app.models.user import User
 
 # All async tests/fixtures in this module share ONE event loop (session-scoped —
@@ -32,13 +33,14 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 BASE_URL = "http://testserver/api/v1"
 
 
-async def _create_user(email: str, password: str, role: UserRole, ip_whitelist_enabled: bool = False) -> uuid.UUID:
+async def _create_user(email: str, password: str, role: str, ip_whitelist_enabled: bool = False) -> uuid.UUID:
     async with AsyncSessionLocal() as db:
+        role_row = await db.scalar(select(Role).where(Role.name == role))
         user = User(
             name="Test User",
             email=email,
             password_hash=hash_password(password),
-            role=role,
+            role_id=role_row.id,
             ip_whitelist_enabled=ip_whitelist_enabled,
         )
         db.add(user)
@@ -70,7 +72,7 @@ async def api_client():
 async def super_admin():
     email = _unique_email("super")
     password = "correct-horse-battery-staple"
-    user_id = await _create_user(email, password, UserRole.super_admin)
+    user_id = await _create_user(email, password, "super_admin")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -79,7 +81,7 @@ async def super_admin():
 async def agent_user():
     email = _unique_email("agent")
     password = "agent-password-123"
-    user_id = await _create_user(email, password, UserRole.agent)
+    user_id = await _create_user(email, password, "agent")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -153,7 +155,7 @@ async def test_agent_cannot_list_or_create_users(api_client, agent_user):
             "name": "Should Not Be Created",
             "email": _unique_email("blocked"),
             "password": "whatever123",
-            "role": "agent",
+            "role_name": "agent",
         },
         headers=headers,
     )
@@ -172,7 +174,7 @@ async def test_super_admin_can_create_user_with_role(api_client, super_admin):
     email = _unique_email("newagent")
     resp = await api_client.post(
         "/users",
-        json={"name": "New Agent", "email": email, "password": "abc123456", "role": "agent"},
+        json={"name": "New Agent", "email": email, "password": "abc123456", "role_name": "agent"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 201, resp.text
@@ -190,7 +192,7 @@ async def test_duplicate_email_rejected(api_client, super_admin):
             "name": "Duplicate",
             "email": super_admin["email"],
             "password": "abc123456",
-            "role": "agent",
+            "role_name": "agent",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -202,30 +204,30 @@ async def test_only_super_admin_can_change_registration_toggle(api_client, super
     agent_token = await _login(api_client, agent_user["email"], agent_user["password"])
 
     forbidden = await api_client.patch(
-        "/system-settings",
-        json={"registration_enabled": True},
+        "/admin/settings/registration_enabled",
+        json={"value": True},
         headers={"Authorization": f"Bearer {agent_token}"},
     )
     assert forbidden.status_code == 403
 
     allowed = await api_client.patch(
-        "/system-settings",
-        json={"registration_enabled": True},
+        "/admin/settings/registration_enabled",
+        json={"value": True},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert allowed.status_code == 200
-    assert allowed.json()["registration_enabled"] is True
+    assert allowed.json()["value"] is True
 
     # restore the safe default so this test is order-independent / repeatable
     await api_client.patch(
-        "/system-settings",
-        json={"registration_enabled": False},
+        "/admin/settings/registration_enabled",
+        json={"value": False},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
 
 
 async def test_ip_whitelist_blocks_request_when_no_ip_matches(api_client):
-    user_id = await _create_user(_unique_email("ipwl"), "pw12345678", UserRole.admin, ip_whitelist_enabled=True)
+    user_id = await _create_user(_unique_email("ipwl"), "pw12345678", "admin", ip_whitelist_enabled=True)
     try:
         async with AsyncSessionLocal() as db:
             user = await db.get(User, user_id)

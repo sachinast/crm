@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+
 interface HotelBooking {
   booking_reference: string;
   booking_platform: string;
@@ -13,6 +15,7 @@ interface HotelBooking {
   check_out_date: string;
   prepaid_amount: number;
   pay_at_counter_amount: number;
+  custom_fields: Record<string, unknown>;
 }
 
 const EMPTY: HotelBooking = {
@@ -25,6 +28,7 @@ const EMPTY: HotelBooking = {
   check_out_date: "",
   prepaid_amount: 0,
   pay_at_counter_amount: 0,
+  custom_fields: {},
 };
 
 export default function HotelBookingForm({
@@ -98,6 +102,12 @@ export default function HotelBookingForm({
       <Field label="Pay-at-counter amount">
         <input required type="number" min={0} step="0.01" value={form.pay_at_counter_amount} onChange={(e) => setForm({ ...form, pay_at_counter_amount: Number(e.target.value) })} className="input" />
       </Field>
+
+      <DynamicFieldsBlock
+        entityType="hotel_booking"
+        value={form.custom_fields}
+        onChange={(next) => setForm({ ...form, custom_fields: next })}
+      />
 
       <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(form.prepaid_amount) + Number(form.pay_at_counter_amount)).toFixed(2)} (computed)

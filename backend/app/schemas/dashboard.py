@@ -7,12 +7,11 @@ see one record at a time.
 """
 from pydantic import BaseModel
 
-from app.models.enums import UserRole
 from app.schemas.lead import LeadSummary
 
 
 class DashboardSummary(BaseModel):
-    role: UserRole
+    role: str
     total_visible_leads: int
     leads_by_status: dict[str, int]
     recent_leads: list[LeadSummary]

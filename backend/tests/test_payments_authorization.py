@@ -16,9 +16,10 @@ from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.models.audit import StatusHistory
 from app.models.booking import AuthorizationRecord
-from app.models.enums import BookingStatus, UserRole
+from app.models.enums import BookingStatus
 from app.models.lead import Lead
 from app.models.payment import PaymentTransaction
+from app.models.rbac import Role
 from app.models.user import User
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -52,9 +53,10 @@ FULL_CONSENT = {
 }
 
 
-async def _create_user(email: str, password: str, role: UserRole) -> uuid.UUID:
+async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
     async with AsyncSessionLocal() as db:
-        user = User(name="Test User", email=email, password_hash=hash_password(password), role=role)
+        role_row = await db.scalar(select(Role).where(Role.name == role))
+        user = User(name="Test User", email=email, password_hash=hash_password(password), role_id=role_row.id)
         db.add(user)
         await db.commit()
         await db.refresh(user)
@@ -103,7 +105,7 @@ async def api_client():
 async def agent():
     email = _unique_email("agent")
     password = "agent-password-123"
-    user_id = await _create_user(email, password, UserRole.agent)
+    user_id = await _create_user(email, password, "agent")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -112,7 +114,7 @@ async def agent():
 async def billing():
     email = _unique_email("billing")
     password = "billing-password-1"
-    user_id = await _create_user(email, password, UserRole.billing)
+    user_id = await _create_user(email, password, "billing")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 

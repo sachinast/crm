@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
@@ -13,6 +14,18 @@ class LeadCreate(BaseModel):
     name: str = Field(min_length=1)
     phone: str = Field(min_length=1)
     email: EmailStr
+    # Admin-defined extra fields (migration 0010) — validated against
+    # custom_field_definitions by app/domain/custom_fields.py before the
+    # lead is created.
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class CustomFieldsUpdate(BaseModel):
+    """PATCH /leads/{id}/custom-fields — full replace, same "send the
+    complete desired state" contract as this codebase's other *Update
+    schemas that touch a JSONB/collection field."""
+
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class LeadRead(BaseModel):
@@ -29,6 +42,7 @@ class LeadRead(BaseModel):
     duplicate_of_id: uuid.UUID | None
     duplicate_override_reason: str | None
     source: str | None  # set for leads captured externally via POST /leads/capture (Phase 8)
+    custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime
 

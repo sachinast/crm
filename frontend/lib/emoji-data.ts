@@ -19,4 +19,6 @@ export const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
   },
 ];
 
-export const QUICK_REPLIES = ["👍 Got it", "✅ On it", "🙏 Thanks!", "⏳ One sec"];
+// The quick-reply chip presets used to live here as a hardcoded array — now
+// admin-editable (app_settings key "messaging.quick_replies") and fetched via
+// lib/messaging-api.ts's fetchQuickReplies() / GET /messaging/quick-replies.

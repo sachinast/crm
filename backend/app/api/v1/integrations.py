@@ -9,12 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_api_key, require_role
+from app.api.deps import require_api_key, require_permission
 from app.db.session import get_db
 from app.domain.api_keys import generate_api_key
 from app.domain.duplicate_check import find_duplicate_candidates
 from app.domain.process_log import log_process_event
-from app.models.enums import UserRole
 from app.models.integration import ApiKey
 from app.models.lead import Lead
 from app.models.user import User
@@ -30,14 +29,14 @@ from app.schemas.integration import (
 keys_router = APIRouter(prefix="/integrations/api-keys", tags=["integrations"])
 capture_router = APIRouter(prefix="/leads", tags=["integrations"])
 
-MANAGE_KEYS_ROLES = (UserRole.admin, UserRole.super_admin)
+MANAGE_KEYS_PERMISSIONS = ("integrations.manage",)
 
 
 @keys_router.post("", response_model=ApiKeyCreated, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     payload: ApiKeyCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(*MANAGE_KEYS_ROLES)),
+    current_user: User = Depends(require_permission(*MANAGE_KEYS_PERMISSIONS)),
 ) -> ApiKeyCreated:
     assigned_agent = await db.get(User, payload.assigned_agent_id)
     if assigned_agent is None:
@@ -68,7 +67,7 @@ async def create_api_key(
 @keys_router.get("", response_model=list[ApiKeyRead])
 async def list_api_keys(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*MANAGE_KEYS_ROLES)),
+    _: User = Depends(require_permission(*MANAGE_KEYS_PERMISSIONS)),
 ) -> list[ApiKey]:
     result = await db.execute(select(ApiKey).order_by(ApiKey.created_at.desc()))
     return list(result.scalars().all())
@@ -79,7 +78,7 @@ async def update_api_key(
     key_id: uuid.UUID,
     payload: ApiKeyUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(*MANAGE_KEYS_ROLES)),
+    _: User = Depends(require_permission(*MANAGE_KEYS_PERMISSIONS)),
 ) -> ApiKey:
     """Soft-revoke only (is_active=False) — never a hard delete, so the
     audit trail of what keys existed and when they were cut off survives."""

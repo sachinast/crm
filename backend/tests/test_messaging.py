@@ -13,7 +13,7 @@ from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.models.audit import Notification
-from app.models.enums import UserRole
+from app.models.rbac import Role
 from app.models.user import User
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -32,9 +32,10 @@ def _unique_email(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}@example.com"
 
 
-async def _create_user(email: str, password: str, role: UserRole = UserRole.agent) -> uuid.UUID:
+async def _create_user(email: str, password: str, role: str = "agent") -> uuid.UUID:
     async with AsyncSessionLocal() as db:
-        user = User(name="Test User", email=email, password_hash=hash_password(password), role=role)
+        role_row = await db.scalar(select(Role).where(Role.name == role))
+        user = User(name="Test User", email=email, password_hash=hash_password(password), role_id=role_row.id)
         db.add(user)
         await db.commit()
         await db.refresh(user)

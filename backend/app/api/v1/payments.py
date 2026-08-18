@@ -13,10 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_role
+from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted, require_permission
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
-from app.models.enums import BookingStatus, UserRole
+from app.models.enums import BookingStatus
 from app.models.payment import PaymentTransaction
 from app.models.user import User
 from app.schemas.payment import PaymentCreate, PaymentRead
@@ -31,7 +31,7 @@ OUTCOME_TO_STATUS = {"charged": BookingStatus.card_charged, "declined": BookingS
 async def process_payment(
     payload: PaymentCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.billing)),
+    current_user: User = Depends(require_permission("billing.charge_card")),
 ) -> PaymentTransaction:
     lead = await get_visible_lead_or_404(db, current_user, payload.lead_id)
     booking = await get_booking_for_lead(db, lead)

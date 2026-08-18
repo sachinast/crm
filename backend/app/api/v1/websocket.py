@@ -15,7 +15,6 @@ from jose import JWTError
 
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
-from app.models.enums import UserRole
 from app.models.user import User
 
 router = APIRouter()
@@ -24,23 +23,27 @@ router = APIRouter()
 class ConnectionManager:
     def __init__(self) -> None:
         self._by_user: dict[uuid.UUID, set[WebSocket]] = {}
-        self._by_role: dict[UserRole, set[WebSocket]] = {}
+        # Keyed by role_id (a plain UUID column on User — not the `role`
+        # relationship object, which would be a fresh, non-equal Python
+        # instance per connection's own short-lived DB session and so
+        # useless as a dict key here).
+        self._by_role: dict[uuid.UUID, set[WebSocket]] = {}
 
     async def connect(self, ws: WebSocket, user: User) -> None:
         await ws.accept()
         self._by_user.setdefault(user.id, set()).add(ws)
-        self._by_role.setdefault(user.role, set()).add(ws)
+        self._by_role.setdefault(user.role_id, set()).add(ws)
 
     def disconnect(self, ws: WebSocket, user: User) -> None:
         self._by_user.get(user.id, set()).discard(ws)
-        self._by_role.get(user.role, set()).discard(ws)
+        self._by_role.get(user.role_id, set()).discard(ws)
 
     async def send_to_user(self, user_id: uuid.UUID, payload: dict) -> None:
         for ws in list(self._by_user.get(user_id, set())):
             await self._safe_send(ws, payload)
 
-    async def send_to_role(self, role: UserRole, payload: dict) -> None:
-        for ws in list(self._by_role.get(role, set())):
+    async def send_to_role(self, role_id: uuid.UUID, payload: dict) -> None:
+        for ws in list(self._by_role.get(role_id, set())):
             await self._safe_send(ws, payload)
 
     def is_user_online(self, user_id: uuid.UUID) -> bool:

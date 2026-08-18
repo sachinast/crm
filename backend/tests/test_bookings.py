@@ -6,12 +6,13 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.main import app
-from app.models.enums import UserRole
 from app.models.lead import Lead
+from app.models.rbac import Role
 from app.models.user import User
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -19,9 +20,10 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 BASE_URL = "http://testserver/api/v1"
 
 
-async def _create_user(email: str, password: str, role: UserRole) -> uuid.UUID:
+async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
     async with AsyncSessionLocal() as db:
-        user = User(name="Test User", email=email, password_hash=hash_password(password), role=role)
+        role_row = await db.scalar(select(Role).where(Role.name == role))
+        user = User(name="Test User", email=email, password_hash=hash_password(password), role_id=role_row.id)
         db.add(user)
         await db.commit()
         await db.refresh(user)
@@ -63,7 +65,7 @@ async def api_client():
 async def agent():
     email = _unique_email("agent")
     password = "agent-password-123"
-    user_id = await _create_user(email, password, UserRole.agent)
+    user_id = await _create_user(email, password, "agent")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -257,7 +259,7 @@ async def test_booking_endpoints_respect_lead_visibility(api_client, agent):
     await api_client.post(f"/leads/{lead_id}/car-booking", json=CAR_PAYLOAD, headers=_auth(token))
 
     other_email = _unique_email("otheragent")
-    other_id = await _create_user(other_email, "other-password-123", UserRole.agent)
+    other_id = await _create_user(other_email, "other-password-123", "agent")
     try:
         other_token = await _login(api_client, other_email, "other-password-123")
         resp = await api_client.get(f"/leads/{lead_id}/car-booking", headers=_auth(other_token))

@@ -19,8 +19,9 @@ from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.models.audit import Notification, StatusHistory
-from app.models.enums import BookingStatus, UserRole
+from app.models.enums import BookingStatus
 from app.models.lead import Lead
+from app.models.rbac import Role
 from app.models.user import User
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -28,9 +29,10 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 BASE_URL = "http://testserver/api/v1"
 
 
-async def _create_user(email: str, password: str, role: UserRole) -> uuid.UUID:
+async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
     async with AsyncSessionLocal() as db:
-        user = User(name="Test User", email=email, password_hash=hash_password(password), role=role)
+        role_row = await db.scalar(select(Role).where(Role.name == role))
+        user = User(name="Test User", email=email, password_hash=hash_password(password), role_id=role_row.id)
         db.add(user)
         await db.commit()
         await db.refresh(user)
@@ -80,7 +82,7 @@ async def api_client():
 async def agent():
     email = _unique_email("agent")
     password = "agent-password-123"
-    user_id = await _create_user(email, password, UserRole.agent)
+    user_id = await _create_user(email, password, "agent")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -89,7 +91,7 @@ async def agent():
 async def billing():
     email = _unique_email("billing")
     password = "billing-password-1"
-    user_id = await _create_user(email, password, UserRole.billing)
+    user_id = await _create_user(email, password, "billing")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -98,7 +100,7 @@ async def billing():
 async def auditor():
     email = _unique_email("auditor")
     password = "auditor-password-1"
-    user_id = await _create_user(email, password, UserRole.auditor)
+    user_id = await _create_user(email, password, "auditor")
     yield {"id": user_id, "email": email, "password": password}
     await _delete_user(user_id)
 
@@ -234,8 +236,9 @@ async def test_status_change_writes_history_and_notifications(api_client, agent,
         notifications = (
             await db.execute(select(Notification).where(Notification.lead_id == uuid.UUID(lead_id)))
         ).scalars().all()
+        billing_role_id = await db.scalar(select(Role.id).where(Role.name == "billing"))
         # transferred_to_billing notifies the 'billing' role (status_machine.TRANSITIONS)
-        assert any(n.recipient_role == UserRole.billing and n.type == "status_change" for n in notifications)
+        assert any(n.recipient_role_id == billing_role_id and n.type == "status_change" for n in notifications)
 
     await _delete_lead(uuid.UUID(lead_id))
 

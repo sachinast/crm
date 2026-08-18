@@ -4,6 +4,8 @@ import { AlertTriangle, Car, Hotel, Plane } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+
 // PRD §4.1 "Lead-First" flow:
 //   Step 1 intake -> Step 2 automatic duplicate search (server-side, on create)
 //   -> Step 3 conditional confirm prompt -> Step 4 service-type unlock.
@@ -41,6 +43,7 @@ export default function NewLeadPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("intake");
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [lead, setLead] = useState<LeadResponse | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [overrideReason, setOverrideReason] = useState("");
@@ -55,7 +58,7 @@ export default function NewLeadPage() {
     const resp = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, custom_fields: customFields }),
     });
     const body = await resp.json();
     setSubmitting(false);
@@ -137,7 +140,7 @@ export default function NewLeadPage() {
       {step === "intake" && (
         <form onSubmit={handleIntakeSubmit} className="card flex flex-col gap-4">
           <label className="text-sm font-medium">
-            Name
+            Customer Name
             <input
               required
               value={form.name}
@@ -164,6 +167,7 @@ export default function NewLeadPage() {
               className="input mt-1.5"
             />
           </label>
+          <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
           {error && (
             <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
               {error}

@@ -3,24 +3,12 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-const ROLES = [
-  "super_admin",
-  "admin",
-  "agent",
-  "billing",
-  "tl",
-  "auditor",
-  "cs",
-  "change_dep",
-  "chargeback_dep",
-  "cr_booking",
-] as const;
+import type { RoleDef } from "@/lib/roles-api";
 
-const EMPTY_FORM = { name: "", email: "", password: "", role: "agent" as string };
-
-export default function CreateUserForm() {
+export default function CreateUserForm({ roles }: { roles: RoleDef[] }) {
   const router = useRouter();
-  const [form, setForm] = useState(EMPTY_FORM);
+  const emptyForm = { name: "", email: "", password: "", role_name: roles[0]?.name ?? "" };
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,7 +31,7 @@ export default function CreateUserForm() {
       return;
     }
 
-    setForm(EMPTY_FORM);
+    setForm(emptyForm);
     router.refresh(); // re-runs the server component list below with the new row
   }
 
@@ -73,10 +61,14 @@ export default function CreateUserForm() {
         onChange={(e) => setForm({ ...form, password: e.target.value })}
         className="input"
       />
-      <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="input">
-        {ROLES.map((role) => (
-          <option key={role} value={role}>
-            {role}
+      <select
+        value={form.role_name}
+        onChange={(e) => setForm({ ...form, role_name: e.target.value })}
+        className="input capitalize"
+      >
+        {roles.map((role) => (
+          <option key={role.id} value={role.name} className="capitalize">
+            {role.name.replace(/_/g, " ")}
           </option>
         ))}
       </select>
@@ -87,7 +79,7 @@ export default function CreateUserForm() {
         </p>
       )}
 
-      <button type="submit" disabled={submitting} className="btn-primary col-span-2">
+      <button type="submit" disabled={submitting || roles.length === 0} className="btn-primary col-span-2">
         {submitting ? "Creating…" : "Create user"}
       </button>
     </form>

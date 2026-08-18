@@ -1,19 +1,6 @@
 import enum
 
 
-class UserRole(str, enum.Enum):
-    super_admin = "super_admin"
-    admin = "admin"
-    agent = "agent"
-    billing = "billing"
-    tl = "tl"
-    auditor = "auditor"
-    cs = "cs"
-    change_dep = "change_dep"
-    chargeback_dep = "chargeback_dep"
-    cr_booking = "cr_booking"
-
-
 class ServiceType(str, enum.Enum):
     car = "car"
     hotel = "hotel"
