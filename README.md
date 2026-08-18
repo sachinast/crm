@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: UI/UX redesign + role-based Dashboard complete
+## Status: In-app messaging complete
 
 **Phase 0 — Scaffolding:**
 
@@ -284,6 +284,63 @@ make it modern and luxurious... also add dashboard for all Users based on their 
   palette carries through to the one unauthenticated, customer-facing screen in the app. Also
   spot-checked Admin → Users and Admin → Integrations for the same visual consistency. `npm run
   lint` and `npm run build` both clean (all 21 routes compile) after every page.
+
+**In-app messaging** (requested ahead of Phase 9): a real-time chat system letting every
+registered user message every other registered user directly — deliberately independent of the
+lead-visibility RBAC model used everywhere else in this app, since messaging is peer-to-peer,
+not booking-scoped.
+
+- ✅ New schema (migration `0005`): `conversations`/`conversation_participants` (supports both
+  1:1 and group chats — creating a conversation with one other user is idempotent, reusing the
+  existing 1:1 thread instead of spawning duplicates), `messages`, `message_attachments`,
+  `message_mentions`. Access control is just "are you a participant" — 404s (not 403s) for
+  non-participants, the same leak-nothing pattern used for leads.
+- ✅ `GET /messaging/users` — directory search open to *any* authenticated user (unlike the
+  Admin-only `GET /users`), for starting a conversation or @mention autocomplete.
+- ✅ `POST/GET /messaging/conversations`, `GET/POST /messaging/conversations/{id}/messages`,
+  `POST /messaging/conversations/{id}/read` — full send/receive/read-receipt lifecycle. Message
+  status (`sent`/`delivered`/`read`) is computed from `ConversationParticipant.last_read_at`
+  rather than a per-message-per-recipient row; "delivered" means at least one other participant's
+  WebSocket was connected at send time — a documented, honest simplification of the same
+  single-worker, in-memory `ConnectionManager` built in Phase 4, now also carrying `chat_message`/
+  `chat_read`/`mention` events alongside the original status-change notifications.
+- ✅ @mentions: the composer inserts a stable `@[Name](userId)` markup into the message body when
+  a user is picked from the suggestion dropdown (not fragile text matching), mentioned users must
+  already be conversation participants, and each mention writes a `Notification` row + WS push so
+  it surfaces in the existing notification bell.
+- ✅ File uploads (`POST/GET /messaging/attachments`): JPG/JPEG/PNG/WEBP/PDF only, capped at 8MB,
+  validated three independent ways (declared content-type, file extension, and a magic-byte sniff
+  of the actual bytes) that all have to agree — catches a mislabeled file without a heavyweight
+  scanning dependency. Stored as bytes directly in Postgres rather than an object store, a
+  deliberate self-contained tradeoff (documented in `app/models/messaging.py`) that needs zero
+  extra infra in any environment this app runs in; swapping in S3/R2 later is a drop-in change to
+  one read/write path, not a schema migration. Uploads/downloads go straight from the browser to
+  the FastAPI backend rather than through a Next.js Route Handler — the same short-lived-token
+  exception the WebSocket connection already uses, reused here so a large upload isn't subject to
+  a serverless function's request-body ceiling.
+- ✅ "Quick response" — a sender-side toggle that flags a message as needing a fast reply (shown
+  as a badge on the message) plus one-click canned quick-reply chips in the composer, covering
+  both readings of the requested "option/indicator."
+- ✅ 15 new passing pytest tests (107 total): 1:1 idempotency, group creation, mention validation
+  (rejects mentioning a non-participant), read-receipt state transitions, unread counts, the
+  three-way attachment validation (rejects a mismatched content-type and a disallowed type), and
+  that a non-participant gets a 404 on both messages and attachment downloads.
+- ✅ Frontend: a new "Messages" nav item visible to every role (with a live unread badge), a
+  two-pane inbox (`app/(dashboard)/messages`) — conversation list with search, a user-search
+  modal for starting new 1:1 or group chats, and a chat window with mention-highlighted bubbles,
+  image thumbnails/PDF file rows, upload progress states, a hand-rolled emoji picker (no external
+  dependency), and read-receipt ticks — all built from the existing design system's `.card`/
+  `.btn-*`/`.input` classes plus two new bubble classes, no new component library.
+- ✅ Verified end-to-end across two real logged-in sessions (Agent and Billing): started a 1:1
+  conversation, sent a message mentioning the other user (confirmed the highlighted mention chip,
+  the notification bell surfacing it, and the sidebar unread badge), replied with a quick-reply
+  chip and the emoji picker, uploaded and sent both an image (confirmed it rendered as a live
+  thumbnail via the WebSocket push with no page reload) and a PDF (confirmed the file-name/icon
+  row), and confirmed message status flipped sender-side from sent → delivered → read as the
+  other participant came online and opened the thread. Caught and fixed one real bug from this
+  pass: a low-resolution image was rendering at its tiny natural pixel size instead of filling the
+  thumbnail box (missing explicit width/height, only `max-*` bounds) — fixed and reverified.
+  `npm run lint`, `npm run build`, and the full 107-test backend suite all clean.
 
 Next: **Phase 9 — Hardening & deploy** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 

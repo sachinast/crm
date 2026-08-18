@@ -47,6 +47,11 @@ class SyncStatus(str, enum.Enum):
     failed = "failed"
 
 
+class AttachmentKind(str, enum.Enum):
+    image = "image"
+    pdf = "pdf"
+
+
 class TransmissionType(str, enum.Enum):
     automatic = "automatic"
     manual = "manual"

@@ -7,6 +7,7 @@ import { getCurrentUser, isAdminRole } from "@/lib/auth";
 
 const BASE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
+  { href: "/messages", label: "Messages", icon: "messages" as const },
   { href: "/leads", label: "Leads", icon: "leads" as const },
   { href: "/billing", label: "Billing", icon: "billing" as const },
   { href: "/audit", label: "Audit / QC", icon: "audit" as const },

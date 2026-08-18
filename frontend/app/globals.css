@@ -247,6 +247,28 @@ body {
     background: rgba(211, 171, 94, 0.16);
     color: #f0d9a3;
   }
+
+  /* In-app messaging — chat bubbles, mention chips, scrollbar */
+  .chat-bubble-own {
+    @apply max-w-md rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .chat-bubble-other {
+    @apply max-w-md rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+  }
+
+  .chat-mention {
+    @apply rounded px-1 py-0.5 font-medium;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
 }
 
 ::selection {

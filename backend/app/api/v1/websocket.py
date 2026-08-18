@@ -43,6 +43,9 @@ class ConnectionManager:
         for ws in list(self._by_role.get(role, set())):
             await self._safe_send(ws, payload)
 
+    def is_user_online(self, user_id: uuid.UUID) -> bool:
+        return bool(self._by_user.get(user_id))
+
     @staticmethod
     async def _safe_send(ws: WebSocket, payload: dict) -> None:
         try:
