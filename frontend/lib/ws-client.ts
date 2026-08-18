@@ -7,6 +7,7 @@ export interface NotificationMessage {
   lead_id?: string;
   status?: string;
   message: string;
+  conversation_id?: string;
 }
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
@@ -51,8 +52,14 @@ export function useNotifications() {
       socket.onmessage = (event) => {
         if (cancelled) return;
         try {
-          const data = JSON.parse(event.data) as NotificationMessage;
-          setMessages((prev) => [data, ...prev].slice(0, 50));
+          const data = JSON.parse(event.data);
+          // This socket also carries messaging events (chat_message/chat_read
+          // — see lib/messaging-client.ts), which aren't notification-shaped
+          // (chat_message's own "message" field is the full message object,
+          // not display text) and are meant for the Messages UI, not this
+          // feed. Only genuine notifications have a string message.
+          if (typeof data?.message !== "string") return;
+          setMessages((prev) => [data as NotificationMessage, ...prev].slice(0, 50));
           setUnread((prev) => prev + 1);
         } catch {
           // ignore malformed frames

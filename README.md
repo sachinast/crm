@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: In-app messaging complete
+## Status: Floating chat widget + universal message notifications complete
 
 **Phase 0 — Scaffolding:**
 
@@ -341,6 +341,41 @@ not booking-scoped.
   pass: a low-resolution image was rendering at its tiny natural pixel size instead of filling the
   thumbnail box (missing explicit width/height, only `max-*` bounds) — fixed and reverified.
   `npm run lint`, `npm run build`, and the full 107-test backend suite all clean.
+
+**Floating chat widget + universal message notifications** (follow-up requests on the messaging
+feature above):
+
+- ✅ Every message now notifies its recipient(s), not just @mentions. `send_message` writes a
+  durable `Notification` row + WS push for every other participant; anyone explicitly mentioned
+  gets the more specific "mentioned you" notification instead (never both for the same message).
+- ✅ Fixed a real bug this surfaced: the notification bell's `useNotifications` (Phase 4) accepted
+  *any* frame off the shared `/ws/notifications` socket unconditionally — since messaging's
+  `chat_message` events carry a full message *object* under the same `message` key the bell
+  expects a display *string* under, that combination was one chat send away from crashing the
+  bell (`{m.message}` rendering an object). Now filtered to only accept string-`message` frames.
+- ✅ Bell entries for messages/mentions are labeled and link to `/messages`.
+- ✅ A persistent floating chat bubble (bottom-right, unread badge) on every dashboard page except
+  `/messages` itself — click to pop out a compact chat panel without leaving what you're doing.
+  Reuses the exact same `MessagingApp` component the full page uses (`variant="compact"`) rather
+  than a parallel implementation: single-pane (list *or* open thread with a back button) instead
+  of the full page's side-by-side layout, since a ~380px-wide floating panel doesn't have room
+  for both.
+- ✅ Consolidated what had been an ad hoc "one WebSocket connection per consumer" pattern into a
+  single shared module-level connection (`lib/messaging-client.ts`) reused by the sidebar badge,
+  the floating widget's badge, and any open chat window — added a second badge consumer (the
+  widget) without adding a second socket.
+- ✅ 1 new passing pytest test (108 total) confirming a plain message and a mention never both
+  fire for the same recipient.
+- ✅ Verified live: the shared-browser-tab-cookie limitation (documented since Phase 4 — logging
+  into a second tab as a different user silently switches the *whole browser's* session,
+  including the first tab's) made a clean two-tab notification demo unreliable, so verified the
+  live push properly instead with a standalone WebSocket listener authenticated as one user via
+  a real token (not a shared browser session) while sending as another via the API — confirmed
+  both the `chat_message` and the new `message`-shaped notification frame arrive in real time,
+  and that the notification frame's `message` field is a string (i.e., won't hit the bug above).
+  Floating widget itself verified in-browser: bubble persists across page navigation, opens a
+  working compact panel, starts a new conversation, sends a message, and stays out of the way
+  on `/messages`. `npm run lint`, `npm run build`, and the full 108-test backend suite all clean.
 
 Next: **Phase 9 — Hardening & deploy** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 

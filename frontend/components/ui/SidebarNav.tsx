@@ -13,10 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
-import { fetchUnreadCount } from "@/lib/messaging-api";
-import { useChatSocket } from "@/lib/messaging-client";
+import { useUnreadMessageCount } from "@/lib/messaging-client";
 
 const ICONS = {
   dashboard: Gauge,
@@ -38,22 +36,7 @@ interface NavItem {
 
 export default function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const hasMessagesLink = items.some((i) => i.icon === "messages");
-
-  useEffect(() => {
-    if (!hasMessagesLink) return;
-    fetchUnreadCount().then(setUnreadMessages).catch(() => {});
-  }, [hasMessagesLink]);
-
-  useChatSocket((event) => {
-    if (!hasMessagesLink) return;
-    if (event.type === "chat_message" && !pathname.startsWith("/messages")) {
-      setUnreadMessages((n) => n + 1);
-    } else if (event.type === "chat_read" || (event.type === "chat_message" && pathname.startsWith("/messages"))) {
-      fetchUnreadCount().then(setUnreadMessages).catch(() => {});
-    }
-  });
+  const unreadMessages = useUnreadMessageCount();
 
   return (
     <nav className="flex flex-col gap-0.5">

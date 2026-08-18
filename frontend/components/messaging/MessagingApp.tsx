@@ -10,7 +10,18 @@ import ChatWindow from "./ChatWindow";
 import ConversationList from "./ConversationList";
 import NewConversationModal from "./NewConversationModal";
 
-export default function MessagingApp({ currentUserId }: { currentUserId: string }) {
+export default function MessagingApp({
+  currentUserId,
+  variant = "page",
+}: {
+  currentUserId: string;
+  /** "compact" is used inside the floating chat widget's small fixed-size
+   * panel — single pane (list OR open chat, with a back button) instead of
+   * the full page's side-by-side layout, and no outer .card chrome since
+   * the widget panel already provides that. */
+  variant?: "page" | "compact";
+}) {
+  const isCompact = variant === "compact";
   const [conversations, setConversations] = useState<ConversationRead[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -53,12 +64,46 @@ export default function MessagingApp({ currentUserId }: { currentUserId: string 
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 
+  const emptyState = (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--accent-soft)" }}>
+        <MessageCircle size={24} style={{ color: "var(--accent)" }} />
+      </div>
+      <div>
+        <p className="text-sm font-medium">Select a conversation</p>
+        <p className="mt-0.5 text-xs" style={{ color: "var(--ink-faint)" }}>
+          or start a new one to message any colleague directly.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="card flex h-[calc(100vh-11rem)] overflow-hidden p-0">
+    <div className={isCompact ? "flex h-full overflow-hidden" : "card flex h-[calc(100vh-11rem)] overflow-hidden p-0"}>
       {loading ? (
         <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "var(--ink-faint)" }}>
           Loading conversations…
         </div>
+      ) : isCompact ? (
+        selected ? (
+          <ChatWindow
+            key={selected.id}
+            conversation={selected}
+            currentUserId={currentUserId}
+            onActivity={refreshConversations}
+            incomingEvent={event}
+            onBack={() => setSelectedId(null)}
+          />
+        ) : (
+          <ConversationList
+            conversations={conversations}
+            currentUserId={currentUserId}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onNewConversation={() => setShowNewModal(true)}
+            compact
+          />
+        )
       ) : (
         <>
           <ConversationList
@@ -68,7 +113,6 @@ export default function MessagingApp({ currentUserId }: { currentUserId: string 
             onSelect={setSelectedId}
             onNewConversation={() => setShowNewModal(true)}
           />
-
           {selected ? (
             <ChatWindow
               key={selected.id}
@@ -78,17 +122,7 @@ export default function MessagingApp({ currentUserId }: { currentUserId: string 
               incomingEvent={event}
             />
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--accent-soft)" }}>
-                <MessageCircle size={24} style={{ color: "var(--accent)" }} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Select a conversation</p>
-                <p className="mt-0.5 text-xs" style={{ color: "var(--ink-faint)" }}>
-                  or start a new one to message any colleague directly.
-                </p>
-              </div>
-            </div>
+            emptyState
           )}
         </>
       )}

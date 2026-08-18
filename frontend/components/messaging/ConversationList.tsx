@@ -40,12 +40,16 @@ export default function ConversationList({
   selectedId,
   onSelect,
   onNewConversation,
+  compact = false,
 }: {
   conversations: ConversationRead[];
   currentUserId: string;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewConversation: () => void;
+  /** Rendered alone (no sibling ChatWindow) inside the floating widget's
+   * narrow single-pane panel — full width, no right border. */
+  compact?: boolean;
 }) {
   const [query, setQuery] = useState("");
 
@@ -56,7 +60,10 @@ export default function ConversationList({
   }, [conversations, query, currentUserId]);
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col border-r" style={{ borderColor: "var(--hairline)" }}>
+    <div
+      className={compact ? "flex h-full w-full flex-col" : "flex h-full w-72 shrink-0 flex-col border-r"}
+      style={compact ? undefined : { borderColor: "var(--hairline)" }}
+    >
       <div className="flex items-center justify-between gap-2 px-4 py-4">
         <h1 className="text-lg font-semibold tracking-tight">Messages</h1>
         <button onClick={onNewConversation} className="btn-primary btn-sm px-2.5" title="New conversation">

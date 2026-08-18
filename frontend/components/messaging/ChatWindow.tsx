@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchMessages, markRead, type ConversationRead, type MessageRead } from "@/lib/messaging-api";
@@ -20,11 +20,15 @@ export default function ChatWindow({
   currentUserId,
   onActivity,
   incomingEvent,
+  onBack,
 }: {
   conversation: ConversationRead;
   currentUserId: string;
   onActivity: () => void;
   incomingEvent: { seq: number; event: ChatEvent } | null;
+  /** Only passed in the floating widget's compact single-pane mode — shows
+   * a back arrow that returns to the conversation list. */
+  onBack?: () => void;
 }) {
   const [messages, setMessages] = useState<MessageRead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +101,11 @@ export default function ChatWindow({
   return (
     <div className="flex h-full flex-1 flex-col">
       <div className="flex items-center gap-2.5 border-b px-5 py-4" style={{ borderColor: "var(--hairline)" }}>
+        {onBack && (
+          <button onClick={onBack} className="btn-ghost btn-sm shrink-0 px-1.5" title="Back to conversations">
+            <ArrowLeft size={15} />
+          </button>
+        )}
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
           style={{ background: "var(--navy-soft)", color: "var(--accent)" }}

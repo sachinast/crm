@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { useNotifications } from "@/lib/ws-client";
@@ -41,15 +42,30 @@ export default function NotificationBell() {
           </div>
           {messages.length === 0 && <p className="p-4" style={{ color: "var(--ink-faint)" }}>Nothing yet.</p>}
           <ul className="flex max-h-72 flex-col overflow-y-auto">
-            {messages.map((m, i) => (
-              <li
-                key={i}
-                className="border-b px-3 py-2.5 last:border-b-0"
-                style={{ borderColor: "var(--hairline)" }}
-              >
-                {m.message}
-              </li>
-            ))}
+            {messages.map((m, i) => {
+              const isChat = m.type === "message" || m.type === "mention";
+              const content = (
+                <>
+                  {isChat && (
+                    <span className="mr-1 font-medium" style={{ color: "var(--accent)" }}>
+                      {m.type === "mention" ? "@mention" : "Message"}
+                    </span>
+                  )}
+                  {m.message}
+                </>
+              );
+              return (
+                <li key={i} className="border-b last:border-b-0" style={{ borderColor: "var(--hairline)" }}>
+                  {isChat ? (
+                    <Link href="/messages" className="block px-3 py-2.5 transition-colors hover:opacity-80" onClick={() => setOpen(false)}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className="px-3 py-2.5">{content}</div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import FloatingChatWidget from "@/components/messaging/FloatingChatWidget";
 import LogoutButton from "@/components/ui/LogoutButton";
 import NotificationBell from "@/components/ui/NotificationBell";
 import SidebarNav from "@/components/ui/SidebarNav";
@@ -105,6 +106,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </header>
         <main className="flex-1 px-6 py-6 md:px-10 md:py-8">{children}</main>
       </div>
+
+      <FloatingChatWidget currentUserId={user.id} />
     </div>
   );
 }

@@ -7,10 +7,12 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.main import app
+from app.models.audit import Notification
 from app.models.enums import UserRole
 from app.models.user import User
 
@@ -188,6 +190,42 @@ async def test_send_message_with_mention_notifies_and_highlights(api_client, ali
     messages = await api_client.get(f"/messaging/conversations/{conv_id}/messages", headers=_auth(bob_token))
     assert messages.status_code == 200
     assert any(m["body"] == "hey @Bob check this" for m in messages.json())
+
+    # A mention gets exactly one notification (the specific "mentioned you"
+    # one), not also a generic "you have a message" for the same message.
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Notification).where(Notification.recipient_user_id == bob["id"]))
+        notifications = list(result.scalars().all())
+    assert len(notifications) == 1
+    assert notifications[0].type == "mention"
+
+
+async def test_every_recipient_gets_notified_not_just_mentions(api_client, alice, bob):
+    alice_token = await _login(api_client, alice["email"], alice["password"])
+
+    conv = await api_client.post(
+        "/messaging/conversations", json={"participant_user_ids": [str(bob["id"])]}, headers=_auth(alice_token)
+    )
+    conv_id = conv.json()["id"]
+
+    resp = await api_client.post(
+        f"/messaging/conversations/{conv_id}/messages",
+        json={"body": "no mention here, just a normal message"},
+        headers=_auth(alice_token),
+    )
+    assert resp.status_code == 201
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Notification).where(Notification.recipient_user_id == bob["id"]))
+        notifications = list(result.scalars().all())
+    assert len(notifications) == 1
+    assert notifications[0].type == "message"
+    assert notifications[0].message.startswith("Test User: no mention here")
+
+    # The sender never gets notified about their own message.
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Notification).where(Notification.recipient_user_id == alice["id"]))
+        assert list(result.scalars().all()) == []
 
 
 async def test_cannot_mention_a_non_participant(api_client, alice, bob, carol):

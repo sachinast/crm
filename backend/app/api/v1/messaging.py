@@ -375,17 +375,45 @@ async def send_message(
 
     serialized = await _serialize_message(db, message, current_user.id)
 
-    # Push to every other participant's live connection(s), and drop a
-    # durable Notification row + push for anyone explicitly @mentioned (the
-    # notification bell surfaces mentions; a plain unread message is only
-    # ever surfaced via the Messages page's own unread badge, to avoid the
-    # bell filling up with routine chat traffic).
+    # Every recipient gets a durable Notification row + a bell push, not just
+    # anyone @mentioned — mentions just get a more specific one instead of a
+    # generic "you have a message" (never both for the same message). The
+    # separate chat_message push (below, to every other participant
+    # regardless) is what live-updates an already-open chat window/widget;
+    # this block is what the notification bell and any other "you have
+    # unread activity" surface reads from.
+    mentioned_ids = set(payload.mentioned_user_ids)
+    preview = (payload.body or "").strip()
+    if not preview:
+        preview = "sent an attachment"
+    elif len(preview) > 80:
+        preview = preview[:77] + "..."
+
     ws_payload = {"type": "chat_message", "conversation_id": str(conversation_id), "message": serialized.model_dump(mode="json")}
     for uid in participant_ids:
-        if uid != current_user.id:
-            await connection_manager.send_to_user(uid, ws_payload)
+        if uid == current_user.id:
+            continue
+        await connection_manager.send_to_user(uid, ws_payload)
 
-    for uid in payload.mentioned_user_ids:
+        if uid in mentioned_ids:
+            continue
+        notification = Notification(
+            recipient_user_id=uid,
+            type="message",
+            message=f"{current_user.name}: {preview}",
+        )
+        db.add(notification)
+        await connection_manager.send_to_user(
+            uid,
+            {
+                "type": "message",
+                "conversation_id": str(conversation_id),
+                "message_id": str(message.id),
+                "message": f"{current_user.name}: {preview}",
+            },
+        )
+
+    for uid in mentioned_ids:
         notification = Notification(
             recipient_user_id=uid,
             type="mention",
