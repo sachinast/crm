@@ -13,4 +13,8 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Railway (and most PaaS hosts) inject $PORT at runtime rather than using the
+# EXPOSEd port literally, and there's no separate release-phase step here, so
+# migrations run as part of container start, before uvicorn takes traffic.
+# --reload is dev-only (file-watching has no purpose in an immutable image).
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
