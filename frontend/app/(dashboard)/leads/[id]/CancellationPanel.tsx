@@ -1,5 +1,6 @@
 "use client";
 
+import { Ban } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
@@ -52,20 +53,23 @@ export default function CancellationPanel({
   if (!canCancel && !cancellation) return null;
 
   return (
-    <div className="rounded-lg border p-4 text-sm">
-      <h2 className="mb-2 font-medium">Cancellation</h2>
+    <div className="card text-sm">
+      <h2 className="section-label mb-3 flex items-center gap-1.5">
+        <Ban size={13} />
+        Cancellation
+      </h2>
 
       {cancellation ? (
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <dt className="text-neutral-500">Original prepaid</dt>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+          <dt style={{ color: "var(--ink-faint)" }}>Original prepaid</dt>
           <dd>${cancellation.original_prepaid_amount.toFixed(2)}</dd>
-          <dt className="text-neutral-500">Penalty fee</dt>
+          <dt style={{ color: "var(--ink-faint)" }}>Penalty fee</dt>
           <dd>${cancellation.cancellation_penalty_fee.toFixed(2)}</dd>
-          <dt className="text-neutral-500">Refund to customer</dt>
+          <dt style={{ color: "var(--ink-faint)" }}>Refund to customer</dt>
           <dd>${cancellation.refund_amount.toFixed(2)}</dd>
-          <dt className="text-neutral-500">Retained by agency</dt>
+          <dt style={{ color: "var(--ink-faint)" }}>Retained by agency</dt>
           <dd>${cancellation.final_retained_amount.toFixed(2)}</dd>
-          <dt className="text-neutral-500">Cancelled</dt>
+          <dt style={{ color: "var(--ink-faint)" }}>Cancelled</dt>
           <dd>{new Date(cancellation.created_at).toLocaleString()}</dd>
         </dl>
       ) : canCancel ? (
@@ -85,14 +89,18 @@ export default function CancellationPanel({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded border border-red-600 px-3 py-1.5 text-xs text-red-700 disabled:opacity-50"
+              className="btn-danger btn-sm"
             >
               {submitting ? "…" : "Confirm cancellation"}
             </button>
-            {error && <p className="w-full text-xs text-red-600">{error}</p>}
+            {error && (
+              <p className="w-full rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+                {error}
+              </p>
+            )}
           </form>
         ) : (
-          <button onClick={() => setOpen(true)} className="rounded border px-3 py-1.5 text-xs hover:bg-neutral-100">
+          <button onClick={() => setOpen(true)} className="btn-secondary btn-sm">
             Cancel this booking
           </button>
         )

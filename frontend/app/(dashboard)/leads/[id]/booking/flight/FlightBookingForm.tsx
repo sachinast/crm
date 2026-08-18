@@ -74,7 +74,7 @@ export default function FlightBookingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-lg border p-4">
+    <form onSubmit={handleSubmit} className="card grid grid-cols-2 gap-4">
       <Field label="Booking reference">
         <input required value={form.booking_reference} onChange={(e) => setForm({ ...form, booking_reference: e.target.value })} className="input" />
       </Field>
@@ -105,13 +105,17 @@ export default function FlightBookingForm({
         <input required type="number" min={0} step="0.01" value={form.pay_at_counter_amount} onChange={(e) => setForm({ ...form, pay_at_counter_amount: Number(e.target.value) })} className="input" />
       </Field>
 
-      <p className="col-span-2 text-xs text-neutral-500">
+      <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(form.prepaid_amount) + Number(form.pay_at_counter_amount)).toFixed(2)} (computed)
       </p>
 
-      {error && <p className="col-span-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="col-span-2 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
 
-      <button type="submit" disabled={submitting} className="col-span-2 rounded bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50">
+      <button type="submit" disabled={submitting} className="btn-primary col-span-2">
         {submitting ? "Saving…" : isEdit ? "Save changes" : "Create flight booking"}
       </button>
     </form>
@@ -120,9 +124,9 @@ export default function FlightBookingForm({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="text-sm">
+    <label className="text-sm font-medium">
       {label}
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </label>
   );
 }

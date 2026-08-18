@@ -53,7 +53,7 @@ export default function RevealField({
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span>{maskedValue}</span>
       {!showPrompt && (
-        <button type="button" onClick={() => setShowPrompt(true)} className="text-xs text-blue-600 underline">
+        <button type="button" onClick={() => setShowPrompt(true)} className="text-xs underline" style={{ color: "var(--accent)" }}>
           Reveal
         </button>
       )}
@@ -64,15 +64,15 @@ export default function RevealField({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason for access"
-            className="rounded border px-2 py-0.5 text-xs"
-            style={{ width: 160 }}
+            className="input"
+            style={{ width: 160, padding: "0.125rem 0.5rem" }}
           />
-          <button type="submit" disabled={submitting} className="text-xs text-blue-600 underline">
+          <button type="submit" disabled={submitting} className="text-xs underline" style={{ color: "var(--accent)" }}>
             {submitting ? "…" : "Confirm"}
           </button>
         </form>
       )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs" style={{ color: "var(--danger)" }}>{error}</span>}
     </span>
   );
 }

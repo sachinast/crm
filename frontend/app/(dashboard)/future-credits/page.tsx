@@ -1,3 +1,5 @@
+import { Gift } from "lucide-react";
+
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
 
@@ -36,8 +38,8 @@ export default async function FutureCreditsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="mb-4 text-lg font-semibold">Future Credits</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="mb-4 text-2xl font-semibold tracking-tight">Future Credits</h1>
+        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
           Your role doesn&apos;t have access to future credits (PRD §7.3: Billing, CS, Change Dep, Chargeback Dep,
           Auditor, TL, Admin, Super Admin).
         </p>
@@ -47,7 +49,12 @@ export default async function FutureCreditsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Future Credits</h1>
+      <div className="mb-6 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
+          <Gift size={18} style={{ color: "var(--accent)" }} />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Future Credits</h1>
+      </div>
 
       {canCreate && (
         <div className="mb-6">
@@ -55,35 +62,37 @@ export default async function FutureCreditsPage() {
         </div>
       )}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-neutral-500">
-            <th className="py-2 font-medium">Source lead</th>
-            <th className="font-medium">Amount</th>
-            <th className="font-medium">Count</th>
-            <th className="font-medium">Valid until</th>
-            <th className="font-medium">Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {credits.length === 0 && (
+      <div className="card-flat overflow-x-auto p-0">
+        <table className="table-modern">
+          <thead>
             <tr>
-              <td colSpan={5} className="py-4 text-neutral-400">
-                No future credits yet.
-              </td>
+              <th>Source lead</th>
+              <th>Amount</th>
+              <th>Count</th>
+              <th>Valid until</th>
+              <th>Created</th>
             </tr>
-          )}
-          {credits.map((c) => (
-            <tr key={c.id} className="border-b">
-              <td className="py-2 font-mono text-xs">{c.source_lead_id}</td>
-              <td>${c.voucher_amount.toFixed(2)}</td>
-              <td>{c.number_of_vouchers}</td>
-              <td>{c.validity_date}</td>
-              <td>{new Date(c.created_at).toLocaleDateString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {credits.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                  No future credits yet.
+                </td>
+              </tr>
+            )}
+            {credits.map((c) => (
+              <tr key={c.id}>
+                <td className="font-mono text-xs" style={{ color: "var(--ink-muted)" }}>{c.source_lead_id}</td>
+                <td className="font-medium">${c.voucher_amount.toFixed(2)}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{c.number_of_vouchers}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{c.validity_date}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{new Date(c.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

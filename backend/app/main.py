@@ -6,6 +6,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.authorization import router as authorization_router
 from app.api.v1.bookings import router as bookings_router
 from app.api.v1.cancellations import router as cancellations_router
+from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.future_credits import router as future_credits_router
 from app.api.v1.health import router as health_router
 from app.api.v1.integrations import capture_router, keys_router as integration_keys_router
@@ -41,6 +42,7 @@ app.include_router(future_credits_router, prefix=settings.api_v1_prefix)
 app.include_router(audit_router, prefix=settings.api_v1_prefix)
 app.include_router(integration_keys_router, prefix=settings.api_v1_prefix)
 app.include_router(capture_router, prefix=settings.api_v1_prefix)
+app.include_router(dashboard_router, prefix=settings.api_v1_prefix)
 app.include_router(websocket_router, prefix="/ws")
 
 

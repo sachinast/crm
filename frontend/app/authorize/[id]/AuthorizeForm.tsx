@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckCircle2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
@@ -66,38 +67,42 @@ export default function AuthorizeForm({ leadId }: { leadId: string }) {
 
   if (done) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-sm text-green-900">
-        <p className="font-medium">Thank you — your booking is confirmed.</p>
-        <p className="mt-1 text-green-700">Our team will process your payment shortly.</p>
+      <div className="card flex items-start gap-3 text-sm" style={{ background: "var(--success-soft)", borderColor: "var(--success)" }}>
+        <CheckCircle2 size={20} className="mt-0.5 shrink-0" style={{ color: "var(--success)" }} />
+        <div>
+          <p className="font-medium" style={{ color: "var(--success)" }}>Thank you — your booking is confirmed.</p>
+          <p className="mt-1" style={{ color: "var(--ink-muted)" }}>Our team will process your payment shortly.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border p-4 text-sm">
-      <h2 className="font-medium">Authorization &amp; consent</h2>
+    <form onSubmit={handleSubmit} className="card flex flex-col gap-3 text-sm">
+      <h2 className="section-label">Authorization &amp; consent</h2>
       {CONSENT_ITEMS.map((item) => (
-        <label key={item.key} className="flex items-start gap-2">
+        <label key={item.key} className="flex items-start gap-2.5">
           <input
             type="checkbox"
             checked={consent[item.key]}
             onChange={(e) => setConsent({ ...consent, [item.key]: e.target.checked })}
             className="mt-0.5"
+            style={{ accentColor: "var(--accent)" }}
           />
           <span>{item.label}</span>
         </label>
       ))}
-      <label className="flex items-start gap-2 border-t pt-3">
-        <span>By clicking below, I agree to all terms and conditions of this booking.</span>
+      <label className="flex items-start gap-2.5 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
+        <span style={{ color: "var(--ink-muted)" }}>By clicking below, I agree to all terms and conditions of this booking.</span>
       </label>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && (
+        <p className="rounded-lg px-3 py-2" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={!allChecked || submitting}
-        className="mt-2 rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-40"
-      >
+      <button type="submit" disabled={!allChecked || submitting} className="btn-primary mt-1">
         {submitting ? "Submitting…" : "I Authorize"}
       </button>
     </form>

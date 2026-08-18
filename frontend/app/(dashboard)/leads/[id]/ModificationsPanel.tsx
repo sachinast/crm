@@ -1,5 +1,6 @@
 "use client";
 
+import { PencilLine } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
@@ -62,18 +63,21 @@ export default function ModificationsPanel({
   if (!canModify && history.length === 0) return null;
 
   return (
-    <div className="rounded-lg border p-4 text-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-medium">Modifications</h2>
+    <div className="card text-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="section-label flex items-center gap-1.5">
+          <PencilLine size={13} />
+          Modifications
+        </h2>
         {canModify && (
-          <button onClick={() => setOpen((v) => !v)} className="text-xs underline">
+          <button onClick={() => setOpen((v) => !v)} className="link-muted text-xs underline">
             {open ? "Cancel" : "Record a change"}
           </button>
         )}
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="mb-3 grid grid-cols-2 gap-2 rounded border p-3">
+        <form onSubmit={handleSubmit} className="card-flat mb-3 grid grid-cols-2 gap-2">
           <input
             required
             placeholder="Field (e.g. pickup_location)"
@@ -103,24 +107,24 @@ export default function ModificationsPanel({
             onChange={(e) => setForm({ ...form, modification_amount: e.target.value })}
             className="input col-span-2"
           />
-          {error && <p className="col-span-2 text-xs text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="col-span-2 rounded bg-neutral-900 px-3 py-1.5 text-xs text-white disabled:opacity-50"
-          >
+          {error && (
+            <p className="col-span-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={submitting} className="btn-primary btn-sm col-span-2">
             {submitting ? "Saving…" : "Save modification"}
           </button>
         </form>
       )}
 
       {history.length === 0 ? (
-        <p className="text-xs text-neutral-400">No modifications recorded.</p>
+        <p className="text-xs" style={{ color: "var(--ink-faint)" }}>No modifications recorded.</p>
       ) : (
-        <ul className="flex flex-col gap-1 text-xs text-neutral-500">
+        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
           {history.map((m) => (
             <li key={m.id}>
-              <strong>{m.field_name}</strong>: {String(m.original_value)} → {String(m.revised_value)}
+              <strong style={{ color: "var(--ink)" }}>{m.field_name}</strong>: {String(m.original_value)} → {String(m.revised_value)}
               {m.modification_amount !== 0 && ` (${m.modification_amount > 0 ? "+" : ""}$${m.modification_amount.toFixed(2)})`}
               {" · "}
               {new Date(m.created_at).toLocaleString()}

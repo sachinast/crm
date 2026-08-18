@@ -40,18 +40,18 @@ export default function CreateFutureCreditForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-lg border p-4 text-sm">
-      <label className="col-span-2">
+    <form onSubmit={handleSubmit} className="card grid grid-cols-2 gap-3 text-sm">
+      <label className="col-span-2 font-medium">
         Source lead ID
         <input
           required
           value={form.source_lead_id}
           onChange={(e) => setForm({ ...form, source_lead_id: e.target.value })}
           placeholder="UUID of the originating lead"
-          className="input mt-1"
+          className="input mt-1.5"
         />
       </label>
-      <label>
+      <label className="font-medium">
         Voucher amount
         <input
           required
@@ -60,10 +60,10 @@ export default function CreateFutureCreditForm() {
           step="0.01"
           value={form.voucher_amount}
           onChange={(e) => setForm({ ...form, voucher_amount: e.target.value })}
-          className="input mt-1"
+          className="input mt-1.5"
         />
       </label>
-      <label>
+      <label className="font-medium">
         Number of vouchers
         <input
           required
@@ -71,25 +71,25 @@ export default function CreateFutureCreditForm() {
           min={1}
           value={form.number_of_vouchers}
           onChange={(e) => setForm({ ...form, number_of_vouchers: e.target.value })}
-          className="input mt-1"
+          className="input mt-1.5"
         />
       </label>
-      <label className="col-span-2">
+      <label className="col-span-2 font-medium">
         Validity date
         <input
           required
           type="date"
           value={form.validity_date}
           onChange={(e) => setForm({ ...form, validity_date: e.target.value })}
-          className="input mt-1"
+          className="input mt-1.5"
         />
       </label>
-      {error && <p className="col-span-2 text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="col-span-2 rounded bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
-      >
+      {error && (
+        <p className="col-span-2 rounded-lg px-3 py-2" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={submitting} className="btn-primary col-span-2">
         {submitting ? "Creating…" : "Create future credit"}
       </button>
     </form>

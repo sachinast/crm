@@ -10,7 +10,7 @@ Secure, role-based, audit-ready lead-to-booking CRM.
 - [Technical Specification](docs/TECHNICAL_SPEC.md) — database schema (DDL), API contracts,
   RBAC & status state-machine design, project structure, and the phased delivery plan.
 
-## Status: Phase 8 complete
+## Status: UI/UX redesign + role-based Dashboard complete
 
 **Phase 0 — Scaffolding:**
 
@@ -241,6 +241,49 @@ surface — the more broadly useful piece anyway, and what TECHNICAL_SPEC.md §1
   agent's queue with `source` set to the override value and PII still masked, confirmed "last used"
   updated on the admin page, revoked the key through the UI, and confirmed the exact same `curl`
   call then got a clean 401.
+
+**UI/UX redesign + role-based Dashboard** (requested ahead of Phase 9 — "enhance the UI/UX...
+make it modern and luxurious... also add dashboard for all Users based on their permissions"):
+
+- ✅ **New design system** (`frontend/app/globals.css`) — a premium travel-CRM palette (deep navy
+  `#12172b` + muted gold `#b3872f` accent, warm ivory `#f6f4ef` surfaces instead of stark white),
+  with a full dark-mode variant via `prefers-color-scheme`. CSS custom properties registered
+  through Tailwind v4's `@theme inline` so the palette is available as ordinary utilities
+  (`bg-accent`, `text-ink-muted`, etc.), plus a shared component layer (`.card`, `.btn-primary`,
+  `.input`, `.badge`, `.table-modern`, `.nav-link`) so every page draws from one source of truth
+  instead of ad hoc Tailwind strings. Soft-tinted status badges (`lib/status-colors.ts` —
+  `statusBadgeStyle`) replaced the old solid-fill white-on-color pattern PRD §6.1 originally
+  specified literally, for better legibility.
+- ✅ **Every page in the app restyled**, business logic untouched: dashboard shell/sidebar
+  (`app/(dashboard)/layout.tsx` — dark navy nav with active-state highlighting via `SidebarNav`,
+  user avatar, `lucide-react` icons throughout), login and landing pages, Leads list + New Lead
+  intake flow, the Lead detail page and all five of its panels (StatusActions, PaymentActions,
+  ModificationsPanel, CancellationPanel, RevealField), all three booking forms (Car/Hotel/
+  Flight), every Admin page (Users, Audit Log, Integrations + their sub-forms), Future Credits,
+  and the public unauthenticated `/authorize/[id]` consent page.
+- ✅ **Role-based Dashboard** (`GET /dashboard/summary`, `app/(dashboard)/dashboard/page.tsx`) —
+  every role gets a permission-appropriate glimpse of aggregate data on login, not just a list of
+  records. Built entirely on top of *existing* authorization primitives rather than a parallel
+  access model: lead counts/status breakdown reuse `apply_lead_visibility` (so an Agent's
+  dashboard reflects only their own leads, exactly like the Leads list already did), and the
+  optional fields (`pending_qc_count`, `pending_payment_count`, `my_processed_revenue`,
+  `total_revenue`, `total_users`, `active_integrations`, `future_credits_issued_count`/
+  `_total_value`) are populated only for the roles the PRD already grants that visibility to
+  (QC for Auditor/TL/Admin/Super Admin, revenue for Billing/TL/Admin/Super Admin, system stats
+  for Admin/Super Admin only) — the same 403 boundary enforced everywhere else in the API, not a
+  new one invented for this feature.
+- ✅ 5 new passing pytest tests (92 total): an Agent's summary contains only their own leads and
+  masked recent-lead entries, Billing sees `pending_payment_count` but not admin-only stats,
+  Admin sees system stats and `total_revenue`, and the endpoint requires auth like everything else.
+- ✅ Verified end-to-end in-browser across a fresh lead's full lifecycle post-redesign: signed in
+  as Super Admin, confirmed the Dashboard's 7 conditional stat cards render with real data (Total
+  Users: 3), created a lead through the restyled intake flow, completed a car booking through the
+  restyled booking form, confirmed every panel on the restyled Lead detail page (status badge,
+  booking summary, "Send for customer authorization" link, Modifications, Cancellation) renders
+  correctly, and opened the public `/authorize/[id]` page in a fresh tab to confirm the luxury
+  palette carries through to the one unauthenticated, customer-facing screen in the app. Also
+  spot-checked Admin → Users and Admin → Integrations for the same visual consistency. `npm run
+  lint` and `npm run build` both clean (all 21 routes compile) after every page.
 
 Next: **Phase 9 — Hardening & deploy** (see TECHNICAL_SPEC.md §10 for the full phase breakdown).
 

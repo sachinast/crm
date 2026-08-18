@@ -1,3 +1,5 @@
+import { CreditCard, FileCheck } from "lucide-react";
+
 import AuthorizeForm from "./AuthorizeForm";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
@@ -43,51 +45,88 @@ const HIGHLIGHT_FIELDS: Record<string, { key: string; label: string }[]> = {
   ],
 };
 
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      className="flex min-h-screen justify-center p-6 sm:p-10"
+      style={{
+        background:
+          "radial-gradient(circle at 20% 10%, rgba(179,135,47,0.10), transparent 45%), radial-gradient(circle at 85% 90%, rgba(18,23,43,0.06), transparent 50%), var(--background)",
+      }}
+    >
+      <div className="w-full max-w-lg">
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
+            style={{ background: "var(--navy)", color: "var(--accent)" }}
+          >
+            T
+          </div>
+          <span className="text-sm font-semibold tracking-tight">Travel CRM</span>
+        </div>
+        {children}
+      </div>
+    </main>
+  );
+}
+
 export default async function AuthorizePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { summary, error } = await fetchSummary(id);
 
   if (!summary) {
     return (
-      <main className="mx-auto max-w-lg p-8 text-center text-sm text-neutral-500">
-        <p>{error}</p>
-      </main>
+      <Shell>
+        <div className="card text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+          <p>{error}</p>
+        </div>
+      </Shell>
     );
   }
 
   if (summary.status !== "authorization_pending") {
     return (
-      <main className="mx-auto max-w-lg p-8 text-center text-sm text-neutral-500">
-        <p>This booking has already been processed — no further action is needed.</p>
-      </main>
+      <Shell>
+        <div className="card text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+          <p>This booking has already been processed — no further action is needed.</p>
+        </div>
+      </Shell>
     );
   }
 
   const highlights = HIGHLIGHT_FIELDS[summary.service_type] ?? [];
 
   return (
-    <main className="mx-auto max-w-lg p-8">
-      <h1 className="mb-1 text-xl font-semibold">Confirm your booking</h1>
-      <p className="mb-6 text-sm text-neutral-500">Hi {summary.customer_name}, please review the details below.</p>
+    <Shell>
+      <h1 className="mb-1 text-center text-2xl font-semibold tracking-tight">Confirm your booking</h1>
+      <p className="mb-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+        Hi {summary.customer_name}, please review the details below.
+      </p>
 
-      <div className="mb-4 rounded-lg border p-4 text-sm">
-        <h2 className="mb-2 font-medium capitalize">{summary.service_type} booking</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <div className="card mb-4 text-sm">
+        <h2 className="section-label mb-3 flex items-center gap-1.5">
+          <FileCheck size={13} />
+          <span className="capitalize">{summary.service_type} booking</span>
+        </h2>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           {highlights.map((f) => (
             <div key={f.key} className="contents">
-              <dt className="text-neutral-500">{f.label}</dt>
+              <dt style={{ color: "var(--ink-faint)" }}>{f.label}</dt>
               <dd>{String(summary.booking[f.key] ?? "—")}</dd>
             </div>
           ))}
         </dl>
       </div>
 
-      <div className="mb-4 rounded-lg border p-4 text-sm">
-        <h2 className="mb-2 font-medium">Payment breakdown</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <dt className="text-neutral-500">Prepaid amount</dt>
+      <div className="card mb-4 text-sm">
+        <h2 className="section-label mb-3 flex items-center gap-1.5">
+          <CreditCard size={13} />
+          Payment breakdown
+        </h2>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          <dt style={{ color: "var(--ink-faint)" }}>Prepaid amount</dt>
           <dd>${Number(summary.booking.prepaid_amount).toFixed(2)}</dd>
-          <dt className="text-neutral-500">Pay at counter</dt>
+          <dt style={{ color: "var(--ink-faint)" }}>Pay at counter</dt>
           <dd>${Number(summary.booking.pay_at_counter_amount).toFixed(2)}</dd>
           <dt className="font-medium">Total</dt>
           <dd className="font-medium">${Number(summary.booking.total_amount).toFixed(2)}</dd>
@@ -95,6 +134,6 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
       </div>
 
       <AuthorizeForm leadId={id} />
-    </main>
+    </Shell>
   );
 }

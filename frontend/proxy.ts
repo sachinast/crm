@@ -7,7 +7,7 @@ const ACCESS_TOKEN_COOKIE = "crm_access_token";
 // (redirect before a protected page even starts rendering); the real
 // authority is the backend, which every server component/route handler in
 // this app re-validates against on each request (see lib/auth.ts, §8).
-const PROTECTED_PREFIXES = ["/leads", "/billing", "/audit", "/admin", "/future-credits"];
+const PROTECTED_PREFIXES = ["/dashboard", "/leads", "/billing", "/audit", "/admin", "/future-credits"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

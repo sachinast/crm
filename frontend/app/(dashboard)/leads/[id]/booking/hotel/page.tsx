@@ -51,10 +51,10 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
 
   return (
     <div className="max-w-2xl">
-      <Link href={`/leads/${id}`} className="text-sm text-neutral-500 hover:underline">
+      <Link href={`/leads/${id}`} className="link-muted text-sm">
         ← {lead.name}
       </Link>
-      <h1 className="mb-6 mt-2 text-lg font-semibold">Hotel booking</h1>
+      <h1 className="mb-6 mt-2 text-2xl font-semibold tracking-tight">Hotel booking</h1>
       <HotelBookingForm leadId={id} initial={existing} />
     </div>
   );

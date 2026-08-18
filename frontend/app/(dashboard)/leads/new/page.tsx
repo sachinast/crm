@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Car, Hotel, Plane } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
@@ -28,11 +29,13 @@ interface Candidate {
   created_at: string;
 }
 
-const SERVICE_TYPES: { value: string; label: string }[] = [
-  { value: "car", label: "Car Rental" },
-  { value: "hotel", label: "Hotel" },
-  { value: "flight", label: "Flight" },
-];
+const SERVICE_TYPES = [
+  { value: "car", label: "Car Rental", icon: Car },
+  { value: "hotel", label: "Hotel", icon: Hotel },
+  { value: "flight", label: "Flight", icon: Plane },
+] as const;
+
+const STEP_NUMBER: Record<Step, number> = { intake: 1, "duplicate-prompt": 3, "service-type": 4 };
 
 export default function NewLeadPage() {
   const router = useRouter();
@@ -120,104 +123,127 @@ export default function NewLeadPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="mb-1 text-lg font-semibold">New lead</h1>
-      <p className="mb-6 text-sm text-neutral-500">
-        Step {step === "intake" ? "1" : step === "duplicate-prompt" ? "2–3" : "4"} of 4 — PRD §4.1
-      </p>
+      <h1 className="text-2xl font-semibold tracking-tight">New lead</h1>
+      <div className="mb-6 mt-3 flex items-center gap-1.5">
+        {[1, 2, 3, 4].map((n) => (
+          <div
+            key={n}
+            className="h-1.5 flex-1 rounded-full"
+            style={{ background: n <= STEP_NUMBER[step] ? "var(--accent)" : "var(--hairline-strong)" }}
+          />
+        ))}
+      </div>
 
       {step === "intake" && (
-        <form onSubmit={handleIntakeSubmit} className="flex flex-col gap-3 rounded-lg border p-4">
-          <label className="text-sm">
+        <form onSubmit={handleIntakeSubmit} className="card flex flex-col gap-4">
+          <label className="text-sm font-medium">
             Name
             <input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              className="input mt-1.5"
             />
           </label>
-          <label className="text-sm">
+          <label className="text-sm font-medium">
             Number
             <input
               required
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              className="input mt-1.5"
             />
           </label>
-          <label className="text-sm">
+          <label className="text-sm font-medium">
             Email
             <input
               required
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              className="input mt-1.5"
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-          >
+          {error && (
+            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? "Checking…" : "Continue"}
           </button>
         </form>
       )}
 
       {step === "duplicate-prompt" && lead && (
-        <form onSubmit={handleConfirm} className="flex flex-col gap-4 rounded-lg border p-4">
-          <div className="rounded bg-amber-50 p-3 text-sm text-amber-900">
-            Client already existed — do you still want to proceed?
+        <form onSubmit={handleConfirm} className="card flex flex-col gap-4">
+          <div
+            className="flex items-start gap-2.5 rounded-lg p-3 text-sm"
+            style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
+          >
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <span>Client already existed — do you still want to proceed?</span>
           </div>
           <ul className="flex flex-col gap-2 text-sm">
             {candidates.map((c) => (
-              <li key={c.id} className="rounded border p-2">
+              <li key={c.id} className="card-flat py-3">
                 <p className="font-medium">{c.name}</p>
-                <p className="text-neutral-500">
+                <p style={{ color: "var(--ink-muted)" }}>
                   {c.phone} · {c.email} · {c.status}
                 </p>
               </li>
             ))}
           </ul>
-          <label className="text-sm">
+          <label className="text-sm font-medium">
             Reason for proceeding
             <input
               required
               value={overrideReason}
               onChange={(e) => setOverrideReason(e.target.value)}
               placeholder="e.g. different customer, shared office line"
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              className="input mt-1.5"
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-          >
+          {error && (
+            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? "Confirming…" : "Yes, proceed anyway"}
           </button>
         </form>
       )}
 
       {step === "service-type" && lead && (
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <p className="text-sm text-neutral-500">Select a service type to unlock the booking form.</p>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            {SERVICE_TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                disabled={submitting}
-                onClick={() => handleServiceType(t.value)}
-                className="rounded border px-3 py-2 text-sm hover:bg-neutral-100 disabled:opacity-50"
-              >
-                {t.label}
-              </button>
-            ))}
+        <div className="card flex flex-col gap-4">
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            Select a service type to unlock the booking form.
+          </p>
+          {error && (
+            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+              {error}
+            </p>
+          )}
+          <div className="grid grid-cols-3 gap-3">
+            {SERVICE_TYPES.map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleServiceType(t.value)}
+                  className="flex flex-col items-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ borderColor: "var(--hairline-strong)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--hairline-strong)")}
+                >
+                  <Icon size={22} strokeWidth={1.75} style={{ color: "var(--accent)" }} />
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

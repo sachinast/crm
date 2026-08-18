@@ -1,3 +1,5 @@
+import { Plug } from "lucide-react";
+
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
@@ -52,68 +54,83 @@ export default async function IntegrationsPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-lg font-semibold">Integrations</h1>
-      <p className="mb-6 text-sm text-neutral-500">
-        Connect Zapier, Make, or any other form or API to capture leads directly into the CRM.
-      </p>
+      <div className="mb-6 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
+          <Plug size={18} style={{ color: "var(--accent)" }} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            Connect Zapier, Make, or any other form or API to capture leads directly into the CRM.
+          </p>
+        </div>
+      </div>
 
       {agents.length === 0 ? (
-        <p className="mb-6 rounded border border-dashed p-4 text-sm text-neutral-500">
+        <p className="card mb-6 text-sm" style={{ borderStyle: "dashed", color: "var(--ink-muted)" }}>
           Create at least one Agent user before setting up an integration — captured leads need an owner.
         </p>
       ) : (
-        <div className="mb-8">
+        <div className="mb-6">
           <CreateApiKeyForm agents={agents} />
         </div>
       )}
 
-      <table className="mb-8 w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-neutral-500">
-            <th className="py-2 font-medium">Name</th>
-            <th className="font-medium">Key</th>
-            <th className="font-medium">Assigned to</th>
-            <th className="font-medium">Last used</th>
-            <th className="font-medium">Status</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {keys.length === 0 && (
+      <div className="card-flat mb-6 overflow-x-auto p-0">
+        <table className="table-modern">
+          <thead>
             <tr>
-              <td colSpan={6} className="py-4 text-neutral-400">
-                No API keys yet.
-              </td>
+              <th>Name</th>
+              <th>Key</th>
+              <th>Assigned to</th>
+              <th>Last used</th>
+              <th>Status</th>
+              <th />
             </tr>
-          )}
-          {keys.map((k) => (
-            <tr key={k.id} className="border-b">
-              <td className="py-2">{k.name}</td>
-              <td className="font-mono text-xs text-neutral-500">{k.key_prefix}…</td>
-              <td>{agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}</td>
-              <td className="text-xs text-neutral-500">
-                {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}
-              </td>
-              <td>
-                <span className={k.is_active ? "text-green-700" : "text-neutral-400"}>
-                  {k.is_active ? "Active" : "Revoked"}
-                </span>
-              </td>
-              <td>
-                <RevokeButton keyId={k.id} isActive={k.is_active} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {keys.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                  No API keys yet.
+                </td>
+              </tr>
+            )}
+            {keys.map((k) => (
+              <tr key={k.id}>
+                <td className="font-medium">{k.name}</td>
+                <td className="font-mono text-xs" style={{ color: "var(--ink-muted)" }}>{k.key_prefix}…</td>
+                <td style={{ color: "var(--ink-muted)" }}>{agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}</td>
+                <td className="text-xs" style={{ color: "var(--ink-muted)" }}>
+                  {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}
+                </td>
+                <td>
+                  <span
+                    className="badge"
+                    style={k.is_active ? { background: "var(--success-soft)", color: "var(--success)" } : { background: "var(--hairline)", color: "var(--ink-faint)" }}
+                  >
+                    {k.is_active ? "Active" : "Revoked"}
+                  </span>
+                </td>
+                <td>
+                  <RevokeButton keyId={k.id} isActive={k.is_active} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <section className="rounded-lg border p-4 text-sm">
-        <h2 className="mb-2 font-medium">Setting up Zapier / Make</h2>
-        <p className="mb-2 text-neutral-500">
+      <section className="card text-sm">
+        <h2 className="section-label mb-3">Setting up Zapier / Make</h2>
+        <p className="mb-2" style={{ color: "var(--ink-muted)" }}>
           Point a &ldquo;Webhooks&rdquo; action (Zapier &ldquo;Webhooks by Zapier&rdquo; → POST, or Make&apos;s
           HTTP module) at:
         </p>
-        <pre className="mb-2 overflow-x-auto rounded border bg-neutral-50 p-2 text-xs">
+        <pre
+          className="mb-2 overflow-x-auto rounded-lg border p-3 text-xs"
+          style={{ background: "var(--background)", borderColor: "var(--hairline)" }}
+        >
           {`POST ${API_BASE_URL}/leads/capture
 Header: X-API-Key: <your key>
 Body (JSON):
@@ -125,7 +142,7 @@ Body (JSON):
   "notes": "optional freeform context"
 }`}
         </pre>
-        <p className="text-neutral-500">
+        <p style={{ color: "var(--ink-muted)" }}>
           Map your form/API&apos;s own fields onto <code>name</code>, <code>phone</code>, <code>email</code> in
           Zapier&apos;s or Make&apos;s field-mapping step — this endpoint&apos;s contract stays fixed regardless of
           the source.

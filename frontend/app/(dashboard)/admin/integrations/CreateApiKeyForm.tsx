@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy, KeyRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
@@ -58,20 +59,23 @@ export default function CreateApiKeyForm({ agents }: { agents: AgentOption[] }) 
 
   if (createdKey) {
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
-        <p className="mb-2 font-medium text-amber-900">
+      <div className="card text-sm" style={{ background: "var(--warning-soft)", borderColor: "var(--warning)" }}>
+        <p className="mb-2 font-medium" style={{ color: "var(--warning)" }}>
           Copy this key now — it won&apos;t be shown again.
         </p>
         <div className="mb-3 flex items-center gap-2">
-          <code className="flex-1 overflow-x-auto rounded border bg-white px-2 py-1.5 text-xs">{createdKey}</code>
-          <button
-            onClick={handleCopy}
-            className="rounded border px-3 py-1.5 text-xs hover:bg-white"
+          <code
+            className="flex-1 overflow-x-auto rounded-lg border px-2.5 py-2 text-xs"
+            style={{ background: "var(--surface)", borderColor: "var(--hairline-strong)" }}
           >
+            {createdKey}
+          </code>
+          <button onClick={handleCopy} className="btn-secondary btn-sm">
+            {copied ? <Check size={13} /> : <Copy size={13} />}
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <button onClick={handleDone} className="rounded bg-neutral-900 px-3 py-1.5 text-xs text-white">
+        <button onClick={handleDone} className="btn-primary btn-sm">
           Done
         </button>
       </div>
@@ -79,25 +83,20 @@ export default function CreateApiKeyForm({ agents }: { agents: AgentOption[] }) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-lg border p-4 text-sm">
-      <label className="col-span-2">
+    <form onSubmit={handleSubmit} className="card grid grid-cols-2 gap-3 text-sm">
+      <label className="col-span-2 font-medium">
         Name
         <input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Zapier — Website Contact Form"
-          className="input mt-1"
+          className="input mt-1.5"
         />
       </label>
-      <label className="col-span-2">
+      <label className="col-span-2 font-medium">
         Assign leads to
-        <select
-          required
-          value={assignedAgentId}
-          onChange={(e) => setAssignedAgentId(e.target.value)}
-          className="input mt-1"
-        >
+        <select required value={assignedAgentId} onChange={(e) => setAssignedAgentId(e.target.value)} className="input mt-1.5">
           {agents.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name} ({a.email})
@@ -105,12 +104,13 @@ export default function CreateApiKeyForm({ agents }: { agents: AgentOption[] }) 
           ))}
         </select>
       </label>
-      {error && <p className="col-span-2 text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting || !assignedAgentId}
-        className="col-span-2 rounded bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
-      >
+      {error && (
+        <p className="col-span-2 rounded-lg px-3 py-2" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={submitting || !assignedAgentId} className="btn-primary col-span-2">
+        <KeyRound size={15} />
         {submitting ? "Creating…" : "Create API key"}
       </button>
     </form>

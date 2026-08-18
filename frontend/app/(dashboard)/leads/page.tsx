@@ -1,7 +1,10 @@
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import { statusBadgeStyle } from "@/lib/status-colors";
+import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
 
 interface LeadRow {
   id: string;
@@ -47,72 +50,94 @@ export default async function LeadsPage({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Leads</h1>
-        <Link href="/leads/new" className="rounded bg-neutral-900 px-3 py-2 text-sm text-white">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+            {leads.length} {leads.length === 1 ? "record" : "records"} in view
+          </p>
+        </div>
+        <Link href="/leads/new" className="btn-primary">
+          <Plus size={16} strokeWidth={2.5} />
           New lead
         </Link>
       </div>
 
-      <form className="mb-4 flex gap-2" method="GET">
-        <input
-          name="email"
-          defaultValue={params.email}
-          placeholder="Filter by email"
-          className="rounded border px-3 py-2 text-sm"
-        />
-        <input
-          name="mobile"
-          defaultValue={params.mobile}
-          placeholder="Filter by mobile"
-          className="rounded border px-3 py-2 text-sm"
-        />
-        <button type="submit" className="rounded border px-3 py-2 text-sm hover:bg-neutral-100">
+      <form className="mb-5 flex flex-wrap gap-2" method="GET">
+        <div className="relative">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-faint)" }} />
+          <input
+            name="email"
+            defaultValue={params.email}
+            placeholder="Filter by email"
+            className="input w-56 pl-8"
+          />
+        </div>
+        <div className="relative">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-faint)" }} />
+          <input
+            name="mobile"
+            defaultValue={params.mobile}
+            placeholder="Filter by mobile"
+            className="input w-56 pl-8"
+          />
+        </div>
+        <button type="submit" className="btn-secondary">
           Filter
         </button>
         {(params.email || params.mobile) && (
-          <Link href="/leads" className="rounded border px-3 py-2 text-sm hover:bg-neutral-100">
+          <Link href="/leads" className="btn-ghost">
             Clear
           </Link>
         )}
       </form>
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-neutral-500">
-            <th className="py-2 font-medium">Name</th>
-            <th className="font-medium">Phone</th>
-            <th className="font-medium">Email</th>
-            <th className="font-medium">Service</th>
-            <th className="font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leads.length === 0 && (
+      <div className="card-flat overflow-x-auto p-0">
+        <table className="table-modern">
+          <thead>
             <tr>
-              <td colSpan={5} className="py-4 text-neutral-400">
-                No leads yet.
-              </td>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Service</th>
+              <th>Status</th>
             </tr>
-          )}
-          {leads.map((lead) => (
-            <tr key={lead.id} className="border-b">
-              <td className="py-2">
-                <Link href={`/leads/${lead.id}`} className="hover:underline">
-                  {lead.name}
-                </Link>
-                {lead.is_duplicate && (
-                  <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">dup</span>
-                )}
-              </td>
-              <td>{lead.phone}</td>
-              <td>{lead.email}</td>
-              <td>{lead.service_type ?? "—"}</td>
-              <td>{lead.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {leads.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                  No leads yet.
+                </td>
+              </tr>
+            )}
+            {leads.map((lead) => (
+              <tr key={lead.id}>
+                <td>
+                  <Link href={`/leads/${lead.id}`} className="font-medium hover:underline">
+                    {lead.name}
+                  </Link>
+                  {lead.is_duplicate && (
+                    <span className="badge ml-2" style={{ background: "var(--warning-soft)", color: "var(--warning)" }}>
+                      dup
+                    </span>
+                  )}
+                </td>
+                <td style={{ color: "var(--ink-muted)" }}>{lead.phone}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{lead.email}</td>
+                <td className="capitalize" style={{ color: "var(--ink-muted)" }}>
+                  {lead.service_type ?? "—"}
+                </td>
+                <td>
+                  <span className="badge" style={statusBadgeStyle(STATUS_COLOR_HINTS[lead.status] ?? "grey")}>
+                    {formatStatus(lead.status)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

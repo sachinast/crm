@@ -1,3 +1,5 @@
+import { ScrollText } from "lucide-react";
+
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
@@ -61,38 +63,40 @@ export default async function AuditPage({
   if (processLog.forbidden) {
     return (
       <div>
-        <h1 className="mb-4 text-lg font-semibold">Audit</h1>
-        <p className="text-sm text-neutral-500">Admin/Super Admin only.</p>
+        <h1 className="mb-4 text-2xl font-semibold tracking-tight">Audit</h1>
+        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Admin/Super Admin only.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-lg font-semibold">Audit</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        PRD §9.2/§9.3 — the master process log, PII reveal trail, and record-access log.
-      </p>
+      <div className="mb-6 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
+          <ScrollText size={18} style={{ color: "var(--accent)" }} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Audit</h1>
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            PRD §9.2/§9.3 — the master process log, PII reveal trail, and record-access log.
+          </p>
+        </div>
+      </div>
 
       <form className="mb-6 flex gap-2" method="GET">
-        <input
-          name="lead_id"
-          defaultValue={lead_id}
-          placeholder="Filter by lead ID"
-          className="rounded border px-3 py-2 text-sm"
-        />
-        <button type="submit" className="rounded border px-3 py-2 text-sm hover:bg-neutral-100">
+        <input name="lead_id" defaultValue={lead_id} placeholder="Filter by lead ID" className="input w-64" />
+        <button type="submit" className="btn-secondary">
           Filter
         </button>
       </form>
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm font-medium">Booking process log</h2>
-        <ul className="flex flex-col gap-1 text-xs text-neutral-500">
-          {processLog.rows.length === 0 && <li className="text-neutral-400">No entries.</li>}
+      <section className="card mb-4">
+        <h2 className="section-label mb-3">Booking process log</h2>
+        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+          {processLog.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
           {processLog.rows.map((r) => (
-            <li key={r.id} className="rounded border p-2">
-              <span className="font-medium text-neutral-700">{r.action}</span>
+            <li key={r.id} className="card-flat py-2.5">
+              <span className="font-medium" style={{ color: "var(--ink)" }}>{r.action}</span>
               {r.field_changed && (
                 <>
                   {" "}
@@ -108,13 +112,13 @@ export default async function AuditPage({
         </ul>
       </section>
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm font-medium">PII reveal log</h2>
-        <ul className="flex flex-col gap-1 text-xs text-neutral-500">
-          {piiReveals.rows.length === 0 && <li className="text-neutral-400">No entries.</li>}
+      <section className="card mb-4">
+        <h2 className="section-label mb-3">PII reveal log</h2>
+        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+          {piiReveals.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
           {piiReveals.rows.map((r) => (
-            <li key={r.id} className="rounded border p-2">
-              <span className="font-medium text-neutral-700">{r.field_revealed}</span> revealed · &ldquo;{r.reason}
+            <li key={r.id} className="card-flat py-2.5">
+              <span className="font-medium" style={{ color: "var(--ink)" }}>{r.field_revealed}</span> revealed · &ldquo;{r.reason}
               &rdquo; · {r.ip_address} · lead <span className="font-mono">{r.lead_id.slice(0, 8)}</span> ·{" "}
               {new Date(r.revealed_at).toLocaleString()}
             </li>
@@ -122,12 +126,12 @@ export default async function AuditPage({
         </ul>
       </section>
 
-      <section>
-        <h2 className="mb-2 text-sm font-medium">Access log</h2>
-        <ul className="flex flex-col gap-1 text-xs text-neutral-500">
-          {accessLog.rows.length === 0 && <li className="text-neutral-400">No entries.</li>}
+      <section className="card">
+        <h2 className="section-label mb-3">Access log</h2>
+        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+          {accessLog.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
           {accessLog.rows.map((r) => (
-            <li key={r.id} className="rounded border p-2">
+            <li key={r.id} className="card-flat py-2.5">
               Opened lead <span className="font-mono">{r.lead_id.slice(0, 8)}</span> ·{" "}
               {new Date(r.opened_at).toLocaleString()}
             </li>

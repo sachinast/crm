@@ -1,33 +1,254 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------
+   Design tokens — a premium travel-CRM palette: deep navy ink + a muted
+   gold accent, warm ivory surfaces instead of stark white/gray. Every
+   token below is registered in @theme so it's available as a normal
+   Tailwind utility (bg-accent, text-ink, border-hairline, etc).
+   ------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #f6f4ef;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --ink: #12172b;
+  --ink-muted: #5b6274;
+  --ink-faint: #8a90a1;
+  --hairline: #e6e2d8;
+  --hairline-strong: #d8d3c4;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --accent: #b3872f;
+  --accent-hover: #9a7327;
+  --accent-soft: #f4e9d3;
+  --accent-ink: #3a2c0c;
+
+  --navy: #12172b;
+  --navy-soft: #1c2440;
+
+  --success: #0f7a5c;
+  --success-soft: #e1f3ec;
+  --danger: #b8425b;
+  --danger-soft: #fbe9ed;
+  --warning: #b06a1c;
+  --warning-soft: #f8ecd9;
+  --info: #2c6faa;
+  --info-soft: #e6f0f8;
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgba(18, 23, 43, 0.04), 0 8px 24px -12px rgba(18, 23, 43, 0.12);
+  --shadow-card-hover: 0 2px 4px rgba(18, 23, 43, 0.06), 0 16px 32px -12px rgba(18, 23, 43, 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b0e19;
+    --surface: #131829;
+    --surface-raised: #171d33;
+    --ink: #eef0f6;
+    --ink-muted: #a7acc0;
+    --ink-faint: #6c7288;
+    --hairline: #232a44;
+    --hairline-strong: #2c3454;
+
+    --accent: #d3ab5e;
+    --accent-hover: #e0bc78;
+    --accent-soft: #2a2311;
+    --accent-ink: #f7e9c9;
+
+    --navy: #0b0e19;
+    --navy-soft: #171d33;
+
+    --success: #3ecf9a;
+    --success-soft: #113028;
+    --danger: #ef7b93;
+    --danger-soft: #34131c;
+    --warning: #e3a854;
+    --warning-soft: #332411;
+    --info: #6badea;
+    --info-soft: #12253a;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 32px -12px rgba(0, 0, 0, 0.6);
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.006em;
 }
 
-/* Shared form input styling for the booking-module forms (car/hotel/flight). */
+/* ---------------------------------------------------------------------
+   Component classes — shared across every page so a look/feel change
+   here cascades everywhere, instead of one-off Tailwind strings per file.
+   Tailwind v4's @apply can only reference real utilities, not other
+   custom classes, so each variant below repeats the shared shape
+   utilities rather than chaining "@apply btn" — the standard pattern for
+   component classes in v4.
+   ------------------------------------------------------------------- */
 @layer components {
   .input {
-    @apply w-full rounded border px-3 py-2 text-sm;
+    @apply w-full rounded-lg border px-3 py-2 text-sm transition-colors outline-none;
+    background: var(--surface);
+    border-color: var(--hairline-strong);
+    color: var(--ink);
   }
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input::placeholder {
+    color: var(--ink-faint);
+  }
+
+  .card {
+    @apply rounded-2xl border p-5;
+    background: var(--surface);
+    border-color: var(--hairline);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-flat {
+    @apply rounded-2xl border p-5;
+    background: var(--surface);
+    border-color: var(--hairline);
+  }
+
+  .stat-card {
+    @apply flex flex-col gap-1 rounded-2xl border p-5;
+    background: var(--surface);
+    border-color: var(--hairline);
+    box-shadow: var(--shadow-card);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--surface);
+    border-color: var(--hairline-strong);
+    color: var(--ink);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    color: var(--ink-muted);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn-danger:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  .link-muted {
+    color: var(--ink-muted);
+  }
+  .link-muted:hover {
+    color: var(--ink);
+  }
+
+  .table-modern {
+    @apply w-full text-sm;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table-modern thead th {
+    @apply px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .table-modern tbody td {
+    @apply px-3 py-3;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .table-modern tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .table-modern tbody tr {
+    transition: background-color 0.12s ease;
+  }
+  .table-modern tbody tr:hover {
+    background: var(--accent-soft);
+  }
+
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-wider;
+    color: var(--ink-faint);
+  }
+
+  .nav-link {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors;
+    color: #aeb4cc;
+  }
+  .nav-link:hover {
+    background: rgba(211, 171, 94, 0.08);
+    color: #e9ecf5;
+  }
+  .nav-link-active {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors;
+    background: rgba(211, 171, 94, 0.16);
+    color: #f0d9a3;
+  }
+}
+
+::selection {
+  background: var(--accent-soft);
 }

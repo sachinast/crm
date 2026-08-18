@@ -1,3 +1,5 @@
+import { UserCog } from "lucide-react";
+
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
@@ -30,40 +32,56 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-lg font-semibold">User provisioning</h1>
-      <p className="mb-6 text-sm text-neutral-500">
-        No self-registration — every account here is created by an Admin or Super Admin (PRD §3).
-      </p>
+      <div className="mb-6 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
+          <UserCog size={18} style={{ color: "var(--accent)" }} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">User provisioning</h1>
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            No self-registration — every account here is created by an Admin or Super Admin (PRD §3).
+          </p>
+        </div>
+      </div>
 
       <CreateUserForm />
 
-      <table className="mt-8 w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-neutral-500">
-            <th className="py-2 font-medium">Name</th>
-            <th className="font-medium">Email</th>
-            <th className="font-medium">Role</th>
-            <th className="font-medium">Active</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.length === 0 && (
+      <div className="card-flat mt-6 overflow-x-auto p-0">
+        <table className="table-modern">
+          <thead>
             <tr>
-              <td colSpan={4} className="py-4 text-neutral-400">
-                No users yet.
-              </td>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Active</th>
             </tr>
-          )}
-          {users.map((u) => (
-            <tr key={u.id} className="border-b">
-              <td className="py-2">{u.name}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>{u.is_active ? "Yes" : "No"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                  No users yet.
+                </td>
+              </tr>
+            )}
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td className="font-medium">{u.name}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{u.email}</td>
+                <td className="capitalize" style={{ color: "var(--ink-muted)" }}>{u.role.replace(/_/g, " ")}</td>
+                <td>
+                  <span
+                    className="badge"
+                    style={u.is_active ? { background: "var(--success-soft)", color: "var(--success)" } : { background: "var(--hairline)", color: "var(--ink-faint)" }}
+                  >
+                    {u.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

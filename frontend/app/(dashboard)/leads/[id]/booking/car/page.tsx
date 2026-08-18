@@ -56,10 +56,10 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="max-w-2xl">
-      <Link href={`/leads/${id}`} className="text-sm text-neutral-500 hover:underline">
+      <Link href={`/leads/${id}`} className="link-muted text-sm">
         ← {lead.name}
       </Link>
-      <h1 className="mb-6 mt-2 text-lg font-semibold">Car rental booking</h1>
+      <h1 className="mb-6 mt-2 text-2xl font-semibold tracking-tight">Car rental booking</h1>
       <CarBookingForm leadId={id} initial={existing} />
     </div>
   );

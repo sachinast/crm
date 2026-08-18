@@ -48,13 +48,13 @@ export default function CreateUserForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-lg border p-4">
+    <form onSubmit={handleSubmit} className="card grid grid-cols-2 gap-3">
       <input
         required
         placeholder="Name"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="rounded border px-3 py-2 text-sm"
+        className="input"
       />
       <input
         required
@@ -62,7 +62,7 @@ export default function CreateUserForm() {
         placeholder="Email"
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
-        className="rounded border px-3 py-2 text-sm"
+        className="input"
       />
       <input
         required
@@ -71,13 +71,9 @@ export default function CreateUserForm() {
         minLength={8}
         value={form.password}
         onChange={(e) => setForm({ ...form, password: e.target.value })}
-        className="rounded border px-3 py-2 text-sm"
+        className="input"
       />
-      <select
-        value={form.role}
-        onChange={(e) => setForm({ ...form, role: e.target.value })}
-        className="rounded border px-3 py-2 text-sm"
-      >
+      <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="input">
         {ROLES.map((role) => (
           <option key={role} value={role}>
             {role}
@@ -85,13 +81,13 @@ export default function CreateUserForm() {
         ))}
       </select>
 
-      {error && <p className="col-span-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="col-span-2 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="col-span-2 rounded bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-      >
+      <button type="submit" disabled={submitting} className="btn-primary col-span-2">
         {submitting ? "Creating…" : "Create user"}
       </button>
     </form>

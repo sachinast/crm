@@ -1,3 +1,4 @@
+import { CalendarClock, Car, CreditCard, Hotel, Link as LinkIcon, Plane, Repeat } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
@@ -5,7 +6,8 @@ import { Fragment } from "react";
 import RevealField from "@/components/pii/RevealField";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
-import { statusColor } from "@/lib/status-colors";
+import { statusBadgeStyle } from "@/lib/status-colors";
+import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
 
 import CancellationPanel from "./CancellationPanel";
 import ModificationsPanel from "./ModificationsPanel";
@@ -177,27 +179,7 @@ const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> =
   ],
 };
 
-function formatStatus(status: string): string {
-  return status.replace(/_/g, " ");
-}
-
-// Falls back to a neutral color for statuses this page doesn't otherwise know
-// the PRD §6.1 color for (only reachable if status_lookup and BookingStatus
-// ever drift out of sync).
-const STATUS_COLOR_HINTS: Record<string, string> = {
-  authorization_pending: "grey",
-  client_approved: "blue",
-  transferred_to_billing: "purple",
-  card_charged: "green",
-  card_declined: "red",
-  tag_change_dep: "yellow",
-  tag_cr_booking: "orange",
-  tag_auditor: "cyan",
-  qc_done: "dark_green",
-  tag_refund: "red",
-  tag_rdr: "black",
-  tag_chargeback: "black",
-};
+const SERVICE_ICON: Record<string, typeof Car> = { car: Car, hotel: Hotel, flight: Plane };
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -223,46 +205,51 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const canProcessPayment = allTransitions.some((t) => t.status === "card_charged" || t.status === "card_declined");
   const transitions = allTransitions.filter((t) => t.status !== "card_charged" && t.status !== "card_declined");
 
+  const ServiceIcon = lead.service_type ? SERVICE_ICON[lead.service_type] : null;
+
   return (
-    <div className="max-w-lg">
-      <Link href="/leads" className="text-sm text-neutral-500 hover:underline">
+    <div className="max-w-2xl">
+      <Link href="/leads" className="link-muted text-sm">
         ← Leads
       </Link>
-      <h1 className="mb-1 mt-2 text-lg font-semibold">{lead.name}</h1>
-      <p className="mb-6 flex flex-wrap items-center gap-x-2 text-sm text-neutral-500">
-        <RevealField leadId={id} field="phone" maskedValue={lead.phone} />
-        <span>·</span>
-        <RevealField leadId={id} field="email" maskedValue={lead.email} />
-      </p>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
-        <dt className="text-neutral-500">Status</dt>
-        <dd>
-          <span
-            className="rounded px-2 py-0.5 text-xs text-white"
-            style={{ backgroundColor: statusColor(STATUS_COLOR_HINTS[lead.status] ?? "grey") }}
-          >
-            {formatStatus(lead.status)}
-          </span>
+      <div className="mb-6 mt-2 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{lead.name}</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm" style={{ color: "var(--ink-muted)" }}>
+            <RevealField leadId={id} field="phone" maskedValue={lead.phone} />
+            <span>·</span>
+            <RevealField leadId={id} field="email" maskedValue={lead.email} />
+          </p>
+        </div>
+        <span className="badge shrink-0" style={statusBadgeStyle(STATUS_COLOR_HINTS[lead.status] ?? "grey")}>
+          {formatStatus(lead.status)}
+        </span>
+      </div>
+
+      <dl className="card mb-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <dt style={{ color: "var(--ink-faint)" }}>Service type</dt>
+        <dd className="flex items-center gap-1.5 capitalize">
+          {ServiceIcon && <ServiceIcon size={14} style={{ color: "var(--accent)" }} />}
+          {lead.service_type ?? "not selected yet"}
         </dd>
-
-        <dt className="text-neutral-500">Service type</dt>
-        <dd>{lead.service_type ?? "not selected yet"}</dd>
 
         {lead.source && (
           <>
-            <dt className="text-neutral-500">Source</dt>
+            <dt style={{ color: "var(--ink-faint)" }}>Source</dt>
             <dd>{lead.source}</dd>
           </>
         )}
 
-        <dt className="text-neutral-500">Duplicate match</dt>
+        <dt style={{ color: "var(--ink-faint)" }}>Duplicate match</dt>
         <dd>
           {lead.is_duplicate ? (
             <span>
               Yes — {lead.duplicate_override_reason ? "confirmed" : "unconfirmed"}
               {lead.duplicate_override_reason && (
-                <span className="block text-neutral-500">“{lead.duplicate_override_reason}”</span>
+                <span className="block" style={{ color: "var(--ink-muted)" }}>
+                  “{lead.duplicate_override_reason}”
+                </span>
               )}
             </span>
           ) : (
@@ -270,37 +257,46 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           )}
         </dd>
 
-        <dt className="text-neutral-500">Created</dt>
+        <dt style={{ color: "var(--ink-faint)" }}>Created</dt>
         <dd>{new Date(lead.created_at).toLocaleString()}</dd>
       </dl>
 
-      <div className="mt-4 rounded-lg border p-4">
-        <h2 className="mb-2 text-sm font-medium">Status actions</h2>
+      <div className="card mb-4">
+        <h2 className="section-label mb-3">Status actions</h2>
         <StatusActions leadId={id} transitions={transitions} />
       </div>
 
       {canProcessPayment && (
-        <div className="mt-4">
+        <div className="mb-4">
           <PaymentActions leadId={id} />
         </div>
       )}
 
       {lead.status === "authorization_pending" && booking && (
-        <div className="mt-4 rounded-lg border border-dashed p-4 text-sm">
-          <h2 className="mb-2 font-medium">Send for customer authorization</h2>
-          <p className="mb-2 text-neutral-500">
-            Share this link with the customer to collect their &ldquo;I Authorize&rdquo; consent (PRD §8):
-          </p>
-          <a href={`/authorize/${id}`} target="_blank" rel="noreferrer" className="break-all text-blue-600 underline">
-            /authorize/{id}
-          </a>
+        <div className="card mb-4 flex items-start gap-3 text-sm" style={{ borderStyle: "dashed" }}>
+          <LinkIcon size={18} className="mt-0.5 shrink-0" style={{ color: "var(--accent)" }} />
+          <div>
+            <h2 className="mb-1 font-medium">Send for customer authorization</h2>
+            <p className="mb-2" style={{ color: "var(--ink-muted)" }}>
+              Share this link with the customer to collect their &ldquo;I Authorize&rdquo; consent (PRD §8):
+            </p>
+            <a
+              href={`/authorize/${id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all underline"
+              style={{ color: "var(--accent)" }}
+            >
+              /authorize/{id}
+            </a>
+          </div>
         </div>
       )}
 
       {!lead.service_type && (
-        <p className="mt-4 text-sm text-neutral-500">
+        <p className="mb-4 text-sm" style={{ color: "var(--ink-muted)" }}>
           Booking form is locked until a service type is selected —{" "}
-          <Link href="/leads/new" className="underline">
+          <Link href="/leads/new" className="underline" style={{ color: "var(--accent)" }}>
             continue the intake flow
           </Link>
           .
@@ -308,54 +304,58 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       )}
 
       {lead.service_type && !booking && (
-        <div className="mt-4 rounded-lg border border-dashed p-4 text-sm">
-          <p className="mb-3 text-neutral-500">
+        <div className="card mb-4 text-sm" style={{ borderStyle: "dashed" }}>
+          <p className="mb-3" style={{ color: "var(--ink-muted)" }}>
             Service type is <strong>{lead.service_type}</strong> — booking details haven&apos;t been entered yet.
           </p>
-          <Link
-            href={`/leads/${id}/booking/${lead.service_type}`}
-            className="inline-block rounded bg-neutral-900 px-3 py-2 text-sm text-white"
-          >
+          <Link href={`/leads/${id}/booking/${lead.service_type}`} className="btn-primary">
             Complete {lead.service_type} booking
           </Link>
         </div>
       )}
 
       {lead.service_type && booking && (
-        <div className="mt-4 rounded-lg border p-4 text-sm">
+        <div className="card mb-4 text-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-medium">
+            <h2 className="flex items-center gap-1.5 font-medium">
+              {ServiceIcon && <ServiceIcon size={15} style={{ color: "var(--accent)" }} />}
               {lead.service_type[0].toUpperCase() + lead.service_type.slice(1)} booking · {booking.booking_reference}
             </h2>
-            <Link href={`/leads/${id}/booking/${lead.service_type}`} className="text-xs underline">
+            <Link href={`/leads/${id}/booking/${lead.service_type}`} className="link-muted text-xs underline">
               Edit
             </Link>
           </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
             {BOOKING_SUMMARY_FIELDS[lead.service_type]?.map((f) => (
               <Fragment key={f.key}>
-                <dt className="text-neutral-500">{f.label}</dt>
+                <dt style={{ color: "var(--ink-faint)" }}>{f.label}</dt>
                 <dd>{String(booking[f.key] ?? "—")}</dd>
               </Fragment>
             ))}
-            <dt className="text-neutral-500">Total</dt>
-            <dd>{booking.total_amount}</dd>
+            <dt style={{ color: "var(--ink-faint)" }}>Total</dt>
+            <dd className="font-medium">{booking.total_amount}</dd>
           </dl>
         </div>
       )}
 
       {payments.length > 0 && (
-        <div className="mt-4 rounded-lg border p-4 text-sm">
-          <h2 className="mb-2 font-medium">Payment history</h2>
-          <ul className="flex flex-col gap-1 text-xs text-neutral-500">
+        <div className="card mb-4 text-sm">
+          <h2 className="section-label mb-3 flex items-center gap-1.5">
+            <CreditCard size={13} />
+            Payment history
+          </h2>
+          <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
             {payments.map((p) => (
-              <li key={p.id}>
-                <span className={p.outcome === "charged" ? "text-green-700" : "text-red-700"}>{p.outcome}</span>
-                {" · $"}
-                {p.total_amount.toFixed(2)}
-                {` · ${p.card_display}`}
-                {" · "}
-                {new Date(p.processed_at ?? p.created_at).toLocaleString()}
+              <li key={p.id} className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className="badge"
+                  style={p.outcome === "charged" ? statusBadgeStyle("green") : statusBadgeStyle("red")}
+                >
+                  {p.outcome}
+                </span>
+                <span>${p.total_amount.toFixed(2)}</span>
+                <span>· {p.card_display}</span>
+                <span>· {new Date(p.processed_at ?? p.created_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>
@@ -363,25 +363,30 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       )}
 
       {(canModify || modifications.length > 0) && (
-        <div className="mt-4">
+        <div className="mb-4">
           <ModificationsPanel leadId={id} canModify={canModify} history={modifications} />
         </div>
       )}
 
       {(canModify || cancellation) && (
-        <div className="mt-4">
+        <div className="mb-4">
           <CancellationPanel leadId={id} canCancel={canModify && !cancellation} cancellation={cancellation} />
         </div>
       )}
 
       {history.length > 0 && (
-        <div className="mt-4 rounded-lg border p-4 text-sm">
-          <h2 className="mb-2 font-medium">Status history</h2>
-          <ul className="flex flex-col gap-1 text-xs text-neutral-500">
+        <div className="card mb-4 text-sm">
+          <h2 className="section-label mb-3 flex items-center gap-1.5">
+            <CalendarClock size={13} />
+            Status history
+          </h2>
+          <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
             {history.map((h) => (
-              <li key={h.id}>
+              <li key={h.id} className="flex items-center gap-1.5">
+                <Repeat size={12} className="shrink-0" style={{ color: "var(--ink-faint)" }} />
                 {h.from_status ? `${formatStatus(h.from_status)} → ` : ""}
-                {formatStatus(h.to_status)} · {new Date(h.changed_at).toLocaleString()}
+                {formatStatus(h.to_status)}
+                <span style={{ color: "var(--ink-faint)" }}>· {new Date(h.changed_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>
