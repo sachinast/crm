@@ -80,7 +80,7 @@ export default function FlightBookingFields({
       <Field label="Destination">
         <input required value={value.destination} onChange={(e) => onChange({ ...value, destination: e.target.value })} className="input" placeholder="LAX" />
       </Field>
-      <div className="col-span-2">
+      <div className="col-span-full">
         <Field label="Flight number(s) — comma separated">
           <input required value={flightNumbersText} onChange={(e) => handleFlightNumbersChange(e.target.value)} className="input" placeholder="DL123, DL456" />
         </Field>
@@ -98,7 +98,7 @@ export default function FlightBookingFields({
         onChange={(next) => onChange({ ...value, custom_fields: next })}
       />
 
-      <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+      <p className="col-span-full text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(value.prepaid_amount) + Number(value.pay_at_counter_amount)).toFixed(2)} (computed)
       </p>
     </fieldset>

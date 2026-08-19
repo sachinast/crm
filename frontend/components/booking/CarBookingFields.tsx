@@ -102,7 +102,7 @@ export default function CarBookingFields({
         onChange={(next) => onChange({ ...value, custom_fields: next })}
       />
 
-      <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+      <p className="col-span-full text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(value.prepaid_amount) + Number(value.pay_at_counter_amount)).toFixed(2)} (computed)
       </p>
     </fieldset>

@@ -267,7 +267,7 @@ export default function NewLeadPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">New lead</h1>
 
       {pendingConfirmLead ? (
@@ -314,49 +314,55 @@ export default function NewLeadPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
-          <Field label="Email">
-            <div className="relative">
-              <input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input pr-9"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                <CheckTick status={emailCheck} />
-              </span>
-            </div>
-            {email.trim().length > 0 && !emailFormatOk && (
-              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                Enter a valid email address
-              </span>
-            )}
-            {emailCheck === "exists" && (
-              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                A lead with this email already exists
-              </span>
-            )}
-          </Field>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Field label="Email">
+              <div className="relative">
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pr-9"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <CheckTick status={emailCheck} />
+                </span>
+              </div>
+              {email.trim().length > 0 && !emailFormatOk && (
+                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                  Enter a valid email address
+                </span>
+              )}
+              {emailCheck === "exists" && (
+                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                  A lead with this email already exists
+                </span>
+              )}
+            </Field>
 
-          <Field label="Phone">
-            <div className="relative">
-              <PhoneInput country={country} nationalNumber={nationalNumber} onCountryChange={setCountry} onNationalNumberChange={setNationalNumber} />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                <CheckTick status={phoneCheck} />
-              </span>
-            </div>
-            {nationalNumber.trim().length > 0 && !phoneFormatOk && (
-              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                Enter a valid number for the selected country
-              </span>
-            )}
-            {phoneCheck === "exists" && (
-              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                A lead with this number already exists
-              </span>
-            )}
-          </Field>
+            <Field label="Phone">
+              <div className="relative">
+                <PhoneInput country={country} nationalNumber={nationalNumber} onCountryChange={setCountry} onNationalNumberChange={setNationalNumber} />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <CheckTick status={phoneCheck} />
+                </span>
+              </div>
+              {nationalNumber.trim().length > 0 && !phoneFormatOk && (
+                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                  Enter a valid number for the selected country
+                </span>
+              )}
+              {phoneCheck === "exists" && (
+                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                  A lead with this number already exists
+                </span>
+              )}
+            </Field>
+
+            <Field label="Customer Name">
+              <input required disabled={!unlocked} value={name} onChange={(e) => setName(e.target.value)} className="input" />
+            </Field>
+          </div>
 
           {showDuplicateWarning && (
             <div
@@ -377,15 +383,13 @@ export default function NewLeadPage() {
           )}
 
           <fieldset disabled={!unlocked} className="flex flex-col gap-4" style={!unlocked ? { opacity: 0.5 } : undefined}>
-            <Field label="Customer Name">
-              <input required value={name} onChange={(e) => setName(e.target.value)} className="input" />
-            </Field>
-
-            <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
+            </div>
 
             <div>
               <p className="mb-2 text-sm font-medium">Service type</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 {SERVICE_TYPES.map((t) => {
                   const Icon = t.icon;
                   const active = serviceType === t.value;
@@ -406,7 +410,7 @@ export default function NewLeadPage() {
             </div>
 
             {serviceType && (
-              <div className="grid grid-cols-2 gap-4 border-t pt-4" style={{ borderColor: "var(--hairline)" }}>
+              <div className="grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-3" style={{ borderColor: "var(--hairline)" }}>
                 {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
                 {serviceType === "hotel" && <HotelBookingFields value={hotelForm} onChange={setHotelForm} />}
                 {serviceType === "flight" && <FlightBookingFields value={flightForm} onChange={setFlightForm} />}

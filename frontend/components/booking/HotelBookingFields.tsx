@@ -59,7 +59,6 @@ export default function HotelBookingFields({
       <Field label="Location">
         <input required value={value.location} onChange={(e) => onChange({ ...value, location: e.target.value })} className="input" />
       </Field>
-      <div />
       <Field label="Check-in date">
         <input required type="date" value={value.check_in_date} onChange={(e) => onChange({ ...value, check_in_date: e.target.value })} className="input" />
       </Field>
@@ -79,7 +78,7 @@ export default function HotelBookingFields({
         onChange={(next) => onChange({ ...value, custom_fields: next })}
       />
 
-      <p className="col-span-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+      <p className="col-span-full text-xs" style={{ color: "var(--ink-muted)" }}>
         Total amount: {(Number(value.prepaid_amount) + Number(value.pay_at_counter_amount)).toFixed(2)} (computed)
       </p>
     </fieldset>
