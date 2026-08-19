@@ -24,7 +24,6 @@ CAR_PAYLOAD = {
     "booking_reference": "CR-DASH-001",
     "booking_platform": "eBookingHub",
     "car_provider": "Hertz",
-    "renter_name": "Dash Renter",
     "renter_dob": "1990-01-01",
     "transmission": "automatic",
     "fuel_policy": "Full to Full",

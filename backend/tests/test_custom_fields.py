@@ -27,7 +27,6 @@ CAR_PAYLOAD = {
     "booking_reference": "CR-9001",
     "booking_platform": "eBookingHub",
     "car_provider": "Hertz",
-    "renter_name": "Alex Renter",
     "renter_dob": "1990-05-15",
     "transmission": "automatic",
     "fuel_policy": "Full to Full",

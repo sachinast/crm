@@ -19,7 +19,6 @@ class CarBookingCreate(BaseModel):
     booking_reference: str = Field(min_length=1)
     booking_platform: str = Field(min_length=1)
     car_provider: str = Field(min_length=1)
-    renter_name: str = Field(min_length=1)
     renter_dob: date
     transmission: TransmissionType
     fuel_policy: str | None = None
@@ -45,7 +44,6 @@ class CarBookingUpdate(BaseModel):
     booking_reference: str | None = None
     booking_platform: str | None = None
     car_provider: str | None = None
-    renter_name: str | None = None
     renter_dob: date | None = None
     transmission: TransmissionType | None = None
     fuel_policy: str | None = None
@@ -67,7 +65,6 @@ class CarBookingRead(BaseModel):
     booking_reference: str
     booking_platform: str
     car_provider: str
-    renter_name: str
     renter_dob: date
     transmission: TransmissionType
     fuel_policy: str | None

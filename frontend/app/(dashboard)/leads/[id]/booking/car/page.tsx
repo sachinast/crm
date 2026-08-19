@@ -16,7 +16,6 @@ interface CarBooking {
   booking_reference: string;
   booking_platform: string;
   car_provider: string;
-  renter_name: string;
   renter_dob: string;
   transmission: string;
   fuel_policy: string | null;

@@ -38,7 +38,8 @@ class CarBooking(UUIDPKMixin, TimestampMixin, Base):
     booking_reference: Mapped[str] = mapped_column(Text, nullable=False)
     booking_platform: Mapped[str] = mapped_column(Text, nullable=False)
     car_provider: Mapped[str] = mapped_column(Text, nullable=False)
-    renter_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # No renter_name — redundant with leads.name ("Customer Name" at intake);
+    # dropped in migration 0011.
     renter_dob: Mapped[date] = mapped_column(Date, nullable=False)
     transmission: Mapped[TransmissionType] = mapped_column(transmission_enum, nullable=False)
     fuel_policy: Mapped[str | None] = mapped_column(Text)
