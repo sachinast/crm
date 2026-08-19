@@ -23,6 +23,7 @@ from app.models.user import User
 from app.schemas.audit import RevealRequest, RevealResult
 from app.schemas.lead import (
     AvailableTransition,
+    ContactCheckResult,
     CustomFieldsUpdate,
     DuplicateCheckResult,
     LeadConfirm,
@@ -167,6 +168,30 @@ async def update_custom_fields(
     await db.commit()
     await db.refresh(lead)
     return lead
+
+
+@router.get("/check-contact", response_model=ContactCheckResult)
+async def check_contact(
+    email: str | None = None,
+    phone: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
+) -> ContactCheckResult:
+    """Live-typing feedback for the intake form (green/red tick as the agent
+    types) — a lighter, faster sibling of GET /{lead_id}/duplicate-check:
+    exact match only, no fuzzy name matching, no lead has to exist yet.
+    Purely a UX hint; POST /leads' own duplicate search (name/phone/email,
+    fuzzy name included) is still the authoritative check that drives the
+    confirm-to-proceed gate, unaffected by this endpoint. Registered ahead of
+    GET /{lead_id} so "check-contact" doesn't get swallowed by that route.
+    """
+    email_exists = None
+    phone_exists = None
+    if email:
+        email_exists = await db.scalar(select(Lead.id).where(Lead.email == email).limit(1)) is not None
+    if phone:
+        phone_exists = await db.scalar(select(Lead.id).where(Lead.phone == phone).limit(1)) is not None
+    return ContactCheckResult(email_exists=email_exists, phone_exists=phone_exists)
 
 
 @router.get("", response_model=list[LeadRead])

@@ -1,4 +1,4 @@
-import { Banknote, CalendarClock, Gift, Plug, ShieldCheck, Users, Wallet } from "lucide-react";
+import { Banknote, CalendarClock, Gift, Plug, ShieldCheck, Trophy, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 
 import StatCard from "@/components/ui/StatCard";
@@ -16,6 +16,13 @@ interface LeadSummaryRow {
   created_at: string;
 }
 
+interface LeaderboardEntry {
+  agent_id: string;
+  agent_name: string;
+  revenue: number;
+  bookings_count: number;
+}
+
 interface DashboardSummary {
   role: string;
   total_visible_leads: number;
@@ -29,7 +36,10 @@ interface DashboardSummary {
   active_integrations: number | null;
   future_credits_issued_count: number | null;
   future_credits_total_value: number | null;
+  leaderboard: LeaderboardEntry[] | null;
 }
+
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 async function fetchSummary(): Promise<DashboardSummary | null> {
   const token = await getAccessToken();
@@ -177,6 +187,43 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {summary.leaderboard !== null && (
+        <div className="card mt-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Trophy size={16} style={{ color: "var(--accent)" }} />
+            <h2 className="text-sm font-semibold">Top 5 Performers</h2>
+          </div>
+          {summary.leaderboard.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+              No charged bookings yet.
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {summary.leaderboard.map((entry, i) => (
+                <li
+                  key={entry.agent_id}
+                  className="flex items-center justify-between gap-3 border-b py-2.5 last:border-b-0"
+                  style={{ borderColor: "var(--hairline)" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-6 shrink-0 text-center text-sm">{MEDALS[i] ?? `#${i + 1}`}</span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{entry.agent_name}</p>
+                      <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                        {entry.bookings_count} {entry.bookings_count === 1 ? "booking" : "bookings"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold" style={{ color: "var(--accent)" }}>
+                    {currency(entry.revenue)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

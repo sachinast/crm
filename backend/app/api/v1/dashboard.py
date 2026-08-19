@@ -17,7 +17,7 @@ from app.models.integration import ApiKey
 from app.models.lead import Lead
 from app.models.payment import PaymentTransaction
 from app.models.user import User
-from app.schemas.dashboard import DashboardSummary
+from app.schemas.dashboard import DashboardSummary, LeaderboardEntry
 from app.schemas.lead import LeadSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -65,6 +65,29 @@ async def get_dashboard_summary(
             )
         )
         summary.total_revenue = float(raw)
+
+        # Top 5 performers — revenue attributed to the agent who owns the
+        # lead (not who processed the card), same permission gate as
+        # company-wide revenue since this is the same class of sensitive,
+        # cross-agent figure.
+        leaderboard_rows = await db.execute(
+            select(
+                Lead.agent_id,
+                User.name,
+                func.sum(PaymentTransaction.total_amount).label("revenue"),
+                func.count(func.distinct(Lead.id)).label("bookings_count"),
+            )
+            .join(PaymentTransaction, PaymentTransaction.lead_id == Lead.id)
+            .join(User, User.id == Lead.agent_id)
+            .where(PaymentTransaction.outcome == "charged")
+            .group_by(Lead.agent_id, User.name)
+            .order_by(func.sum(PaymentTransaction.total_amount).desc())
+            .limit(5)
+        )
+        summary.leaderboard = [
+            LeaderboardEntry(agent_id=agent_id, agent_name=name, revenue=float(revenue), bookings_count=count)
+            for agent_id, name, revenue, count in leaderboard_rows
+        ]
 
     if current_user.role.has_permission("dashboard.system_stats"):
         summary.total_users = await db.scalar(select(func.count()).select_from(User))

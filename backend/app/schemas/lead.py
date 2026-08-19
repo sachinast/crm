@@ -84,6 +84,16 @@ class DuplicateCheckResult(BaseModel):
     candidates: list[LeadSummary]
 
 
+class ContactCheckResult(BaseModel):
+    """GET /leads/check-contact — a lighter, faster sibling of
+    DuplicateCheckResult for live-typing feedback on the intake form (exact
+    match only, no fuzzy name matching, no lead has to exist yet). None for
+    whichever field wasn't supplied in the request."""
+
+    email_exists: bool | None = None
+    phone_exists: bool | None = None
+
+
 class LeadConfirm(BaseModel):
     """PRD §4.1 Step 3 — the agent's explicit "yes, proceed anyway"."""
 

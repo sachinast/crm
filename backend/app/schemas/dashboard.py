@@ -5,9 +5,23 @@ visibility (apply_lead_visibility) or role gates — this endpoint doesn't
 introduce a new access model, just aggregates what the caller could already
 see one record at a time.
 """
+import uuid
+
 from pydantic import BaseModel
 
 from app.schemas.lead import LeadSummary
+
+
+class LeaderboardEntry(BaseModel):
+    """One row of the top-5 performers leaderboard — revenue attributed to
+    the agent who *owns* the lead (Lead.agent_id), not whoever processed the
+    card (that's almost always Billing, a different role) — this measures
+    sales performance, not payment-processing throughput."""
+
+    agent_id: uuid.UUID
+    agent_name: str
+    revenue: float
+    bookings_count: int
 
 
 class DashboardSummary(BaseModel):
@@ -26,3 +40,4 @@ class DashboardSummary(BaseModel):
     active_integrations: int | None = None
     future_credits_issued_count: int | None = None
     future_credits_total_value: float | None = None
+    leaderboard: list[LeaderboardEntry] | None = None

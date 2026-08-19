@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertTriangle, Car, Hotel, Plane } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
@@ -39,6 +39,56 @@ const SERVICE_TYPES = [
 
 const STEP_NUMBER: Record<Step, number> = { intake: 1, "duplicate-prompt": 3, "service-type": 4 };
 
+type CheckStatus = "idle" | "checking" | "exists" | "available";
+
+/** Live green/red tick next to a field, debounced against GET
+ * /leads/check-contact — a fast, exact-match-only hint (does a lead already
+ * exist with this exact value) shown as the agent types, distinct from the
+ * fuzzy, authoritative duplicate search POST /leads itself still runs on
+ * submit. Purely advisory: a red tick doesn't block Continue — the
+ * confirm-to-proceed flow (Step 3) is still what actually gates it. */
+function CheckTick({ status }: { status: CheckStatus }) {
+  if (status === "idle") return null;
+  if (status === "checking") return <Loader2 size={15} className="animate-spin" style={{ color: "var(--ink-faint)" }} />;
+  if (status === "exists") return <XCircle size={15} style={{ color: "var(--danger)" }} />;
+  return <CheckCircle2 size={15} style={{ color: "var(--success)" }} />;
+}
+
+function useContactCheck(value: string, field: "email" | "phone", minLength: number): CheckStatus {
+  // `result` only ever gets set from inside the debounced fetch's callback
+  // (never synchronously in the effect body) — "checking" below is derived
+  // by comparing the last-resolved value against the current one, not set
+  // imperatively, since a bare `setState` in an effect body causes
+  // cascading renders.
+  const [result, setResult] = useState<{ value: string; exists: boolean } | null>(null);
+  const trimmed = value.trim();
+
+  useEffect(() => {
+    if (trimmed.length < minLength) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch(`/api/leads/check-contact?${field}=${encodeURIComponent(trimmed)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => {
+          if (cancelled || !body) return;
+          const exists = field === "email" ? body.email_exists : body.phone_exists;
+          setResult({ value: trimmed, exists });
+        })
+        .catch(() => {
+          if (!cancelled) setResult(null);
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmed, field, minLength]);
+
+  if (trimmed.length < minLength) return "idle";
+  if (result && result.value === trimmed) return result.exists ? "exists" : "available";
+  return "checking";
+}
+
 export default function NewLeadPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("intake");
@@ -49,6 +99,9 @@ export default function NewLeadPage() {
   const [overrideReason, setOverrideReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const phoneCheck = useContactCheck(form.phone, "phone", 7);
+  const emailCheck = useContactCheck(form.email, "email", 5);
 
   async function handleIntakeSubmit(event: FormEvent) {
     event.preventDefault();
@@ -150,22 +203,42 @@ export default function NewLeadPage() {
           </label>
           <label className="text-sm font-medium">
             Number
-            <input
-              required
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="input mt-1.5"
-            />
+            <div className="relative mt-1.5">
+              <input
+                required
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="input pr-9"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                <CheckTick status={phoneCheck} />
+              </span>
+            </div>
+            {phoneCheck === "exists" && (
+              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                A lead with this number already exists
+              </span>
+            )}
           </label>
           <label className="text-sm font-medium">
             Email
-            <input
-              required
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="input mt-1.5"
-            />
+            <div className="relative mt-1.5">
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="input pr-9"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                <CheckTick status={emailCheck} />
+              </span>
+            </div>
+            {emailCheck === "exists" && (
+              <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+                A lead with this email already exists
+              </span>
+            )}
           </label>
           <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
           {error && (
