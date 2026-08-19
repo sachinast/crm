@@ -3,21 +3,27 @@
 import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { CountryCode } from "libphonenumber-js";
 
 import CarBookingFields, { EMPTY_CAR_BOOKING, type CarBookingValue } from "@/components/booking/CarBookingFields";
 import HotelBookingFields, { EMPTY_HOTEL_BOOKING, type HotelBookingValue } from "@/components/booking/HotelBookingFields";
 import FlightBookingFields, { EMPTY_FLIGHT_BOOKING, type FlightBookingValue } from "@/components/booking/FlightBookingFields";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import Field from "@/components/shared/FormField";
-import { isValidEmail, isValidPhone, sanitizePhoneInput } from "@/lib/validation";
+import PhoneInput from "@/components/shared/PhoneInput";
+import { isValidEmail } from "@/lib/validation";
+import { detectDefaultCountry, isValidNationalNumber, toE164 } from "@/lib/phone";
 
 // Single-step intake: every field for the customer + their booking shows at
 // once (no wizard) — the only thing gated is *when* the rest of the form
-// unlocks. Email and Phone are checked live (exact match, GET
-// /leads/check-contact) as the agent types; the rest of the fields stay
-// disabled until both come back clear, or the agent provides an explicit
-// override reason for a flagged match (PRD §4.1 Step 3's "yes, proceed
-// anyway", now inline instead of a separate step).
+// unlocks. Email and Phone are validated in two stages, in order: format
+// first (a real email shape; a real number for the selected country, via
+// libphonenumber-js — not just "7+ digits"), and only once format passes
+// does the live database check (exact match, GET /leads/check-contact) even
+// fire. The rest of the fields stay disabled until both come back clear, or
+// the agent provides an explicit override reason for a flagged match (PRD
+// §4.1 Step 3's "yes, proceed anyway", now inline instead of a separate
+// step).
 interface LeadResponse {
   id: string;
   name: string;
@@ -62,24 +68,24 @@ function CheckTick({ status }: { status: CheckStatus }) {
 
 /** Live green/red tick, debounced against GET /leads/check-contact — a fast,
  * exact-match-only hint distinct from the fuzzy, authoritative duplicate
- * search POST /leads itself still runs on submit. "checking"/"idle" are
- * derived by comparing the last-resolved value against the current one
- * (never set imperatively) so this doesn't trip the set-state-in-effect
- * lint rule. */
-function useContactCheck(value: string, field: "email" | "phone", minLength: number): CheckStatus {
+ * search POST /leads itself still runs on submit. Only ever fires once
+ * `formatValid` is true — format is checked first, the database second, in
+ * that order, never the other way round. "checking"/"idle" are derived by
+ * comparing the last-resolved value against the current one (never set
+ * imperatively) so this doesn't trip the set-state-in-effect lint rule. */
+function useContactCheck(value: string, field: "email" | "phone", formatValid: boolean): CheckStatus {
   const [result, setResult] = useState<{ value: string; exists: boolean } | null>(null);
-  const trimmed = value.trim();
 
   useEffect(() => {
-    if (trimmed.length < minLength) return;
+    if (!formatValid) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      fetch(`/api/leads/check-contact?${field}=${encodeURIComponent(trimmed)}`)
+      fetch(`/api/leads/check-contact?${field}=${encodeURIComponent(value)}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((body) => {
           if (cancelled || !body) return;
           const exists = field === "email" ? body.email_exists : body.phone_exists;
-          setResult({ value: trimmed, exists });
+          setResult({ value, exists });
         })
         .catch(() => {
           if (!cancelled) setResult(null);
@@ -89,10 +95,10 @@ function useContactCheck(value: string, field: "email" | "phone", minLength: num
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [trimmed, field, minLength]);
+  }, [value, field, formatValid]);
 
-  if (trimmed.length < minLength) return "idle";
-  if (result && result.value === trimmed) return result.exists ? "exists" : "available";
+  if (!formatValid) return "idle";
+  if (result && result.value === value) return result.exists ? "exists" : "available";
   return "checking";
 }
 
@@ -100,7 +106,8 @@ export default function NewLeadPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState<CountryCode>("US");
+  const [nationalNumber, setNationalNumber] = useState("");
   const [name, setName] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
@@ -120,14 +127,30 @@ export default function NewLeadPage() {
   const [pendingCandidates, setPendingCandidates] = useState<Candidate[]>([]);
   const [pendingReason, setPendingReason] = useState("");
 
-  const emailCheck = useContactCheck(email, "email", 5);
-  const phoneCheck = useContactCheck(phone, "phone", 7);
-  const emailFormatOk = email.trim().length === 0 || isValidEmail(email);
-  const phoneFormatOk = phone.trim().length === 0 || isValidPhone(phone);
+  // GIO (geo-IP) auto-detected default country — Vercel's edge header in
+  // production, the browser's own locale as a fallback everywhere else.
+  // Only overrides the "US" default once, on mount; never fights a
+  // selection the agent has already made.
+  useEffect(() => {
+    let cancelled = false;
+    detectDefaultCountry().then((detected) => {
+      if (!cancelled) setCountry(detected);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const emailFormatOk = isValidEmail(email);
+  const phoneFormatOk = isValidNationalNumber(nationalNumber, country);
+  const phone = phoneFormatOk ? toE164(nationalNumber, country) : "";
+
+  const emailCheck = useContactCheck(email.trim(), "email", emailFormatOk);
+  const phoneCheck = useContactCheck(phone, "phone", phoneFormatOk);
 
   const hasOverride = overrideReason.trim().length > 0;
-  const emailReady = emailFormatOk && (emailCheck === "available" || (emailCheck === "exists" && hasOverride));
-  const phoneReady = phoneFormatOk && (phoneCheck === "available" || (phoneCheck === "exists" && hasOverride));
+  const emailReady = emailCheck === "available" || (emailCheck === "exists" && hasOverride);
+  const phoneReady = phoneCheck === "available" || (phoneCheck === "exists" && hasOverride);
   const unlocked = emailReady && phoneReady;
   const showDuplicateWarning = emailCheck === "exists" || phoneCheck === "exists";
 
@@ -304,7 +327,7 @@ export default function NewLeadPage() {
                 <CheckTick status={emailCheck} />
               </span>
             </div>
-            {!emailFormatOk && (
+            {email.trim().length > 0 && !emailFormatOk && (
               <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
                 Enter a valid email address
               </span>
@@ -318,19 +341,14 @@ export default function NewLeadPage() {
 
           <Field label="Phone">
             <div className="relative">
-              <input
-                required
-                value={phone}
-                onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
-                className="input pr-9"
-              />
+              <PhoneInput country={country} nationalNumber={nationalNumber} onCountryChange={setCountry} onNationalNumberChange={setNationalNumber} />
               <span className="absolute right-3 top-1/2 -translate-y-1/2">
                 <CheckTick status={phoneCheck} />
               </span>
             </div>
-            {!phoneFormatOk && (
+            {nationalNumber.trim().length > 0 && !phoneFormatOk && (
               <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                Enter a valid phone number (digits only, at least 7)
+                Enter a valid number for the selected country
               </span>
             )}
             {phoneCheck === "exists" && (
