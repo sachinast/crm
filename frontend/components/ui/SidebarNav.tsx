@@ -15,6 +15,7 @@ import {
   History,
   Sliders,
   ListPlus,
+  Database,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,6 +37,7 @@ const ICONS = {
   activity: History,
   settings: Sliders,
   customFields: ListPlus,
+  masters: Database,
 } as const;
 
 interface NavItem {

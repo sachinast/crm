@@ -11,6 +11,7 @@ from app.api.v1.authorization import router as authorization_router
 from app.api.v1.bookings import router as bookings_router
 from app.api.v1.cancellations import router as cancellations_router
 from app.api.v1.custom_fields import router as custom_fields_router
+from app.api.v1.master_options import router as master_options_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.future_credits import router as future_credits_router
 from app.api.v1.health import router as health_router
@@ -55,6 +56,7 @@ app.include_router(admin_status_permissions_router, prefix=settings.api_v1_prefi
 app.include_router(admin_activity_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_settings_router, prefix=settings.api_v1_prefix)
 app.include_router(custom_fields_router, prefix=settings.api_v1_prefix)
+app.include_router(master_options_router, prefix=settings.api_v1_prefix)
 app.include_router(websocket_router, prefix="/ws")
 
 

@@ -2,6 +2,7 @@
 
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+import MasterSelect from "@/components/shared/MasterSelect";
 
 export interface HotelBookingValue {
   booking_reference: string;
@@ -47,13 +48,13 @@ export default function HotelBookingFields({
         <input required value={value.booking_reference} onChange={(e) => onChange({ ...value, booking_reference: e.target.value })} className="input" />
       </Field>
       <Field label="Booking platform">
-        <input required value={value.booking_platform} onChange={(e) => onChange({ ...value, booking_platform: e.target.value })} className="input" />
+        <MasterSelect fieldKey="booking_platform" value={value.booking_platform} onChange={(v) => onChange({ ...value, booking_platform: v })} />
       </Field>
       <Field label="Hotel name">
-        <input required value={value.hotel_name} onChange={(e) => onChange({ ...value, hotel_name: e.target.value })} className="input" />
+        <MasterSelect fieldKey="hotel_name" value={value.hotel_name} onChange={(v) => onChange({ ...value, hotel_name: v })} />
       </Field>
       <Field label="Room type">
-        <input required value={value.room_type} onChange={(e) => onChange({ ...value, room_type: e.target.value })} className="input" />
+        <MasterSelect fieldKey="room_type" value={value.room_type} onChange={(v) => onChange({ ...value, room_type: v })} />
       </Field>
       <Field label="Location">
         <input required value={value.location} onChange={(e) => onChange({ ...value, location: e.target.value })} className="input" />

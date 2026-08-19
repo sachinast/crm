@@ -14,6 +14,7 @@ interface Lead {
 
 interface FlightBooking {
   booking_reference: string;
+  booking_platform: string;
   pnr: string;
   airline: string;
   flight_numbers: string[];

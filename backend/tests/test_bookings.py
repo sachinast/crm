@@ -124,6 +124,7 @@ HOTEL_PAYLOAD = {
 
 FLIGHT_PAYLOAD = {
     "booking_reference": "FL-3001",
+    "booking_platform": "eBookingHub",
     "pnr": "ABC123",
     "airline": "Delta",
     "flight_numbers": ["DL123", "DL456"],

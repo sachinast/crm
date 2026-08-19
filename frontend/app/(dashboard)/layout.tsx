@@ -69,6 +69,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: "Custom Fields",
       icon: "customFields" as const,
     },
+    hasPermission(user, "admin.manage_custom_fields") && {
+      href: "/admin/masters",
+      label: "Master Data",
+      icon: "masters" as const,
+    },
   ].filter(
     (
       item,
@@ -80,6 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         | "roles"
         | "statusPermissions"
         | "log"
+        | "masters"
         | "activity"
         | "integrations"
         | "settings"

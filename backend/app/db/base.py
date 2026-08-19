@@ -11,4 +11,4 @@ class Base(DeclarativeBase):
 
 
 # Import model modules so their tables register on Base.metadata.
-from app.models import rbac, user, lead, booking, payment, audit, status, integration, messaging, activity, settings, custom_fields  # noqa: E402,F401
+from app.models import rbac, user, lead, booking, payment, audit, status, integration, messaging, activity, settings, custom_fields, master_options  # noqa: E402,F401

@@ -39,27 +39,6 @@ class AttachmentKind(str, enum.Enum):
     pdf = "pdf"
 
 
-class TransmissionType(str, enum.Enum):
-    automatic = "automatic"
-    manual = "manual"
-
-
-class VehicleType(str, enum.Enum):
-    economy = "economy"
-    compact = "compact"
-    intermediate = "intermediate"
-    standard = "standard"
-    full_size = "full_size"
-    standard_suv = "standard_suv"
-    intermediate_suv = "intermediate_suv"
-    premium_suv = "premium_suv"
-    full_size_suv = "full_size_suv"
-    luxury = "luxury"
-    passenger_van = "passenger_van"
-    mini_van = "mini_van"
-    fifteen_passenger_van = "fifteen_passenger_van"
-    mystery_car = "mystery_car"
-    premium_crossover = "premium_crossover"
-    premium_elite_crossover = "premium_elite_crossover"
-    pickup_truck = "pickup_truck"
-    electric = "electric"
+# TransmissionType/VehicleType removed in migration 0012 — car_bookings.
+# transmission/vehicle_type are now plain TEXT, values sourced from
+# master_field_options (Super Admin master data) instead of a fixed enum.

@@ -10,8 +10,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.enums import TransmissionType, VehicleType
-
 # --- Car ---------------------------------------------------------------
 
 
@@ -20,9 +18,9 @@ class CarBookingCreate(BaseModel):
     booking_platform: str = Field(min_length=1)
     car_provider: str = Field(min_length=1)
     renter_dob: date
-    transmission: TransmissionType
+    transmission: str = Field(min_length=1)
     fuel_policy: str | None = None
-    vehicle_type: VehicleType
+    vehicle_type: str = Field(min_length=1)
     pickup_datetime: datetime
     pickup_location: str = Field(min_length=1)
     return_datetime: datetime
@@ -45,9 +43,9 @@ class CarBookingUpdate(BaseModel):
     booking_platform: str | None = None
     car_provider: str | None = None
     renter_dob: date | None = None
-    transmission: TransmissionType | None = None
+    transmission: str | None = None
     fuel_policy: str | None = None
-    vehicle_type: VehicleType | None = None
+    vehicle_type: str | None = None
     pickup_datetime: datetime | None = None
     pickup_location: str | None = None
     return_datetime: datetime | None = None
@@ -66,9 +64,9 @@ class CarBookingRead(BaseModel):
     booking_platform: str
     car_provider: str
     renter_dob: date
-    transmission: TransmissionType
+    transmission: str
     fuel_policy: str | None
-    vehicle_type: VehicleType
+    vehicle_type: str
     pickup_datetime: datetime
     pickup_location: str
     return_datetime: datetime
@@ -143,6 +141,7 @@ class HotelBookingRead(BaseModel):
 
 class FlightBookingCreate(BaseModel):
     booking_reference: str = Field(min_length=1)
+    booking_platform: str = Field(min_length=1)
     pnr: str = Field(min_length=1)
     airline: str = Field(min_length=1)
     flight_numbers: list[str] = Field(min_length=1)
@@ -156,6 +155,7 @@ class FlightBookingCreate(BaseModel):
 
 class FlightBookingUpdate(BaseModel):
     booking_reference: str | None = None
+    booking_platform: str | None = None
     pnr: str | None = None
     airline: str | None = None
     flight_numbers: list[str] | None = Field(default=None, min_length=1)
@@ -173,6 +173,7 @@ class FlightBookingRead(BaseModel):
     id: uuid.UUID
     lead_id: uuid.UUID
     booking_reference: str
+    booking_platform: str
     pnr: str
     airline: str
     flight_numbers: list[str]

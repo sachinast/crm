@@ -2,7 +2,7 @@
 
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
-import { VEHICLE_TYPES } from "@/lib/vehicle-types";
+import MasterSelect from "@/components/shared/MasterSelect";
 
 export interface CarBookingValue {
   booking_reference: string;
@@ -60,26 +60,19 @@ export default function CarBookingFields({
         <input required value={value.booking_reference} onChange={(e) => onChange({ ...value, booking_reference: e.target.value })} className="input" />
       </Field>
       <Field label="Booking platform">
-        <input required value={value.booking_platform} onChange={(e) => onChange({ ...value, booking_platform: e.target.value })} className="input" placeholder="eBookingHub, Our Booking" />
+        <MasterSelect fieldKey="booking_platform" value={value.booking_platform} onChange={(v) => onChange({ ...value, booking_platform: v })} />
       </Field>
       <Field label="Car provider">
-        <input required value={value.car_provider} onChange={(e) => onChange({ ...value, car_provider: e.target.value })} className="input" placeholder="Hertz, Budget" />
+        <MasterSelect fieldKey="car_provider" value={value.car_provider} onChange={(v) => onChange({ ...value, car_provider: v })} />
       </Field>
       <Field label="Vehicle type">
-        <select value={value.vehicle_type} onChange={(e) => onChange({ ...value, vehicle_type: e.target.value })} className="input">
-          {VEHICLE_TYPES.map((v) => (
-            <option key={v.value} value={v.value}>{v.label}</option>
-          ))}
-        </select>
+        <MasterSelect fieldKey="vehicle_type" value={value.vehicle_type} onChange={(v) => onChange({ ...value, vehicle_type: v })} />
       </Field>
       <Field label="Renter date of birth">
         <input required type="date" value={value.renter_dob} onChange={(e) => onChange({ ...value, renter_dob: e.target.value })} className="input" />
       </Field>
       <Field label="Transmission">
-        <select value={value.transmission} onChange={(e) => onChange({ ...value, transmission: e.target.value })} className="input">
-          <option value="automatic">Automatic</option>
-          <option value="manual">Manual</option>
-        </select>
+        <MasterSelect fieldKey="transmission" value={value.transmission} onChange={(v) => onChange({ ...value, transmission: v })} />
       </Field>
       <Field label="Fuel policy">
         <input value={value.fuel_policy ?? ""} onChange={(e) => onChange({ ...value, fuel_policy: e.target.value })} className="input" placeholder="Full to Full" />

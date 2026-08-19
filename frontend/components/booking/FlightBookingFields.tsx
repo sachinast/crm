@@ -4,9 +4,11 @@ import { useState } from "react";
 
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+import MasterSelect from "@/components/shared/MasterSelect";
 
 export interface FlightBookingValue {
   booking_reference: string;
+  booking_platform: string;
   pnr: string;
   airline: string;
   flight_numbers: string[];
@@ -20,6 +22,7 @@ export interface FlightBookingValue {
 
 export const EMPTY_FLIGHT_BOOKING: FlightBookingValue = {
   booking_reference: "",
+  booking_platform: "",
   pnr: "",
   airline: "",
   flight_numbers: [],
@@ -59,14 +62,17 @@ export default function FlightBookingFields({
       <Field label="Booking reference">
         <input required value={value.booking_reference} onChange={(e) => onChange({ ...value, booking_reference: e.target.value })} className="input" />
       </Field>
+      <Field label="Booking platform">
+        <MasterSelect fieldKey="booking_platform" value={value.booking_platform} onChange={(v) => onChange({ ...value, booking_platform: v })} />
+      </Field>
       <Field label="PNR">
         <input required value={value.pnr} onChange={(e) => onChange({ ...value, pnr: e.target.value })} className="input" />
       </Field>
       <Field label="Airline">
-        <input required value={value.airline} onChange={(e) => onChange({ ...value, airline: e.target.value })} className="input" />
+        <MasterSelect fieldKey="airline" value={value.airline} onChange={(v) => onChange({ ...value, airline: v })} />
       </Field>
       <Field label="Cabin class">
-        <input required value={value.cabin_class} onChange={(e) => onChange({ ...value, cabin_class: e.target.value })} className="input" placeholder="Economy, Business" />
+        <MasterSelect fieldKey="cabin_class" value={value.cabin_class} onChange={(v) => onChange({ ...value, cabin_class: v })} />
       </Field>
       <Field label="Origin">
         <input required value={value.origin} onChange={(e) => onChange({ ...value, origin: e.target.value })} className="input" placeholder="JFK" />

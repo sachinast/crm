@@ -16,15 +16,11 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import ENUM as PGEnum, INET, JSONB, UUID
+from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.models.enums import TransmissionType, VehicleType
 from app.models.mixins import TimestampMixin, UUIDPKMixin
-
-transmission_enum = PGEnum(TransmissionType, name="transmission_type", create_type=False)
-vehicle_type_enum = PGEnum(VehicleType, name="vehicle_type", create_type=False)
 
 MONEY = Numeric(12, 2)
 
@@ -41,9 +37,11 @@ class CarBooking(UUIDPKMixin, TimestampMixin, Base):
     # No renter_name — redundant with leads.name ("Customer Name" at intake);
     # dropped in migration 0011.
     renter_dob: Mapped[date] = mapped_column(Date, nullable=False)
-    transmission: Mapped[TransmissionType] = mapped_column(transmission_enum, nullable=False)
+    # transmission/vehicle_type: plain TEXT since migration 0012 — values are
+    # admin-managed (master_field_options), not a fixed Postgres enum anymore.
+    transmission: Mapped[str] = mapped_column(Text, nullable=False)
     fuel_policy: Mapped[str | None] = mapped_column(Text)
-    vehicle_type: Mapped[VehicleType] = mapped_column(vehicle_type_enum, nullable=False)
+    vehicle_type: Mapped[str] = mapped_column(Text, nullable=False)
     pickup_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     pickup_location: Mapped[str] = mapped_column(Text, nullable=False)
     return_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -88,6 +86,7 @@ class FlightBooking(UUIDPKMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     booking_reference: Mapped[str] = mapped_column(Text, nullable=False)
+    booking_platform: Mapped[str] = mapped_column(Text, nullable=False)
     pnr: Mapped[str] = mapped_column(Text, nullable=False)
     airline: Mapped[str] = mapped_column(Text, nullable=False)
     flight_numbers: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
