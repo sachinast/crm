@@ -37,6 +37,8 @@ PERMISSION_CATALOG: list[PermissionDef] = [
     PermissionDef("admin.manage_roles", "Create/edit roles and permissions", "Admin"),
     PermissionDef("admin.manage_custom_fields", "Define custom form fields", "Admin"),
     PermissionDef("admin.view_activity_log", "View the activity log", "Admin"),
+    PermissionDef("attendance.view_all", "View every user's attendance, not just your own", "Attendance"),
+    PermissionDef("files.view_all", "Browse every user's uploaded files, not just your own", "Files"),
 ]
 
 PERMISSION_CODES = {p.code for p in PERMISSION_CATALOG}

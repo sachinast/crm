@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import FloatingChatWidget from "@/components/messaging/FloatingChatWidget";
+import HeaderClocks from "@/components/layout/HeaderClocks";
 import LogoutButton from "@/components/ui/LogoutButton";
 import NotificationBell from "@/components/ui/NotificationBell";
 import SidebarNav from "@/components/ui/SidebarNav";
@@ -14,6 +15,9 @@ const BASE_NAV = [
   { href: "/billing", label: "Billing", icon: "billing" as const },
   { href: "/audit", label: "Audit / QC", icon: "audit" as const },
   { href: "/future-credits", label: "Future Credits", icon: "credits" as const },
+  { href: "/attendance", label: "Attendance", icon: "attendance" as const },
+  { href: "/files", label: "Files", icon: "files" as const },
+  { href: "/notes", label: "Notes", icon: "notes" as const },
 ];
 
 function initials(name: string): string {
@@ -152,9 +156,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       <div className="flex flex-1 flex-col">
         <header
-          className="flex items-center justify-end border-b px-6 py-3"
+          className="flex items-center justify-end gap-3 border-b px-6 py-3"
           style={{ borderColor: "var(--hairline)", background: "var(--surface)" }}
         >
+          <HeaderClocks />
           <NotificationBell />
         </header>
         <main className="flex-1 px-6 py-6 md:px-10 md:py-8">{children}</main>

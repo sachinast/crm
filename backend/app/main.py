@@ -5,12 +5,15 @@ from app.api.v1.admin_activity import router as admin_activity_router
 from app.api.v1.admin_roles import router as admin_roles_router
 from app.api.v1.admin_settings import router as admin_settings_router
 from app.api.v1.admin_status_permissions import router as admin_status_permissions_router
+from app.api.v1.attendance import router as attendance_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.authorization import router as authorization_router
 from app.api.v1.bookings import router as bookings_router
 from app.api.v1.cancellations import router as cancellations_router
 from app.api.v1.custom_fields import router as custom_fields_router
+from app.api.v1.files import public_router as files_public_router, router as files_router
+from app.api.v1.header_clocks import router as header_clocks_router
 from app.api.v1.master_options import router as master_options_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.future_credits import router as future_credits_router
@@ -19,6 +22,7 @@ from app.api.v1.integrations import capture_router, keys_router as integration_k
 from app.api.v1.leads import router as leads_router
 from app.api.v1.messaging import router as messaging_router
 from app.api.v1.modifications import router as modifications_router
+from app.api.v1.notes import router as notes_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.users import router as users_router
 from app.api.v1.websocket import router as websocket_router
@@ -57,6 +61,11 @@ app.include_router(admin_activity_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_settings_router, prefix=settings.api_v1_prefix)
 app.include_router(custom_fields_router, prefix=settings.api_v1_prefix)
 app.include_router(master_options_router, prefix=settings.api_v1_prefix)
+app.include_router(attendance_router, prefix=settings.api_v1_prefix)
+app.include_router(files_router, prefix=settings.api_v1_prefix)
+app.include_router(files_public_router, prefix=settings.api_v1_prefix)
+app.include_router(notes_router, prefix=settings.api_v1_prefix)
+app.include_router(header_clocks_router, prefix=settings.api_v1_prefix)
 app.include_router(websocket_router, prefix="/ws")
 
 

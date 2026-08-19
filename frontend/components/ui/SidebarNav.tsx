@@ -16,6 +16,9 @@ import {
   Sliders,
   ListPlus,
   Database,
+  Clock,
+  FolderOpen,
+  StickyNote,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +41,9 @@ const ICONS = {
   settings: Sliders,
   customFields: ListPlus,
   masters: Database,
+  attendance: Clock,
+  files: FolderOpen,
+  notes: StickyNote,
 } as const;
 
 interface NavItem {
