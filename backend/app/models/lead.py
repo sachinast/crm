@@ -37,6 +37,15 @@ class Lead(UUIDPKMixin, TimestampMixin, Base):
     # custom_field_definitions (app/models/custom_fields.py), validated
     # against it on write by app/domain/custom_fields.py.
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Embeddable widget capture metadata (migration 0014) — all NULL for
+    # every other lead source. See app/api/v1/embed_public.py.
+    embed_widget_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("embed_widgets.id", ondelete="SET NULL")
+    )
+    landing_page_url: Mapped[str | None] = mapped_column(Text)
+    visitor_public_ip: Mapped[str | None] = mapped_column(Text)  # server-observed (X-Forwarded-For/socket)
+    visitor_local_ip: Mapped[str | None] = mapped_column(Text)  # self-reported by the widget's WebRTC probe
+    embed_submission: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # raw search-intent fields as submitted
 
     __table_args__ = (
         Index("idx_leads_agent_id", "agent_id"),

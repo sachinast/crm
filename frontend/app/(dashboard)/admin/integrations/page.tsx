@@ -1,10 +1,13 @@
-import { Plug } from "lucide-react";
+import { Code2, Plug } from "lucide-react";
 
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
 import CreateApiKeyForm from "./CreateApiKeyForm";
+import CreateEmbedWidgetForm from "./CreateEmbedWidgetForm";
+import EmbedSnippetButton from "./EmbedSnippetButton";
 import RevokeButton from "./RevokeButton";
+import ToggleWidgetButton from "./ToggleWidgetButton";
 
 interface ApiKeyRow {
   id: string;
@@ -13,6 +16,16 @@ interface ApiKeyRow {
   assigned_agent_id: string;
   is_active: boolean;
   last_used_at: string | null;
+  created_at: string;
+}
+
+interface EmbedWidgetRow {
+  id: string;
+  name: string;
+  widget_key: string;
+  assigned_agent_id: string;
+  is_active: boolean;
+  submission_count: number;
   created_at: string;
 }
 
@@ -34,6 +47,16 @@ async function fetchApiKeys(): Promise<ApiKeyRow[]> {
   }
 }
 
+async function fetchEmbedWidgets(): Promise<EmbedWidgetRow[]> {
+  const token = await getAccessToken();
+  if (!token) return [];
+  try {
+    return await apiFetch<EmbedWidgetRow[]>("/admin/embed-widgets", { token });
+  } catch {
+    return [];
+  }
+}
+
 async function fetchAgents(): Promise<AgentOption[]> {
   const token = await getAccessToken();
   if (!token) return [];
@@ -49,7 +72,7 @@ async function fetchAgents(): Promise<AgentOption[]> {
 // here; the actual capture endpoint (POST /leads/capture) is authenticated
 // separately, with the key itself, not a staff session.
 export default async function IntegrationsPage() {
-  const [keys, agents] = await Promise.all([fetchApiKeys(), fetchAgents()]);
+  const [keys, widgets, agents] = await Promise.all([fetchApiKeys(), fetchEmbedWidgets(), fetchAgents()]);
   const agentById = new Map(agents.map((a) => [a.id, a]));
 
   return (
@@ -148,6 +171,75 @@ Body (JSON):
           the source.
         </p>
       </section>
+
+      <div className="mb-6 mt-10 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
+          <Code2 size={18} style={{ color: "var(--accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Booking Widgets</h2>
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            A one-tag, copy-paste form for any landing page — Flights, Hotels, and Cabs in one MakeMyTrip-styled
+            widget. Captures the visitor&apos;s public IP, local network IP (best-effort), and the page it was
+            submitted from.
+          </p>
+        </div>
+      </div>
+
+      {agents.length === 0 ? (
+        <p className="card mb-6 text-sm" style={{ borderStyle: "dashed", color: "var(--ink-muted)" }}>
+          Create at least one Agent user before creating a widget — captured leads need an owner.
+        </p>
+      ) : (
+        <div className="mb-6">
+          <CreateEmbedWidgetForm agents={agents} />
+        </div>
+      )}
+
+      <div className="card-flat mb-6 overflow-x-auto p-0">
+        <table className="table-modern">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Assigned to</th>
+              <th>Submissions</th>
+              <th>Status</th>
+              <th>Embed</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {widgets.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                  No booking widgets yet.
+                </td>
+              </tr>
+            )}
+            {widgets.map((w) => (
+              <tr key={w.id}>
+                <td className="font-medium">{w.name}</td>
+                <td style={{ color: "var(--ink-muted)" }}>{agentById.get(w.assigned_agent_id)?.name ?? w.assigned_agent_id.slice(0, 8)}</td>
+                <td>{w.submission_count}</td>
+                <td>
+                  <span
+                    className="badge"
+                    style={w.is_active ? { background: "var(--success-soft)", color: "var(--success)" } : { background: "var(--hairline)", color: "var(--ink-faint)" }}
+                  >
+                    {w.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td>
+                  <EmbedSnippetButton widgetKey={w.widget_key} />
+                </td>
+                <td>
+                  <ToggleWidgetButton widgetId={w.id} isActive={w.is_active} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

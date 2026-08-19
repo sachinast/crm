@@ -35,6 +35,13 @@ interface LeadDetail {
   duplicate_override_reason: string | null;
   source: string | null; // set for leads captured externally via POST /leads/capture (Phase 8)
   custom_fields: Record<string, unknown>;
+  // Embeddable widget capture metadata (migration 0014) — all null unless
+  // this lead came from a Booking Widget (Admin → Integrations).
+  embed_widget_id: string | null;
+  landing_page_url: string | null;
+  visitor_public_ip: string | null;
+  visitor_local_ip: string | null;
+  embed_submission: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -265,6 +272,55 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <dt style={{ color: "var(--ink-faint)" }}>Created</dt>
         <dd>{new Date(lead.created_at).toLocaleString()}</dd>
       </dl>
+
+      {lead.embed_widget_id && (
+        <dl className="card mb-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <dt className="col-span-2 section-label" style={{ color: "var(--ink-faint)" }}>
+            Website Enquiry Details
+          </dt>
+
+          {lead.landing_page_url && (
+            <>
+              <dt style={{ color: "var(--ink-faint)" }}>Landing page</dt>
+              <dd className="truncate">
+                <a href={lead.landing_page_url} target="_blank" rel="noopener noreferrer" className="link-muted">
+                  {lead.landing_page_url}
+                </a>
+              </dd>
+            </>
+          )}
+
+          {lead.visitor_public_ip && (
+            <>
+              <dt style={{ color: "var(--ink-faint)" }}>Browser IP</dt>
+              <dd className="font-mono text-xs">{lead.visitor_public_ip}</dd>
+            </>
+          )}
+
+          {lead.visitor_local_ip && (
+            <>
+              <dt style={{ color: "var(--ink-faint)" }}>Local network IP</dt>
+              <dd className="font-mono text-xs">{lead.visitor_local_ip}</dd>
+            </>
+          )}
+
+          {lead.embed_submission && Object.keys(lead.embed_submission).length > 0 && (
+            <>
+              <dt className="col-span-2 mt-1 section-label" style={{ color: "var(--ink-faint)" }}>
+                Search details submitted
+              </dt>
+              {Object.entries(lead.embed_submission).map(([k, v]) => (
+                <Fragment key={k}>
+                  <dt className="capitalize" style={{ color: "var(--ink-faint)" }}>
+                    {k.replace(/_/g, " ")}
+                  </dt>
+                  <dd>{v === null || v === "" ? "—" : String(v)}</dd>
+                </Fragment>
+              ))}
+            </>
+          )}
+        </dl>
+      )}
 
       <LeadCustomFieldsPanel
         leadId={id}

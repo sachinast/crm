@@ -43,6 +43,15 @@ class LeadRead(BaseModel):
     duplicate_override_reason: str | None
     source: str | None  # set for leads captured externally via POST /leads/capture (Phase 8)
     custom_fields: dict[str, Any]
+    # Embeddable widget capture metadata (migration 0014) — all None for
+    # every other lead source. Not PII-masked like email/phone: these are
+    # operational metadata (where the enquiry came from), not the customer's
+    # own contact details.
+    embed_widget_id: uuid.UUID | None = None
+    landing_page_url: str | None = None
+    visitor_public_ip: str | None = None
+    visitor_local_ip: str | None = None
+    embed_submission: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 
