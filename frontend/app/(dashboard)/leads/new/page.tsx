@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle } from "lucide-react";
+import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { CountryCode } from "libphonenumber-js";
 
 import CarBookingFields, { EMPTY_CAR_BOOKING, type CarBookingValue } from "@/components/booking/CarBookingFields";
@@ -14,16 +15,6 @@ import PhoneInput from "@/components/shared/PhoneInput";
 import { isValidEmail } from "@/lib/validation";
 import { detectDefaultCountry, isValidNationalNumber, toE164 } from "@/lib/phone";
 
-// Single-step intake: every field for the customer + their booking shows at
-// once (no wizard) — the only thing gated is *when* the rest of the form
-// unlocks. Email and Phone are validated in two stages, in order: format
-// first (a real email shape; a real number for the selected country, via
-// libphonenumber-js — not just "7+ digits"), and only once format passes
-// does the live database check (exact match, GET /leads/check-contact) even
-// fire. The rest of the fields stay disabled until both come back clear, or
-// the agent provides an explicit override reason for a flagged match (PRD
-// §4.1 Step 3's "yes, proceed anyway", now inline instead of a separate
-// step).
 interface LeadResponse {
   id: string;
   name: string;
@@ -45,34 +36,25 @@ interface Candidate {
 }
 
 const SERVICE_TYPES = [
-  { value: "car" as const, label: "Car Rental", icon: Car },
-  { value: "hotel" as const, label: "Hotel", icon: Hotel },
-  { value: "flight" as const, label: "Flight", icon: Plane },
+  { value: "car" as const, label: "Car Rental", sublabel: "Chauffeur & Fleet Vehicles", icon: Car },
+  { value: "hotel" as const, label: "Hotel", sublabel: "Resorts, Rooms & Stays", icon: Hotel },
+  { value: "flight" as const, label: "Flight", sublabel: "PNR, Domestic & International", icon: Plane },
 ];
 
 type ServiceType = (typeof SERVICE_TYPES)[number]["value"];
 type CheckStatus = "idle" | "checking" | "exists" | "available";
 
-// datetime-local inputs give "YYYY-MM-DDTHH:mm" with no timezone. Treating
-// that as UTC is a Phase 3 simplification (the DB column is timezone-aware).
 function toIsoUtc(localValue: string): string {
   return localValue ? `${localValue}:00Z` : localValue;
 }
 
 function CheckTick({ status }: { status: CheckStatus }) {
   if (status === "idle") return null;
-  if (status === "checking") return <Loader2 size={15} className="animate-spin" style={{ color: "var(--ink-faint)" }} />;
-  if (status === "exists") return <XCircle size={15} style={{ color: "var(--danger)" }} />;
-  return <CheckCircle2 size={15} style={{ color: "var(--success)" }} />;
+  if (status === "checking") return <Loader2 size={14} className="animate-spin text-slate-400" />;
+  if (status === "exists") return <XCircle size={14} className="text-[var(--danger)]" />;
+  return <CheckCircle2 size={14} className="text-[var(--success)]" />;
 }
 
-/** Live green/red tick, debounced against GET /leads/check-contact — a fast,
- * exact-match-only hint distinct from the fuzzy, authoritative duplicate
- * search POST /leads itself still runs on submit. Only ever fires once
- * `formatValid` is true — format is checked first, the database second, in
- * that order, never the other way round. "checking"/"idle" are derived by
- * comparing the last-resolved value against the current one (never set
- * imperatively) so this doesn't trip the set-state-in-effect lint rule. */
 function useContactCheck(value: string, field: "email" | "phone", formatValid: boolean): CheckStatus {
   const [result, setResult] = useState<{ value: string; exists: boolean } | null>(null);
 
@@ -111,7 +93,7 @@ export default function NewLeadPage() {
   const [name, setName] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
-  const [serviceType, setServiceType] = useState<ServiceType | null>(null);
+  const [serviceType, setServiceType] = useState<ServiceType | null>("car");
   const [carForm, setCarForm] = useState<CarBookingValue>(EMPTY_CAR_BOOKING);
   const [hotelForm, setHotelForm] = useState<HotelBookingValue>(EMPTY_HOTEL_BOOKING);
   const [flightForm, setFlightForm] = useState<FlightBookingValue>(EMPTY_FLIGHT_BOOKING);
@@ -119,18 +101,10 @@ export default function NewLeadPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Set only if POST /leads flags a match our exact-match pre-check missed
-  // (e.g. a fuzzy name-similarity match with a different email/phone) —
-  // the lead already exists at this point; we're just waiting on a reason
-  // before calling POST /leads/{id}/confirm and continuing.
   const [pendingConfirmLead, setPendingConfirmLead] = useState<LeadResponse | null>(null);
   const [pendingCandidates, setPendingCandidates] = useState<Candidate[]>([]);
   const [pendingReason, setPendingReason] = useState("");
 
-  // GIO (geo-IP) auto-detected default country — Vercel's edge header in
-  // production, the browser's own locale as a fallback everywhere else.
-  // Only overrides the "US" default once, on mount; never fights a
-  // selection the agent has already made.
   useEffect(() => {
     let cancelled = false;
     detectDefaultCountry().then((detected) => {
@@ -153,6 +127,37 @@ export default function NewLeadPage() {
   const phoneReady = phoneCheck === "available" || (phoneCheck === "exists" && hasOverride);
   const unlocked = emailReady && phoneReady;
   const showDuplicateWarning = emailCheck === "exists" || phoneCheck === "exists";
+
+  const currentFinancials = () => {
+    if (serviceType === "car") {
+      const prepaid = Number(carForm.prepaid_amount) || 0;
+      const counter = Number(carForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    if (serviceType === "hotel") {
+      const prepaid = Number(hotelForm.prepaid_amount) || 0;
+      const counter = Number(hotelForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    if (serviceType === "flight") {
+      const prepaid = Number(flightForm.prepaid_amount) || 0;
+      const counter = Number(flightForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    return { prepaid: 0, counter: 0, total: 0 };
+  };
+
+  const updateFinancials = (prepaid: number, counter: number) => {
+    if (serviceType === "car") {
+      setCarForm({ ...carForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    } else if (serviceType === "hotel") {
+      setHotelForm({ ...hotelForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    } else if (serviceType === "flight") {
+      setFlightForm({ ...flightForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    }
+  };
+
+  const { prepaid, counter, total } = currentFinancials();
 
   async function finishServiceTypeAndBooking(leadId: string) {
     if (!serviceType) {
@@ -217,10 +222,6 @@ export default function NewLeadPage() {
     }
 
     if (body.is_duplicate && !hasOverride) {
-      // Our exact-match pre-check said email/phone were clear, but the
-      // backend's fuzzy name-similarity search still flagged something —
-      // stop and get an explicit reason before proceeding, same as the
-      // pre-check's own override flow.
       const dupResp = await fetch(`/api/leads/${body.id}/duplicate-check`);
       const dupBody = await dupResp.json().catch(() => ({ candidates: [] }));
       setPendingCandidates(dupBody.candidates ?? []);
@@ -267,23 +268,35 @@ export default function NewLeadPage() {
   }
 
   return (
-    <div className="w-full">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">New lead</h1>
+    <div className="w-full max-w-7xl mx-auto space-y-3.5 pb-8">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">New Lead Intake</h1>
+          <p className="text-[11px] text-slate-400">
+            Single-step client verification and unified booking dispatch.
+          </p>
+        </div>
+
+        <Link href="/leads" className="btn-secondary btn-sm text-xs">
+          Cancel Intake
+        </Link>
+      </div>
 
       {pendingConfirmLead ? (
-        <div className="card flex flex-col gap-4">
+        <div className="card flex flex-col gap-3">
           <div
-            className="flex items-start gap-2.5 rounded-lg p-3 text-sm"
+            className="flex items-start gap-2.5 rounded-xl p-3 text-xs"
             style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
           >
-            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <span>A similarly-named client already exists — do you still want to proceed?</span>
           </div>
-          <ul className="flex flex-col gap-2 text-sm">
+          <ul className="flex flex-col gap-2 text-xs">
             {pendingCandidates.map((c) => (
-              <li key={c.id} className="card-flat py-3">
-                <p className="font-medium">{c.name}</p>
-                <p style={{ color: "var(--ink-muted)" }}>
+              <li key={c.id} className="card-flat py-2.5">
+                <p className="font-medium text-white">{c.name}</p>
+                <p className="text-slate-400">
                   {c.phone} · {c.email} · {c.status}
                 </p>
               </li>
@@ -299,7 +312,7 @@ export default function NewLeadPage() {
             />
           </Field>
           {error && (
-            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+            <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
               {error}
             </p>
           )}
@@ -307,89 +320,115 @@ export default function NewLeadPage() {
             type="button"
             onClick={handlePendingConfirm}
             disabled={submitting || !pendingReason.trim()}
-            className="btn-primary"
+            className="btn-primary text-xs"
           >
             {submitting ? "Confirming…" : "Yes, proceed anyway"}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field label="Email">
-              <div className="relative">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* STEP 1: Client Information Card */}
+          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-4 shadow-sm">
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                Client Information
+              </span>
+              <span className="text-[10px] text-slate-400">
+                Verified against duplicates
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field label="Email Address">
+                <div className="relative">
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="input pr-8"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <CheckTick status={emailCheck} />
+                  </span>
+                </div>
+                {email.trim().length > 0 && !emailFormatOk && (
+                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                    Enter a valid email address
+                  </span>
+                )}
+                {emailCheck === "exists" && (
+                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                    A lead with this email already exists
+                  </span>
+                )}
+              </Field>
+
+              <Field label="Phone Number">
+                <div className="relative">
+                  <PhoneInput
+                    country={country}
+                    nationalNumber={nationalNumber}
+                    onCountryChange={setCountry}
+                    onNationalNumberChange={setNationalNumber}
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <CheckTick status={phoneCheck} />
+                  </span>
+                </div>
+                {nationalNumber.trim().length > 0 && !phoneFormatOk && (
+                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                    Enter a valid number
+                  </span>
+                )}
+                {phoneCheck === "exists" && (
+                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                    A lead with this number already exists
+                  </span>
+                )}
+              </Field>
+
+              <Field label="Customer Name">
                 <input
                   required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input pr-9"
+                  disabled={!unlocked}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Ravendra Singh"
+                  className="input font-medium"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <CheckTick status={emailCheck} />
-                </span>
-              </div>
-              {email.trim().length > 0 && !emailFormatOk && (
-                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                  Enter a valid email address
-                </span>
-              )}
-              {emailCheck === "exists" && (
-                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                  A lead with this email already exists
-                </span>
-              )}
-            </Field>
-
-            <Field label="Phone">
-              <div className="relative">
-                <PhoneInput country={country} nationalNumber={nationalNumber} onCountryChange={setCountry} onNationalNumberChange={setNationalNumber} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <CheckTick status={phoneCheck} />
-                </span>
-              </div>
-              {nationalNumber.trim().length > 0 && !phoneFormatOk && (
-                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                  Enter a valid number for the selected country
-                </span>
-              )}
-              {phoneCheck === "exists" && (
-                <span className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
-                  A lead with this number already exists
-                </span>
-              )}
-            </Field>
-
-            <Field label="Customer Name">
-              <input required disabled={!unlocked} value={name} onChange={(e) => setName(e.target.value)} className="input" />
-            </Field>
-          </div>
-
-          {showDuplicateWarning && (
-            <div
-              className="flex flex-col gap-2 rounded-lg p-3 text-sm"
-              style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
-            >
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                <span>This email or number is already on file. Provide a reason to proceed anyway.</span>
-              </div>
-              <input
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="e.g. different customer, shared office line"
-                className="input"
-              />
+              </Field>
             </div>
-          )}
 
-          <fieldset disabled={!unlocked} className="flex flex-col gap-4" style={!unlocked ? { opacity: 0.5 } : undefined}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {showDuplicateWarning && (
+              <div
+                className="mt-3 flex flex-col gap-1.5 rounded-xl p-2.5 text-xs"
+                style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
+              >
+                <div className="flex items-start gap-2 font-medium">
+                  <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                  <span>This contact is already on file. Provide an override reason to proceed:</span>
+                </div>
+                <input
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="e.g. different customer, corporate group booking"
+                  className="input text-xs"
+                />
+              </div>
+            )}
+
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
             </div>
+          </div>
 
-            <div>
-              <p className="mb-2 text-sm font-medium">Service type</p>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {/* Gated Booking Container */}
+          <fieldset disabled={!unlocked} className="space-y-3.5" style={!unlocked ? { opacity: 0.4 } : undefined}>
+            {/* STEP 2: Service Selection Card */}
+            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-3.5 shadow-sm">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {SERVICE_TYPES.map((t) => {
                   const Icon = t.icon;
                   const active = serviceType === t.value;
@@ -398,41 +437,110 @@ export default function NewLeadPage() {
                       key={t.value}
                       type="button"
                       onClick={() => setServiceType(t.value)}
-                      className="flex flex-col items-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors"
-                      style={{ borderColor: active ? "var(--accent)" : "var(--hairline-strong)", background: active ? "var(--accent-soft)" : undefined }}
+                      className={`group flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                        active
+                          ? "border-[#d3ab5e] bg-[#182136] shadow-md ring-1 ring-[#d3ab5e]"
+                          : "border-[#232e47] bg-[#0d1220] hover:border-[#38486e]"
+                      }`}
                     >
-                      <Icon size={22} strokeWidth={1.75} style={{ color: "var(--accent)" }} />
-                      {t.label}
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                          active
+                            ? "bg-[#d3ab5e] text-slate-900 shadow-sm"
+                            : "bg-[#161d30] text-[#d3ab5e] border border-[#2a3652]"
+                        }`}
+                      >
+                        <Icon size={17} strokeWidth={2} />
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">{t.label}</span>
+                          {active && <Check size={13} className="text-[#d3ab5e]" />}
+                        </div>
+                        <p className="text-[10px] text-slate-400">{t.sublabel}</p>
+                      </div>
                     </button>
                   );
                 })}
               </div>
             </div>
 
+            {/* STEP 3: Booking Specifications Card */}
             {serviceType && (
-              <div className="grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-3" style={{ borderColor: "var(--hairline)" }}>
-                {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
-                {serviceType === "hotel" && <HotelBookingFields value={hotelForm} onChange={setHotelForm} />}
-                {serviceType === "flight" && <FlightBookingFields value={flightForm} onChange={setFlightForm} />}
+              <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-4 shadow-sm">
+                <div className="grid grid-cols-1 gap-4">
+                  {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
+                  {serviceType === "hotel" && <HotelBookingFields value={hotelForm} onChange={setHotelForm} />}
+                  {serviceType === "flight" && <FlightBookingFields value={flightForm} onChange={setFlightForm} />}
+                </div>
               </div>
             )}
 
-            {error && (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
-                {error}
-              </p>
-            )}
+            {/* STEP 4: Financial Summary & Actions Toolbar */}
+            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-3.5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* Financial Breakdown Inputs */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 rounded-xl bg-[#0d1220] px-3 py-1.5 border border-[#232e47]">
+                    <span className="text-[11px] font-semibold text-slate-300">Prepaid ($):</span>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={prepaid}
+                      onChange={(e) => updateFinancials(Number(e.target.value), counter)}
+                      className="w-20 rounded-lg border border-[#313f61] bg-[#141b2d] px-2 py-0.5 font-mono text-xs font-bold text-white outline-none focus:border-[#d3ab5e]"
+                    />
+                  </div>
 
-            <button type="submit" disabled={submitting || !serviceType} className="btn-primary">
-              {submitting ? "Creating…" : "Create lead"}
-            </button>
+                  <div className="flex items-center gap-2 rounded-xl bg-[#0d1220] px-3 py-1.5 border border-[#232e47]">
+                    <span className="text-[11px] font-semibold text-slate-300">Pay at Counter ($):</span>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={counter}
+                      onChange={(e) => updateFinancials(prepaid, Number(e.target.value))}
+                      className="w-20 rounded-lg border border-[#313f61] bg-[#141b2d] px-2 py-0.5 font-mono text-xs font-bold text-white outline-none focus:border-[#d3ab5e]"
+                    />
+                  </div>
+
+                  {/* Grand Total Badge */}
+                  <div className="flex items-center gap-2 rounded-xl bg-[#2a2311] px-3.5 py-1.5 border border-[#d3ab5e]/40">
+                    <span className="text-[11px] font-medium text-[#f7e9c9]">Total Booking Value:</span>
+                    <span className="font-mono text-sm font-extrabold text-[#d3ab5e]">
+                      ${total.toFixed(2)} USD
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right-aligned Submit & Cancel Actions */}
+                <div className="flex items-center gap-2.5">
+                  <Link href="/leads" className="btn-secondary btn-sm text-xs">
+                    Cancel
+                  </Link>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !serviceType || !unlocked}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-5 py-2 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span>{submitting ? "Processing…" : "Create Lead"}</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <p className="mt-2 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--danger)]" style={{ background: "var(--danger-soft)" }}>
+                  {error}
+                </p>
+              )}
+            </div>
           </fieldset>
-
-          {!unlocked && (
-            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
-              Enter a unique email and phone number to unlock the rest of the form.
-            </p>
-          )}
         </form>
       )}
     </div>

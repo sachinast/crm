@@ -1,7 +1,11 @@
-import { History } from "lucide-react";
+import { History, ShieldAlert, Lock, User, Globe, Clock, Layers } from "lucide-react";
+import Link from "next/link";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import PageHeader from "@/components/shared/PageHeader";
+import DataTableCard from "@/components/shared/DataTableCard";
+import Pagination from "@/components/shared/Pagination";
 
 interface ActivityEntry {
   id: string;
@@ -34,7 +38,7 @@ interface PiiRevealEntry {
 }
 
 const CATEGORIES = ["auth", "admin", "messaging", "pii"];
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 async function fetchJson<T>(path: string): Promise<{ data: T | null; forbidden: boolean }> {
   const token = await getAccessToken();
@@ -51,7 +55,7 @@ function summarize(entry: ActivityEntry): string {
   const m = entry.metadata ?? {};
   switch (entry.action) {
     case "login_success":
-      return "Logged in";
+      return "Logged in successfully";
     case "login_failed":
       return `Failed login attempt (${m.email ?? "unknown email"})`;
     case "role_created":
@@ -67,28 +71,24 @@ function summarize(entry: ActivityEntry): string {
     case "conversation_started":
       return `Started a ${m.is_group ? "group " : ""}conversation (${m.participant_count} participants)`;
     case "reveal_denied":
-      return `Tried to reveal ${m.field} on a lead they can't access`;
+      return `Tried to reveal ${m.field} on an unauthorized lead`;
     default:
       return entry.action.replace(/_/g, " ");
   }
 }
 
-// Master Admin — Activity Log. General account/admin activity (migration
-// 0008) plus a combined "PII Reveal Activity" view merging successful
-// reveals (existing pii_reveal_audit_log, GET /audit/pii-reveals) with
-// denied attempts (activity_log, category=pii) — the gap the user asked to
-// close: seeing not just who revealed masked info, but who *tried* to and
-// couldn't. Same no-privileged-access-of-its-own posture as every other
-// admin page; GET /admin/activity and GET /audit/pii-reveals enforce their
-// own permissions server-side.
 export default async function AdminActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; page?: string }>;
+  searchParams: Promise<{ category?: string; page?: string; page_size?: string }>;
 }) {
-  const { category, page: pageParam } = await searchParams;
+  const { category, page: pageParam, page_size: pageSizeParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
-  const suffix = `?page=${page}&page_size=${PAGE_SIZE}${category ? `&category=${encodeURIComponent(category)}` : ""}`;
+  const pageSize = Number(pageSizeParam) && [10, 25, 50, 100].includes(Number(pageSizeParam))
+    ? Number(pageSizeParam)
+    : PAGE_SIZE;
+
+  const suffix = `?page=${page}&page_size=${pageSize}${category ? `&category=${encodeURIComponent(category)}` : ""}`;
 
   const [{ data: activity, forbidden: activityForbidden }, { data: piiReveals, forbidden: piiForbidden }] =
     await Promise.all([
@@ -115,141 +115,198 @@ export default async function AdminActivityPage({
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <History size={18} style={{ color: "var(--accent)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Activity Log</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Logins, admin config changes, and denied access attempts — milestone-level, not full content.
-          </p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      {/* Symmetric Page Header */}
+      <PageHeader
+        title="Activity Log"
+        subtitle="System authentication, role policy changes, and security access milestones."
+        badge={activity ? `${activity.total} events` : undefined}
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Admin", href: "/admin/users" },
+          { label: "Activity Log" },
+        ]}
+        icon={<History size={18} />}
+      />
 
-      <div className="mb-4 flex gap-1.5">
-        <a href="/admin/activity" className="badge" style={!category ? { background: "var(--accent-soft)", color: "var(--accent)" } : { background: "var(--hairline)", color: "var(--ink-muted)" }}>
-          All
-        </a>
-        {CATEGORIES.map((c) => (
-          <a
-            key={c}
-            href={`/admin/activity?category=${c}`}
-            className="badge capitalize"
-            style={category === c ? { background: "var(--accent-soft)", color: "var(--accent)" } : { background: "var(--hairline)", color: "var(--ink-muted)" }}
-          >
-            {c}
-          </a>
-        ))}
-      </div>
-
+      {/* Main System Activity Grid Card */}
       {activityForbidden ? (
-        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-          Your role doesn&apos;t have access to the activity log.
-        </p>
+        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-6 text-sm text-slate-400">
+          Your role does not have permission to view the system activity log.
+        </div>
       ) : (
-        <div className="card-flat mb-8 overflow-x-auto p-0">
-          <table className="table-modern">
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Actor</th>
-                <th>Event</th>
-                <th>IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(activity?.items.length ?? 0) === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                    No activity yet.
-                  </td>
-                </tr>
-              )}
-              {activity?.items.map((entry) => (
-                <tr key={entry.id}>
-                  <td style={{ color: "var(--ink-muted)" }}>{new Date(entry.created_at).toLocaleString()}</td>
-                  <td>{entry.actor_name ?? <span style={{ color: "var(--ink-faint)" }}>system</span>}</td>
-                  <td>{summarize(entry)}</td>
-                  <td className="font-mono text-xs" style={{ color: "var(--ink-faint)" }}>{entry.ip_address ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {activity && activity.total > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-4 py-3 text-sm" style={{ color: "var(--ink-muted)" }}>
-              <span>
-                Page {activity.page} of {Math.ceil(activity.total / PAGE_SIZE)} ({activity.total} total)
-              </span>
-              <div className="flex gap-2">
-                {page > 1 && (
-                  <a className="btn-ghost btn-sm" href={`/admin/activity?page=${page - 1}${category ? `&category=${category}` : ""}`}>
-                    Previous
-                  </a>
-                )}
-                {page * PAGE_SIZE < activity.total && (
-                  <a className="btn-ghost btn-sm" href={`/admin/activity?page=${page + 1}${category ? `&category=${category}` : ""}`}>
-                    Next
-                  </a>
-                )}
+        <DataTableCard
+          headerContent={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                <Link
+                  href="/admin/activity"
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                    !category
+                      ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
+                      : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                  }`}
+                >
+                  All Events
+                </Link>
+                {CATEGORIES.map((c) => {
+                  const isActive = category === c;
+                  return (
+                    <Link
+                      key={c}
+                      href={`/admin/activity?category=${c}`}
+                      className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                        isActive
+                          ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
+                          : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                      }`}
+                    >
+                      {c}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="text-xs text-slate-400 font-medium">
+                {activity?.total ?? 0} total entries
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      <h2 className="section-label mb-3">PII Reveal Activity</h2>
-      <p className="mb-3 text-sm" style={{ color: "var(--ink-muted)" }}>
-        Successful reveals and denied attempts, together — who saw masked information, and who tried to and couldn&apos;t.
-      </p>
-      {piiForbidden && activityForbidden ? (
-        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-          Your role doesn&apos;t have access to PII reveal activity.
-        </p>
-      ) : (
-        <div className="card-flat overflow-x-auto p-0">
-          <table className="table-modern">
+          }
+          footerContent={
+            activity && (
+              <Pagination
+                currentPage={page}
+                totalItems={activity.total}
+                pageSize={pageSize}
+                basePath="/admin/activity"
+                extraParams={{ category, page_size: pageSize }}
+                pageSizeOptions={[10, 25, 50, 100]}
+              />
+            )
+          }
+        >
+          <table className="table-modern w-full">
             <thead>
-              <tr>
-                <th>When</th>
-                <th>Agent</th>
-                <th>Result</th>
-                <th>IP</th>
+              <tr className="bg-[#182136]/30">
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Timestamp
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Actor / User
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Event Action
+                </th>
+                <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  IP Address
+                </th>
               </tr>
             </thead>
-            <tbody>
-              {combinedPii.length === 0 && (
+            <tbody className="divide-y divide-[#232e47]">
+              {(activity?.items.length ?? 0) === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                    No PII reveal activity yet.
+                  <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                    No activity recorded in this category.
                   </td>
                 </tr>
+              ) : (
+                activity?.items.map((entry) => (
+                  <tr key={entry.id} className="transition-colors hover:bg-[#182136]/60">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                      {new Date(entry.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-white">
+                      {entry.actor_name ?? <span className="font-normal text-slate-500">system</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-200">
+                      {summarize(entry)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                      {entry.ip_address ?? "—"}
+                    </td>
+                  </tr>
+                ))
               )}
-              {combinedPii.map((row, i) => (
-                <tr key={i}>
-                  <td style={{ color: "var(--ink-muted)" }}>{new Date(row.at).toLocaleString()}</td>
-                  <td className="font-mono text-xs">{row.actor}</td>
-                  <td>
-                    <span
-                      className="badge mr-2"
-                      style={
-                        row.kind === "revealed"
-                          ? { background: "var(--success-soft)", color: "var(--success)" }
-                          : { background: "var(--danger-soft)", color: "var(--danger)" }
-                      }
-                    >
-                      {row.kind === "revealed" ? "Revealed" : "Denied"}
-                    </span>
-                    {row.detail}
-                  </td>
-                  <td className="font-mono text-xs" style={{ color: "var(--ink-faint)" }}>{row.ip ?? "—"}</td>
-                </tr>
-              ))}
             </tbody>
           </table>
-        </div>
+        </DataTableCard>
       )}
+
+      {/* PII Reveal & Security Audit Activity */}
+      <div className="space-y-3 pt-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={16} className="text-[#d3ab5e]" />
+            <h2 className="text-base font-bold text-white">PII Reveal & Security Activity</h2>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Audit trail of customer data reveals and denied unmasked access attempts.
+          </p>
+        </div>
+
+        {piiForbidden && activityForbidden ? (
+          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 text-sm text-slate-400">
+            Your role does not have permission to view PII reveal records.
+          </div>
+        ) : (
+          <DataTableCard>
+            <table className="table-modern w-full">
+              <thead>
+                <tr className="bg-[#182136]/30">
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Timestamp
+                  </th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Agent / User
+                  </th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Security Event & Reason
+                  </th>
+                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    IP Address
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#232e47]">
+                {combinedPii.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                      No PII reveal activity logged yet.
+                    </td>
+                  </tr>
+                ) : (
+                  combinedPii.map((row, i) => (
+                    <tr key={i} className="transition-colors hover:bg-[#182136]/60">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                        {new Date(row.at).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-white">
+                        {row.actor}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-200">
+                        <span
+                          className={`mr-2.5 inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                            row.kind === "revealed"
+                              ? "bg-[#113028] text-[#3ecf9a] border-[#3ecf9a]/30"
+                              : "bg-[#34131c] text-[#ef7b93] border-[#ef7b93]/30"
+                          }`}
+                        >
+                          {row.kind === "revealed" ? "Revealed" : "Denied"}
+                        </span>
+                        <span>{row.detail}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                        {row.ip ?? "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </DataTableCard>
+        )}
+      </div>
     </div>
   );
 }

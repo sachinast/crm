@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, KeyRound, Lock, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, KeyRound, Lock, Plus, Trash2, ShieldCheck, Check } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -110,138 +110,195 @@ export default function RolesManager({
   }
 
   return (
-    <div className="card flex h-[calc(100vh-11rem)] overflow-hidden p-0">
-      <div className="flex w-64 shrink-0 flex-col border-r" style={{ borderColor: "var(--hairline)" }}>
-        <div className="flex items-center justify-between px-4 py-4">
-          <h2 className="section-label">Roles</h2>
-          <button onClick={() => setShowNewRole(true)} className="btn-ghost btn-sm px-1.5" title="New role">
-            <Plus size={15} />
+    <div className="flex h-[calc(100vh-13rem)] overflow-hidden rounded-2xl border border-[#232e47] bg-[#131a2b] shadow-sm">
+      {/* Left Role List Sidebar */}
+      <div className="flex w-72 shrink-0 flex-col border-r border-[#232e47] bg-[#0d1220]/60">
+        <div className="flex items-center justify-between border-b border-[#232e47] p-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Configured Roles
+            </span>
+            <span className="rounded-full bg-[#182136] px-2 py-0.5 text-[10px] font-bold text-slate-400">
+              {roles.length}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowNewRole(true)}
+            className="rounded-lg border border-[#2a3652] bg-[#182136] p-1.5 text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+            title="Create new role"
+          >
+            <Plus size={14} />
           </button>
         </div>
-        <ul className="flex-1 overflow-y-auto scrollbar-thin px-2 pb-3">
-          {roles.map((role) => (
-            <li key={role.id}>
-              <button
-                onClick={() => selectRole(role)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors"
-                style={{ background: role.id === selectedId ? "var(--accent-soft)" : "transparent" }}
-              >
-                {role.is_system_role ? (
-                  <Lock size={13} style={{ color: "var(--ink-faint)" }} />
-                ) : (
-                  <KeyRound size={13} style={{ color: "var(--accent)" }} />
-                )}
-                <span className="truncate capitalize">{role.name.replace(/_/g, " ")}</span>
-                <span className="ml-auto text-xs" style={{ color: "var(--ink-faint)" }}>
-                  {role.permissions.length}
-                </span>
-              </button>
-            </li>
-          ))}
+
+        <ul className="flex-1 overflow-y-auto p-2 space-y-1">
+          {roles.map((role) => {
+            const isSelected = role.id === selectedId;
+            return (
+              <li key={role.id}>
+                <button
+                  onClick={() => selectRole(role)}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
+                    isSelected
+                      ? "bg-[#182136] text-white border border-[#d3ab5e]/50 shadow-xs"
+                      : "text-slate-400 hover:bg-[#182136]/50 hover:text-slate-200 border border-transparent"
+                  }`}
+                >
+                  {role.is_system_role ? (
+                    <Lock size={13} className="text-slate-500 shrink-0" />
+                  ) : (
+                    <KeyRound size={13} className="text-[#d3ab5e] shrink-0" />
+                  )}
+                  <span className="truncate capitalize">{role.name.replace(/_/g, " ")}</span>
+                  <span
+                    className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
+                      isSelected ? "bg-[#d3ab5e] text-slate-950" : "bg-[#131a2b] text-slate-500"
+                    }`}
+                  >
+                    {role.permissions.length}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto scrollbar-thin p-6">
+      {/* Right Permissions Matrix Editor */}
+      <div className="flex flex-1 flex-col overflow-y-auto p-6 bg-[#131a2b]">
         {showNewRole && (
-          <div className="card mb-5 flex items-end gap-2" style={{ borderColor: "var(--accent)" }}>
-            <label className="flex-1 text-sm font-medium">
-              New role name
+          <div className="mb-5 rounded-xl border border-[#d3ab5e] bg-[#182136] p-4 space-y-3">
+            <h3 className="text-xs font-bold text-white">Create New Custom Role</h3>
+            <div className="flex items-center gap-2">
               <input
                 autoFocus
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
-                placeholder="e.g. regional_manager"
-                className="input mt-1.5"
+                placeholder="e.g. regional_supervisor"
+                className="input text-xs flex-1"
               />
-            </label>
-            <button onClick={handleCreateRole} disabled={saving || !newRoleName.trim()} className="btn-primary">
-              Create
-            </button>
-            <button onClick={() => setShowNewRole(false)} className="btn-ghost">
-              Cancel
-            </button>
+              <button
+                onClick={handleCreateRole}
+                disabled={saving || !newRoleName.trim()}
+                className="btn-primary btn-sm text-xs"
+              >
+                Create Role
+              </button>
+              <button onClick={() => setShowNewRole(false)} className="btn-ghost btn-sm text-xs">
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
         {error && (
-          <p className="mb-4 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          <p className="mb-4 flex items-center gap-1.5 rounded-lg border border-[#ef7b93]/30 bg-[#34131c] px-3 py-2 text-xs font-medium text-[#ef7b93]">
             <AlertTriangle size={14} />
-            {error}
+            <span>{error}</span>
           </p>
         )}
 
         {!selected ? (
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
-            Select a role, or create a new one.
-          </p>
+          <div className="flex h-full items-center justify-center text-xs text-slate-500">
+            Select a role from the sidebar to inspect or modify permissions.
+          </div>
         ) : (
           <>
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#232e47] pb-4">
               <div>
-                <h1 className="flex items-center gap-2 text-xl font-semibold capitalize tracking-tight">
-                  {selected.name.replace(/_/g, " ")}
-                  {selected.is_system_role && (
-                    <span className="badge" style={{ background: "var(--hairline)", color: "var(--ink-muted)" }}>
-                      <Lock size={11} />
-                      System role
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-lg font-bold text-white capitalize">
+                    {selected.name.replace(/_/g, " ")}
+                  </h2>
+                  {selected.is_system_role ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#313f61] bg-[#182136] px-2 py-0.5 text-[10px] font-bold uppercase text-slate-400">
+                      <Lock size={10} />
+                      System Role
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#d3ab5e]/30 bg-[#182136] px-2 py-0.5 text-[10px] font-bold uppercase text-[#d3ab5e]">
+                      Custom Role
                     </span>
                   )}
-                </h1>
-                <p className="mt-0.5 text-sm" style={{ color: "var(--ink-muted)" }}>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
                   {selected.is_system_role
-                    ? "One of the 10 built-in roles — can't be renamed or deleted, but its permissions can be changed."
-                    : "Custom role."}
+                    ? "Built-in core role. Role definition is locked, permissions can be granted or revoked."
+                    : "Custom role created at runtime. Can be safely renamed, modified, or deleted."}
                 </p>
               </div>
+
               {!selected.is_system_role && (
                 <button
                   onClick={() => handleDelete(selected)}
                   disabled={saving}
-                  className="btn-danger btn-sm"
-                  title="Delete this role"
+                  className="btn-danger btn-sm text-xs"
+                  title="Delete this custom role"
                 >
                   <Trash2 size={13} />
-                  Delete
+                  <span>Delete Role</span>
                 </button>
               )}
             </div>
 
-            <div className="flex flex-col gap-5">
+            {/* Grouped Permissions Matrix */}
+            <div className="space-y-5 flex-1">
               {Array.from(grouped.entries()).map(([category, perms]) => (
-                <div key={category} className="card-flat">
-                  <h3 className="section-label mb-3">{category}</h3>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {perms.map((p) => (
-                      <label key={p.code} className="flex items-start gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checkedCodes.has(p.code)}
-                          onChange={() => toggleCode(p.code)}
-                          className="mt-0.5"
-                          style={{ accentColor: "var(--accent)" }}
-                        />
-                        <span>
-                          <span className="block">{p.description}</span>
-                          <span className="block font-mono text-xs" style={{ color: "var(--ink-faint)" }}>
-                            {p.code}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
+                <div key={category} className="rounded-xl border border-[#232e47] bg-[#182136]/40 p-4">
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#d3ab5e]">
+                    {category} Permissions
+                  </h3>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {perms.map((p) => {
+                      const isChecked = checkedCodes.has(p.code);
+                      return (
+                        <label
+                          key={p.code}
+                          className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer transition-colors ${
+                            isChecked
+                              ? "border-[#d3ab5e]/40 bg-[#182136]"
+                              : "border-[#232e47] bg-[#0d1220]/60 hover:border-[#2a3652]"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCode(p.code)}
+                            className="mt-0.5 h-4 w-4 rounded border-[#313f61] bg-[#0d1220]"
+                            style={{ accentColor: "#d3ab5e" }}
+                          />
+                          <div className="text-xs">
+                            <span className="block font-medium text-slate-200">{p.description}</span>
+                            <span className="block font-mono text-[10px] text-slate-400">{p.code}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="sticky bottom-0 mt-6 flex items-center gap-3 border-t bg-[var(--surface)] pt-4" style={{ borderColor: "var(--hairline)" }}>
-              <button onClick={handleSave} disabled={!dirty || saving} className="btn-primary">
-                {saving ? "Saving…" : "Save permissions"}
-              </button>
-              {dirty && (
-                <span className="text-xs" style={{ color: "var(--warning)" }}>
-                  Unsaved changes
-                </span>
-              )}
+            {/* Bottom Sticky Save Bar */}
+            <div className="sticky bottom-0 mt-6 flex items-center justify-between border-t border-[#232e47] bg-[#131a2b] pt-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={!dirty || saving}
+                  className="btn-primary btn-sm text-xs"
+                >
+                  {saving ? "Saving Changes…" : "Save Permission Matrix"}
+                </button>
+                {dirty && (
+                  <span className="text-xs font-medium text-[#e0bc78] animate-pulse">
+                    ● Unsaved changes
+                  </span>
+                )}
+              </div>
+
+              <span className="text-xs text-slate-400 font-mono">
+                {checkedCodes.size} of {permissions.length} granted
+              </span>
             </div>
           </>
         )}

@@ -1,5 +1,7 @@
 "use client";
 
+import { Hotel, Calendar } from "lucide-react";
+
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
@@ -30,9 +32,6 @@ export const EMPTY_HOTEL_BOOKING: HotelBookingValue = {
   custom_fields: {},
 };
 
-/** Hotel booking fields only — no form tag, no submit button. Reused by the
- * standalone edit page (HotelBookingForm.tsx) and the single-step lead
- * intake form (leads/new/page.tsx). */
 export default function HotelBookingFields({
   value,
   onChange,
@@ -43,44 +42,106 @@ export default function HotelBookingFields({
   disabled?: boolean;
 }) {
   return (
-    <fieldset disabled={disabled} className="contents">
-      <Field label="Booking reference">
-        <input required value={value.booking_reference} onChange={(e) => onChange({ ...value, booking_reference: e.target.value })} className="input" />
-      </Field>
-      <Field label="Booking platform">
-        <MasterSelect fieldKey="booking_platform" value={value.booking_platform} onChange={(v) => onChange({ ...value, booking_platform: v })} />
-      </Field>
-      <Field label="Hotel name">
-        <MasterSelect fieldKey="hotel_name" value={value.hotel_name} onChange={(v) => onChange({ ...value, hotel_name: v })} />
-      </Field>
-      <Field label="Room type">
-        <MasterSelect fieldKey="room_type" value={value.room_type} onChange={(v) => onChange({ ...value, room_type: v })} />
-      </Field>
-      <Field label="Location">
-        <input required value={value.location} onChange={(e) => onChange({ ...value, location: e.target.value })} className="input" />
-      </Field>
-      <Field label="Check-in date">
-        <input required type="date" value={value.check_in_date} onChange={(e) => onChange({ ...value, check_in_date: e.target.value })} className="input" />
-      </Field>
-      <Field label="Check-out date">
-        <input required type="date" value={value.check_out_date} onChange={(e) => onChange({ ...value, check_out_date: e.target.value })} className="input" />
-      </Field>
-      <Field label="Prepaid amount">
-        <input required type="number" min={0} step="0.01" value={value.prepaid_amount} onChange={(e) => onChange({ ...value, prepaid_amount: Number(e.target.value) })} className="input" />
-      </Field>
-      <Field label="Pay-at-counter amount">
-        <input required type="number" min={0} step="0.01" value={value.pay_at_counter_amount} onChange={(e) => onChange({ ...value, pay_at_counter_amount: Number(e.target.value) })} className="input" />
-      </Field>
+    <fieldset disabled={disabled} className="col-span-full grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {/* LEFT COLUMN: Hotel Property & Room Details (7 columns) */}
+      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5 lg:col-span-7">
+        <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
+          <Hotel size={14} />
+          <span>Property & Room Details</span>
+        </div>
 
-      <DynamicFieldsBlock
-        entityType="hotel_booking"
-        value={value.custom_fields}
-        onChange={(next) => onChange({ ...value, custom_fields: next })}
-      />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <Field label="Booking reference">
+            <input
+              required
+              value={value.booking_reference}
+              onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
+              className="input"
+              placeholder="e.g. HT-4029"
+            />
+          </Field>
 
-      <p className="col-span-full text-xs" style={{ color: "var(--ink-muted)" }}>
-        Total amount: {(Number(value.prepaid_amount) + Number(value.pay_at_counter_amount)).toFixed(2)} (computed)
-      </p>
+          <Field label="Booking platform">
+            <MasterSelect
+              fieldKey="booking_platform"
+              value={value.booking_platform}
+              onChange={(v) => onChange({ ...value, booking_platform: v })}
+            />
+          </Field>
+
+          <Field label="Hotel name">
+            <MasterSelect
+              fieldKey="hotel_name"
+              value={value.hotel_name}
+              onChange={(v) => onChange({ ...value, hotel_name: v })}
+            />
+          </Field>
+
+          <Field label="Room type">
+            <MasterSelect
+              fieldKey="room_type"
+              value={value.room_type}
+              onChange={(v) => onChange({ ...value, room_type: v })}
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Location / City">
+              <input
+                required
+                value={value.location}
+                onChange={(e) => onChange({ ...value, location: e.target.value })}
+                className="input"
+                placeholder="City / Destination"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="mt-2.5">
+          <DynamicFieldsBlock
+            entityType="hotel_booking"
+            value={value.custom_fields}
+            onChange={(next) => onChange({ ...value, custom_fields: next })}
+          />
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Stay Schedule (5 columns) */}
+      <div className="space-y-3 lg:col-span-5">
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5">
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
+            <Calendar size={13} className="text-[var(--accent)]" />
+            <span>Stay Schedule</span>
+          </div>
+
+          <div className="space-y-2.5">
+            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
+              <Field label="Check-in date">
+                <input
+                  required
+                  type="date"
+                  value={value.check_in_date}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onChange={(e) => onChange({ ...value, check_in_date: e.target.value })}
+                  className="input"
+                />
+              </Field>
+
+              <Field label="Check-out date">
+                <input
+                  required
+                  type="date"
+                  value={value.check_out_date}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onChange={(e) => onChange({ ...value, check_out_date: e.target.value })}
+                  className="input"
+                />
+              </Field>
+            </div>
+          </div>
+        </div>
+      </div>
     </fieldset>
   );
 }

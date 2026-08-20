@@ -1,7 +1,9 @@
-import { Code2, Plug } from "lucide-react";
+import { Code2, Plug, Key } from "lucide-react";
 
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import PageHeader from "@/components/shared/PageHeader";
+import DataTableCard from "@/components/shared/DataTableCard";
 
 import CreateApiKeyForm from "./CreateApiKeyForm";
 import CreateEmbedWidgetForm from "./CreateEmbedWidgetForm";
@@ -67,178 +69,190 @@ async function fetchAgents(): Promise<AgentOption[]> {
   }
 }
 
-// External integrations (Zapier, Make, or any other API/form that can send a
-// webhook) — TECHNICAL_SPEC.md §10.3. Admin/Super Admin manage API keys
-// here; the actual capture endpoint (POST /leads/capture) is authenticated
-// separately, with the key itself, not a staff session.
 export default async function IntegrationsPage() {
   const [keys, widgets, agents] = await Promise.all([fetchApiKeys(), fetchEmbedWidgets(), fetchAgents()]);
   const agentById = new Map(agents.map((a) => [a.id, a]));
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <Plug size={18} style={{ color: "var(--accent)" }} />
+    <div className="w-full max-w-7xl mx-auto space-y-8">
+      {/* Symmetric Page Header */}
+      <PageHeader
+        title="Integrations & Webhooks"
+        subtitle="Connect Zapier, Make, custom webhooks, or embeddable booking widgets to stream leads into CRM."
+        badge={`${keys.length} API keys`}
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Admin", href: "/admin/users" },
+          { label: "Integrations" },
+        ]}
+        icon={<Plug size={18} />}
+      />
+
+      {/* Section 1: Inbound Webhooks & API Keys */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-5">
+          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
+            <h2 className="mb-1 text-sm font-bold text-white">Generate Integration API Key</h2>
+            <p className="mb-4 text-xs text-slate-400">
+              Authenticate external Zapier, Make, or custom HTTP webhooks.
+            </p>
+            {agents.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[#313f61] p-4 text-xs text-slate-400">
+                Create at least one Agent user first to assign incoming leads.
+              </p>
+            ) : (
+              <CreateApiKeyForm agents={agents} />
+            )}
+          </div>
         </div>
+
+        <div className="lg:col-span-7">
+          <DataTableCard
+            headerContent={
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Active Inbound API Keys
+                </span>
+                <span className="text-[11px] text-slate-400">{keys.length} keys</span>
+              </div>
+            }
+          >
+            <table className="table-modern w-full">
+              <thead>
+                <tr className="bg-[#182136]/30">
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Name</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Key Prefix</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Lead Owner</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#232e47]">
+                {keys.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-xs text-slate-400">No integration keys generated yet.</td>
+                  </tr>
+                ) : (
+                  keys.map((k) => (
+                    <tr key={k.id} className="transition-colors hover:bg-[#182136]/60">
+                      <td className="px-4 py-3 font-semibold text-white">{k.name}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">{k.key_prefix}...</td>
+                      <td className="px-4 py-3 text-xs text-slate-300">
+                        {agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            k.is_active
+                              ? "bg-[#113028] text-[#3ecf9a] border border-[#3ecf9a]/30"
+                              : "bg-[#232e47] text-slate-400 border border-[#313f61]"
+                          }`}
+                        >
+                          {k.is_active ? "Active" : "Revoked"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <RevokeButton keyId={k.id} isActive={k.is_active} />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </DataTableCard>
+        </div>
+      </div>
+
+      {/* Section 2: Embed Booking Widgets */}
+      <div className="space-y-4 pt-4 border-t border-[#232e47]">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Connect Zapier, Make, or any other form or API to capture leads directly into the CRM.
+          <div className="flex items-center gap-2">
+            <Code2 size={18} className="text-[#d3ab5e]" />
+            <h2 className="text-lg font-bold text-white">Embeddable Booking Widgets</h2>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-400">
+            One-tag copy-paste interactive booking widget for any website landing page.
           </p>
         </div>
-      </div>
 
-      {agents.length === 0 ? (
-        <p className="card mb-6 text-sm" style={{ borderStyle: "dashed", color: "var(--ink-muted)" }}>
-          Create at least one Agent user before setting up an integration — captured leads need an owner.
-        </p>
-      ) : (
-        <div className="mb-6">
-          <CreateApiKeyForm agents={agents} />
-        </div>
-      )}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
+              <h3 className="mb-1 text-sm font-bold text-white">Create New Web Widget</h3>
+              <p className="mb-4 text-xs text-slate-400">
+                Deploy dynamic Flight, Hotel, and Cab booking intake forms.
+              </p>
+              {agents.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[#313f61] p-4 text-xs text-slate-400">
+                  Create at least one Agent user first to assign submissions.
+                </p>
+              ) : (
+                <CreateEmbedWidgetForm agents={agents} />
+              )}
+            </div>
+          </div>
 
-      <div className="card-flat mb-6 overflow-x-auto p-0">
-        <table className="table-modern">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Key</th>
-              <th>Assigned to</th>
-              <th>Last used</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {keys.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                  No API keys yet.
-                </td>
-              </tr>
-            )}
-            {keys.map((k) => (
-              <tr key={k.id}>
-                <td className="font-medium">{k.name}</td>
-                <td className="font-mono text-xs" style={{ color: "var(--ink-muted)" }}>{k.key_prefix}…</td>
-                <td style={{ color: "var(--ink-muted)" }}>{agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}</td>
-                <td className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}
-                </td>
-                <td>
-                  <span
-                    className="badge"
-                    style={k.is_active ? { background: "var(--success-soft)", color: "var(--success)" } : { background: "var(--hairline)", color: "var(--ink-faint)" }}
-                  >
-                    {k.is_active ? "Active" : "Revoked"}
+          <div className="lg:col-span-7">
+            <DataTableCard
+              headerContent={
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Active Web Widgets
                   </span>
-                </td>
-                <td>
-                  <RevokeButton keyId={k.id} isActive={k.is_active} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <section className="card text-sm">
-        <h2 className="section-label mb-3">Setting up Zapier / Make</h2>
-        <p className="mb-2" style={{ color: "var(--ink-muted)" }}>
-          Point a &ldquo;Webhooks&rdquo; action (Zapier &ldquo;Webhooks by Zapier&rdquo; → POST, or Make&apos;s
-          HTTP module) at:
-        </p>
-        <pre
-          className="mb-2 overflow-x-auto rounded-lg border p-3 text-xs"
-          style={{ background: "var(--background)", borderColor: "var(--hairline)" }}
-        >
-          {`POST ${API_BASE_URL}/leads/capture
-Header: X-API-Key: <your key>
-Body (JSON):
-{
-  "name": "{{ contact.name }}",
-  "phone": "{{ contact.phone }}",
-  "email": "{{ contact.email }}",
-  "source": "Website Contact Form",
-  "notes": "optional freeform context"
-}`}
-        </pre>
-        <p style={{ color: "var(--ink-muted)" }}>
-          Map your form/API&apos;s own fields onto <code>name</code>, <code>phone</code>, <code>email</code> in
-          Zapier&apos;s or Make&apos;s field-mapping step — this endpoint&apos;s contract stays fixed regardless of
-          the source.
-        </p>
-      </section>
-
-      <div className="mb-6 mt-10 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <Code2 size={18} style={{ color: "var(--accent)" }} />
+                  <span className="text-[11px] text-slate-400">{widgets.length} widgets</span>
+                </div>
+              }
+            >
+              <table className="table-modern w-full">
+                <thead>
+                  <tr className="bg-[#182136]/30">
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Widget Name</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Assigned Agent</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                    <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Code / Embed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#232e47]">
+                  {widgets.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-xs text-slate-400">No web widgets created yet.</td>
+                    </tr>
+                  ) : (
+                    widgets.map((w) => (
+                      <tr key={w.id} className="transition-colors hover:bg-[#182136]/60">
+                        <td className="px-4 py-3 font-semibold text-white">{w.name}</td>
+                        <td className="px-4 py-3 text-xs text-slate-300">
+                          {agentById.get(w.assigned_agent_id)?.name ?? w.assigned_agent_id.slice(0, 8)}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-[#d3ab5e]">
+                          {w.submission_count}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                              w.is_active
+                                ? "bg-[#113028] text-[#3ecf9a] border border-[#3ecf9a]/30"
+                                : "bg-[#232e47] text-slate-400 border border-[#313f61]"
+                            }`}
+                          >
+                            {w.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <EmbedSnippetButton widgetKey={w.widget_key} />
+                            <ToggleWidgetButton widgetId={w.id} isActive={w.is_active} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </DataTableCard>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Booking Widgets</h2>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            A one-tag, copy-paste form for any landing page — Flights, Hotels, and Cabs in one MakeMyTrip-styled
-            widget. Captures the visitor&apos;s public IP, local network IP (best-effort), and the page it was
-            submitted from.
-          </p>
-        </div>
-      </div>
-
-      {agents.length === 0 ? (
-        <p className="card mb-6 text-sm" style={{ borderStyle: "dashed", color: "var(--ink-muted)" }}>
-          Create at least one Agent user before creating a widget — captured leads need an owner.
-        </p>
-      ) : (
-        <div className="mb-6">
-          <CreateEmbedWidgetForm agents={agents} />
-        </div>
-      )}
-
-      <div className="card-flat mb-6 overflow-x-auto p-0">
-        <table className="table-modern">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Assigned to</th>
-              <th>Submissions</th>
-              <th>Status</th>
-              <th>Embed</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {widgets.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                  No booking widgets yet.
-                </td>
-              </tr>
-            )}
-            {widgets.map((w) => (
-              <tr key={w.id}>
-                <td className="font-medium">{w.name}</td>
-                <td style={{ color: "var(--ink-muted)" }}>{agentById.get(w.assigned_agent_id)?.name ?? w.assigned_agent_id.slice(0, 8)}</td>
-                <td>{w.submission_count}</td>
-                <td>
-                  <span
-                    className="badge"
-                    style={w.is_active ? { background: "var(--success-soft)", color: "var(--success)" } : { background: "var(--hairline)", color: "var(--ink-faint)" }}
-                  >
-                    {w.is_active ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td>
-                  <EmbedSnippetButton widgetKey={w.widget_key} />
-                </td>
-                <td>
-                  <ToggleWidgetButton widgetId={w.id} isActive={w.is_active} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

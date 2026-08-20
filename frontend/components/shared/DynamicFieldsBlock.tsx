@@ -69,6 +69,7 @@ export default function DynamicFieldsBlock({
                 required={def.is_required}
                 type="date"
                 value={(value[def.key] as string) ?? ""}
+                onClick={(e) => e.currentTarget.showPicker?.()}
                 onChange={(e) => setField(def.key, e.target.value)}
                 className="input"
               />

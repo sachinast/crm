@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react";
 
 import AttendanceManager from "@/components/attendance/AttendanceManager";
+import PageHeader from "@/components/shared/PageHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -9,18 +10,13 @@ export default async function AttendancePage() {
   const canViewAll = hasPermission(user, "attendance.view_all");
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <Clock size={18} style={{ color: "var(--accent)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Check in and out, and review attendance history.
-          </p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Staff Attendance"
+        subtitle="Daily agent clock-in/out tracking and working hours history."
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Attendance" }]}
+        icon={<Clock size={18} />}
+      />
 
       <AttendanceManager canViewAll={canViewAll} />
     </div>

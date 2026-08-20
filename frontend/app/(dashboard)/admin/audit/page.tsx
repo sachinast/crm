@@ -1,7 +1,11 @@
-import { ScrollText } from "lucide-react";
+import { ScrollText, Search, ShieldAlert, Eye, Lock, Filter } from "lucide-react";
+import Link from "next/link";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
+import PageHeader from "@/components/shared/PageHeader";
+import DataTableCard from "@/components/shared/DataTableCard";
+import Pagination from "@/components/shared/Pagination";
 
 interface ProcessLogEntry {
   id: string;
@@ -31,6 +35,8 @@ interface AccessLogEntry {
   opened_at: string;
 }
 
+const PAGE_SIZE_DEFAULT = 10;
+
 async function fetchAudit<T>(path: string): Promise<{ rows: T[]; forbidden: boolean }> {
   const token = await getAccessToken();
   if (!token) return { rows: [], forbidden: true };
@@ -42,16 +48,17 @@ async function fetchAudit<T>(path: string): Promise<{ rows: T[]; forbidden: bool
   }
 }
 
-// TECHNICAL_SPEC.md §5/§9 — Admin/Super Admin-only oversight tools: the
-// master "Log Report of Booking Process" (§9.3), the PII reveal audit trail
-// (§9.2), and the record-open access log (§5). One page, three sections,
-// each independently role-gated server-side (this page just relays 403s).
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lead_id?: string }>;
+  searchParams: Promise<{ lead_id?: string; tab?: string; page?: string; page_size?: string }>;
 }) {
-  const { lead_id } = await searchParams;
+  const { lead_id, tab = "process", page: pageParam, page_size: pageSizeParam } = await searchParams;
+  const page = Math.max(Number(pageParam) || 1, 1);
+  const pageSize = Number(pageSizeParam) && [10, 25, 50, 100].includes(Number(pageSizeParam))
+    ? Number(pageSizeParam)
+    : PAGE_SIZE_DEFAULT;
+
   const suffix = lead_id ? `?lead_id=${encodeURIComponent(lead_id)}` : "";
 
   const [processLog, piiReveals, accessLog] = await Promise.all([
@@ -62,82 +69,225 @@ export default async function AuditPage({
 
   if (processLog.forbidden) {
     return (
-      <div>
-        <h1 className="mb-4 text-2xl font-semibold tracking-tight">Audit</h1>
-        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Admin/Super Admin only.</p>
+      <div className="w-full max-w-7xl mx-auto space-y-6">
+        <PageHeader
+          title="Audit & Quality Control"
+          subtitle="Admin & Super Admin oversight portal."
+          breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Admin" }, { label: "Audit" }]}
+          icon={<ScrollText size={18} />}
+        />
+        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-6 text-sm text-slate-400">
+          Your account role does not have permission to view audit reports.
+        </div>
       </div>
     );
   }
 
+  // Active dataset according to tab
+  const activeTab = ["process", "pii", "access"].includes(tab) ? tab : "process";
+
+  let currentItemsCount = 0;
+  if (activeTab === "process") currentItemsCount = processLog.rows.length;
+  else if (activeTab === "pii") currentItemsCount = piiReveals.rows.length;
+  else if (activeTab === "access") currentItemsCount = accessLog.rows.length;
+
+  const pagedProcess = processLog.rows.slice((page - 1) * pageSize, page * pageSize);
+  const pagedPii = piiReveals.rows.slice((page - 1) * pageSize, page * pageSize);
+  const pagedAccess = accessLog.rows.slice((page - 1) * pageSize, page * pageSize);
+
+  const TABS = [
+    { id: "process", label: "Booking Process Log", count: processLog.rows.length },
+    { id: "pii", label: "PII Unmasking Log", count: piiReveals.rows.length },
+    { id: "access", label: "Record Access Log", count: accessLog.rows.length },
+  ];
+
   return (
-    <div className="max-w-3xl">
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <ScrollText size={18} style={{ color: "var(--accent)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Audit</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            PRD §9.2/§9.3 — the master process log, PII reveal trail, and record-access log.
-          </p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      {/* Symmetric Page Header */}
+      <PageHeader
+        title="Audit & Quality Control"
+        subtitle="Master booking process log, PII unmasking trail, and record access inspection."
+        badge={`${processLog.rows.length + piiReveals.rows.length + accessLog.rows.length} total events`}
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Admin", href: "/admin/users" },
+          { label: "Audit & QC" },
+        ]}
+        icon={<ScrollText size={18} />}
+      />
 
-      <form className="mb-6 flex gap-2" method="GET">
-        <input name="lead_id" defaultValue={lead_id} placeholder="Filter by lead ID" className="input w-64" />
-        <button type="submit" className="btn-secondary">
-          Filter
-        </button>
-      </form>
+      {/* Main Aligned DataTableCard Grid with Tabs & Pagination */}
+      <DataTableCard
+        headerContent={
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+            {/* Category Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+              {TABS.map((t) => {
+                const isActive = activeTab === t.id;
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/admin/audit?tab=${t.id}${lead_id ? `&lead_id=${encodeURIComponent(lead_id)}` : ""}`}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
+                        : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                    }`}
+                  >
+                    <span>{t.label}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.2 text-[10px] font-mono ${
+                        isActive ? "bg-slate-950/20 text-slate-950" : "bg-[#182136] text-slate-400"
+                      }`}
+                    >
+                      {t.count}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
 
-      <section className="card mb-4">
-        <h2 className="section-label mb-3">Booking process log</h2>
-        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-          {processLog.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
-          {processLog.rows.map((r) => (
-            <li key={r.id} className="card-flat py-2.5">
-              <span className="font-medium" style={{ color: "var(--ink)" }}>{r.action}</span>
-              {r.field_changed && (
-                <>
-                  {" "}
-                  · {r.field_changed}: {JSON.stringify(r.old_value)} → {JSON.stringify(r.new_value)}
-                </>
+            {/* Lead Search Filter */}
+            <form className="flex items-center gap-2" method="GET">
+              <input type="hidden" name="tab" value={activeTab} />
+              <div className="relative min-w-[220px]">
+                <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  name="lead_id"
+                  defaultValue={lead_id}
+                  placeholder="Filter by Lead UUID..."
+                  className="input w-full pl-8 text-xs font-mono"
+                />
+              </div>
+              <button type="submit" className="btn-secondary btn-sm text-xs">
+                Filter
+              </button>
+              {lead_id && (
+                <Link href={`/admin/audit?tab=${activeTab}`} className="btn-ghost btn-sm text-xs">
+                  Clear
+                </Link>
               )}
-              {" · lead "}
-              <span className="font-mono">{r.lead_id.slice(0, 8)}</span>
-              {" · "}
-              {new Date(r.created_at).toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      </section>
+            </form>
+          </div>
+        }
+        footerContent={
+          <Pagination
+            currentPage={page}
+            totalItems={currentItemsCount}
+            pageSize={pageSize}
+            basePath="/admin/audit"
+            extraParams={{ tab: activeTab, lead_id, page_size: pageSize }}
+            pageSizeOptions={[10, 25, 50, 100]}
+          />
+        }
+      >
+        {activeTab === "process" && (
+          <table className="table-modern w-full">
+            <thead>
+              <tr className="bg-[#182136]/30">
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Timestamp</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Action / Mutation</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Target Lead</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Attribute Changes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#232e47]">
+              {pagedProcess.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-xs text-slate-400">No process entries found.</td>
+                </tr>
+              ) : (
+                pagedProcess.map((r) => (
+                  <tr key={r.id} className="transition-colors hover:bg-[#182136]/60">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-white">{r.action}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                      <Link href={`/leads/${r.lead_id}`} className="hover:underline">
+                        {r.lead_id.slice(0, 8)}...
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-300">
+                      {r.field_changed ? (
+                        <span>
+                          <span className="font-semibold text-slate-200">{r.field_changed}</span>: {JSON.stringify(r.old_value)} → {JSON.stringify(r.new_value)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
 
-      <section className="card mb-4">
-        <h2 className="section-label mb-3">PII reveal log</h2>
-        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-          {piiReveals.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
-          {piiReveals.rows.map((r) => (
-            <li key={r.id} className="card-flat py-2.5">
-              <span className="font-medium" style={{ color: "var(--ink)" }}>{r.field_revealed}</span> revealed · &ldquo;{r.reason}
-              &rdquo; · {r.ip_address} · lead <span className="font-mono">{r.lead_id.slice(0, 8)}</span> ·{" "}
-              {new Date(r.revealed_at).toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      </section>
+        {activeTab === "pii" && (
+          <table className="table-modern w-full">
+            <thead>
+              <tr className="bg-[#182136]/30">
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Timestamp</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Field Revealed</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Reason & Agent</th>
+                <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">IP Address</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#232e47]">
+              {pagedPii.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-xs text-slate-400">No PII unmasking entries.</td>
+                </tr>
+              ) : (
+                pagedPii.map((r) => (
+                  <tr key={r.id} className="transition-colors hover:bg-[#182136]/60">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-400">{new Date(r.revealed_at).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-md border border-[#3ecf9a]/30 bg-[#113028] px-2 py-0.5 font-mono text-xs font-semibold text-[#3ecf9a]">
+                        {r.field_revealed}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-300">
+                      &ldquo;{r.reason}&rdquo; · agent <span className="font-mono text-slate-400">{r.agent_id.slice(0, 8)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">{r.ip_address}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
 
-      <section className="card">
-        <h2 className="section-label mb-3">Access log</h2>
-        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-          {accessLog.rows.length === 0 && <li style={{ color: "var(--ink-faint)" }}>No entries.</li>}
-          {accessLog.rows.map((r) => (
-            <li key={r.id} className="card-flat py-2.5">
-              Opened lead <span className="font-mono">{r.lead_id.slice(0, 8)}</span> ·{" "}
-              {new Date(r.opened_at).toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      </section>
+        {activeTab === "access" && (
+          <table className="table-modern w-full">
+            <thead>
+              <tr className="bg-[#182136]/30">
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Opened Timestamp</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Target Lead</th>
+                <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Agent ID</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#232e47]">
+              {pagedAccess.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-12 text-center text-xs text-slate-400">No record access events.</td>
+                </tr>
+              ) : (
+                pagedAccess.map((r) => (
+                  <tr key={r.id} className="transition-colors hover:bg-[#182136]/60">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-400">{new Date(r.opened_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                      <Link href={`/leads/${r.lead_id}`} className="hover:underline">
+                        {r.lead_id}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-slate-300">{r.opened_by}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+      </DataTableCard>
     </div>
   );
 }

@@ -1,9 +1,15 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Database, AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { createMasterOption, deleteMasterOption, type MasterFieldKey, type MasterOption } from "@/lib/master-options-api";
+import {
+  createMasterOption,
+  deleteMasterOption,
+  type MasterFieldKey,
+  type MasterOption,
+} from "@/lib/master-options-api";
+import DataTableCard from "@/components/shared/DataTableCard";
 
 const FIELDS: { value: MasterFieldKey; label: string }[] = [
   { value: "booking_platform", label: "Booking Platform" },
@@ -53,69 +59,110 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
   }
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {FIELDS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setActive(f.value)}
-            className="badge"
-            style={active === f.value ? { background: "var(--accent-soft)", color: "var(--accent)" } : { background: "var(--hairline)", color: "var(--ink-muted)" }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      {/* Aligned DataTableCard Grid */}
+      <DataTableCard
+        headerContent={
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+            {/* Category Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 py-0.5">
+              {FIELDS.map((f) => {
+                const isActive = active === f.value;
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => setActive(f.value)}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                      isActive
+                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
+                        : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
 
-      <div className="mb-4 flex gap-2">
-        <input
-          value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder={`New ${FIELDS.find((f) => f.value === active)?.label} value`}
-          className="input flex-1"
-        />
-        <button onClick={handleAdd} disabled={saving || !newValue.trim()} className="btn-primary">
-          <Plus size={14} />
-          Add
-        </button>
-      </div>
+            <div className="text-xs text-slate-400 font-medium">
+              {visible.length} {visible.length === 1 ? "option" : "options"}
+            </div>
+          </div>
+        }
+      >
+        {/* Quick Add Toolbar */}
+        <div className="p-3.5 bg-[#182136]/20 border-b border-[#232e47]">
+          <div className="flex items-center gap-2 max-w-md">
+            <input
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              placeholder={`Add new ${FIELDS.find((f) => f.value === active)?.label} value...`}
+              className="input text-xs"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={saving || !newValue.trim()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 shrink-0"
+            >
+              <Plus size={13} strokeWidth={2.5} />
+              <span>Add</span>
+            </button>
+          </div>
 
-      {error && (
-        <p className="mb-3 text-sm" style={{ color: "var(--danger)" }}>
-          {error}
-        </p>
-      )}
+          {error && (
+            <p className="mt-2 text-xs text-[#ef7b93] flex items-center gap-1">
+              <AlertTriangle size={12} />
+              <span>{error}</span>
+            </p>
+          )}
+        </div>
 
-      <div className="card-flat overflow-x-auto p-0">
-        <table className="table-modern">
+        <table className="table-modern w-full">
           <thead>
-            <tr>
-              <th>Value</th>
-              <th />
+            <tr className="bg-[#182136]/30">
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Option Display Value
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Category Master
+              </th>
+              <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Action
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {visible.length === 0 && (
+          <tbody className="divide-y divide-[#232e47]">
+            {visible.length === 0 ? (
               <tr>
-                <td colSpan={2} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                  No values defined for this field yet.
+                <td colSpan={3} className="py-12 text-center text-xs text-slate-400">
+                  No dropdown values defined for this category yet.
                 </td>
               </tr>
+            ) : (
+              visible.map((opt) => (
+                <tr key={opt.id} className="transition-colors hover:bg-[#182136]/60">
+                  <td className="px-4 py-3 font-semibold text-white">
+                    {opt.value}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                    {opt.field_key}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(opt.id)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-[#34131c] hover:text-[#ef7b93] transition-colors"
+                      title="Delete option"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
-            {visible.map((o) => (
-              <tr key={o.id}>
-                <td className="font-medium">{o.value}</td>
-                <td>
-                  <button onClick={() => handleDelete(o.id)} className="btn-ghost btn-sm px-1.5" title="Delete this value">
-                    <Trash2 size={13} style={{ color: "var(--danger)" }} />
-                  </button>
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
-      </div>
+      </DataTableCard>
     </div>
   );
 }
