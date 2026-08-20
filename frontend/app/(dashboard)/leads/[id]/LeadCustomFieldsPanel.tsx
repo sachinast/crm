@@ -52,7 +52,7 @@ export default function LeadCustomFieldsPanel({
         <DynamicFieldsBlock entityType="lead" value={values} onChange={setValues} />
       </fieldset>
       {error && (
-        <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="mt-3 alert-danger">
           {error}
         </p>
       )}

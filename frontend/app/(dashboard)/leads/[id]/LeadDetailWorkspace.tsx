@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 import RevealField from "@/components/pii/RevealField";
-import { statusBadgeStyle } from "@/lib/status-colors";
+import StatusBadge from "@/components/shared/StatusBadge";
 import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
 
 import StatusActions from "./StatusActions";
@@ -179,9 +179,7 @@ export default function LeadDetailWorkspace({
 
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">{lead.name}</h1>
-            <span className="badge shrink-0" style={statusBadgeStyle(STATUS_COLOR_HINTS[lead.status] ?? "grey")}>
-              {formatStatus(lead.status)}
-            </span>
+            <StatusBadge status={lead.status} />
           </div>
 
           {/* Masked PII Header Chips */}
@@ -447,8 +445,11 @@ export default function LeadDetailWorkspace({
                       <li key={p.id} className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2">
                           <span
-                            className="badge text-[10px]"
-                            style={p.outcome === "charged" ? statusBadgeStyle("green") : statusBadgeStyle("red")}
+                            className={`badge text-[10px] font-bold uppercase ${
+                              p.outcome === "charged"
+                                ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200"
+                                : "bg-rose-950/40 text-rose-400 border border-rose-800/40 [data-theme=light]:bg-rose-50 [data-theme=light]:text-rose-700 [data-theme=light]:border-rose-200"
+                            }`}
                           >
                             {p.outcome}
                           </span>

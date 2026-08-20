@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { statusBadgeStyle } from "@/lib/status-colors";
+import { statusBadgeClass } from "@/lib/status-colors";
 
 interface Transition {
   status: string;
@@ -46,21 +46,20 @@ export default function StatusActions({ leadId, transitions }: { leadId: string;
   }
 
   if (transitions.length === 0) {
-    return <p className="text-xs" style={{ color: "var(--ink-faint)" }}>No status actions available for your role right now.</p>;
+    return <p className="text-xs text-ink-faint">No status actions available for your role right now.</p>;
   }
 
   return (
     <div>
       <div className="flex flex-wrap gap-2">
         {transitions.map((t) => {
-          const style = statusBadgeStyle(t.ui_color);
+          const colorClass = statusBadgeClass(t.ui_color);
           return (
             <button
               key={t.status}
               onClick={() => handleClick(t.status)}
               disabled={submitting !== null}
-              className="btn-sm rounded-lg font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: style.backgroundColor, color: style.color }}
+              className={`btn-sm rounded-xl font-semibold shadow-xs transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 ${colorClass}`}
             >
               {submitting === t.status ? "…" : t.label}
             </button>
@@ -68,7 +67,7 @@ export default function StatusActions({ leadId, transitions }: { leadId: string;
         })}
       </div>
       {error && (
-        <p className="mt-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="mt-2 alert-danger">
           {error}
         </p>
       )}

@@ -52,13 +52,13 @@ export default function CarBookingFields({
   return (
     <fieldset disabled={disabled} className="col-span-full grid grid-cols-1 gap-4 lg:grid-cols-12">
       {/* LEFT COLUMN: Vehicle & Rental Specifications (7 columns) */}
-      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5 lg:col-span-7">
-        <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
-          <Car size={14} />
+      <div className="rounded-2xl border border-hairline bg-surface p-4 lg:col-span-7 space-y-4">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+          <Car size={15} />
           <span>Vehicle & Rental Specifications</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Booking reference">
             <input
               required
@@ -102,11 +102,10 @@ export default function CarBookingFields({
           </Field>
 
           <Field label="Fuel policy">
-            <input
+            <MasterSelect
+              fieldKey="fuel_policy"
               value={value.fuel_policy ?? ""}
-              onChange={(e) => onChange({ ...value, fuel_policy: e.target.value })}
-              className="input"
-              placeholder="Full to Full"
+              onChange={(v) => onChange({ ...value, fuel_policy: v })}
             />
           </Field>
 
@@ -118,13 +117,13 @@ export default function CarBookingFields({
                 value={value.renter_dob}
                 onClick={(e) => e.currentTarget.showPicker?.()}
                 onChange={(e) => onChange({ ...value, renter_dob: e.target.value })}
-                className="input"
+                className="input font-mono"
               />
             </Field>
           </div>
         </div>
 
-        <div className="mt-2.5">
+        <div>
           <DynamicFieldsBlock
             entityType="car_booking"
             value={value.custom_fields}
@@ -135,16 +134,16 @@ export default function CarBookingFields({
 
       {/* RIGHT COLUMN: Schedule & Journey Routing (5 columns) */}
       <div className="space-y-3 lg:col-span-5">
-        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5">
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
-            <MapPin size={13} className="text-[var(--accent)]" />
+        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+            <MapPin size={15} />
             <span>Schedule & Routing</span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {/* Pick-up Block */}
-            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+            <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
+              <div className="text-xs font-bold uppercase tracking-wider text-accent">
                 Pick-up Details
               </div>
               <Field label="Pick-up location">
@@ -163,14 +162,14 @@ export default function CarBookingFields({
                   value={value.pickup_datetime}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   onChange={(e) => onChange({ ...value, pickup_datetime: e.target.value })}
-                  className="input"
+                  className="input font-mono"
                 />
               </Field>
             </div>
 
             {/* Drop-off Block */}
-            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+            <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
+              <div className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                 Drop-off / Return Details
               </div>
               <Field label="Return location">
@@ -189,7 +188,7 @@ export default function CarBookingFields({
                   value={value.return_datetime}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   onChange={(e) => onChange({ ...value, return_datetime: e.target.value })}
-                  className="input"
+                  className="input font-mono"
                 />
               </Field>
             </div>

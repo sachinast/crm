@@ -47,21 +47,21 @@ export default function RevenueTrendChart({ baseRevenue }: { baseRevenue?: numbe
   const totalPeriodLeads = data.reduce((acc, curr) => acc + curr.leads, 0);
 
   return (
-    <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-4">
+    <div className="card space-y-4">
       {/* Chart Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <BarChart3 size={16} className="text-[#d3ab5e]" />
-            <h3 className="text-sm font-bold text-white">Revenue & Pipeline Velocity</h3>
+            <BarChart3 size={18} className="text-[var(--accent)]" />
+            <h3 className="text-sm font-bold text-[var(--ink)]">Revenue & Pipeline Velocity</h3>
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
             Booking revenue realization and intake velocity trends.
           </p>
         </div>
 
         {/* Timeframe Toggle Buttons */}
-        <div className="flex items-center gap-1 rounded-xl border border-[#232e47] bg-[#0d1220] p-1">
+        <div className="flex items-center gap-1 rounded-xl border border-hairline bg-surface-sunken p-1">
           {(["7D", "30D", "12M"] as const).map((r) => (
             <button
               key={r}
@@ -69,10 +69,10 @@ export default function RevenueTrendChart({ baseRevenue }: { baseRevenue?: numbe
                 setRange(r);
                 setHoveredIndex(null);
               }}
-              className={`rounded-lg px-2.5 py-1 font-mono text-[11px] font-bold transition-all ${
+              className={`rounded-lg px-3 py-1 font-mono text-xs font-bold transition-all ${
                 range === r
-                  ? "bg-[#d3ab5e] text-slate-950 shadow-xs"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-accent text-white shadow-xs"
+                  : "text-ink-muted hover:text-ink"
               }`}
             >
               {r}
@@ -82,23 +82,23 @@ export default function RevenueTrendChart({ baseRevenue }: { baseRevenue?: numbe
       </div>
 
       {/* KPI Highlight Strip */}
-      <div className="grid grid-cols-2 gap-3 border-y border-[#232e47] py-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 border-y border-[var(--hairline)] py-3 sm:grid-cols-3">
         <div>
-          <span className="text-[11px] font-semibold text-slate-400">Period Revenue</span>
-          <p className="mt-0.5 text-base font-extrabold text-white font-mono">
+          <span className="text-xs font-semibold text-[var(--ink-muted)]">Period Revenue</span>
+          <p className="mt-0.5 text-lg font-extrabold text-[var(--ink)] font-mono">
             ${totalPeriodRevenue.toLocaleString()}
           </p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400">Intake Volume</span>
-          <p className="mt-0.5 text-base font-extrabold text-[#d3ab5e] font-mono">
+          <span className="text-xs font-semibold text-[var(--ink-muted)]">Intake Volume</span>
+          <p className="mt-0.5 text-lg font-extrabold text-[var(--accent)] font-mono">
             {totalPeriodLeads} leads
           </p>
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-semibold text-slate-400">Period Growth</span>
-          <p className="mt-0.5 flex items-center gap-1 text-xs font-bold text-[#3ecf9a]">
-            <TrendingUp size={13} />
+          <span className="text-xs font-semibold text-[var(--ink-muted)]">Period Growth</span>
+          <p className="mt-0.5 flex items-center gap-1 text-xs font-bold text-success">
+            <TrendingUp size={14} />
             <span>+14.8% vs previous period</span>
           </p>
         </div>
@@ -120,11 +120,11 @@ export default function RevenueTrendChart({ baseRevenue }: { baseRevenue?: numbe
               >
                 {/* Tooltip on Hover */}
                 {isHovered && (
-                  <div className="absolute -top-12 z-20 whitespace-nowrap rounded-xl border border-[#d3ab5e]/60 bg-[#0d1220] px-2.5 py-1 text-center shadow-lg pointer-events-none animate-fadeIn">
-                    <p className="text-[11px] font-bold text-white font-mono">
+                  <div className="absolute -top-12 z-20 whitespace-nowrap rounded-xl border border-[var(--accent)] bg-[var(--surface-sunken)] px-3 py-1 text-center shadow-lg pointer-events-none animate-fadeIn">
+                    <p className="text-xs font-bold text-[var(--ink)] font-mono">
                       ${point.revenue.toLocaleString()}
                     </p>
-                    <p className="text-[10px] text-[#d3ab5e] font-medium">
+                    <p className="text-[10px] text-[var(--accent)] font-semibold">
                       {point.leads} bookings
                     </p>
                   </div>
@@ -135,15 +135,15 @@ export default function RevenueTrendChart({ baseRevenue }: { baseRevenue?: numbe
                   style={{ height: `${heightPct}%` }}
                   className={`w-full rounded-t-lg transition-all duration-300 ${
                     isHovered
-                      ? "bg-gradient-to-t from-[#d3ab5e] to-[#f0d59e] shadow-[0_0_15px_rgba(211,171,94,0.4)]"
-                      : "bg-gradient-to-t from-[#182136] to-[#d3ab5e]/80 group-hover:to-[#d3ab5e]"
+                      ? "bg-gradient-to-t from-[var(--accent)] to-[var(--accent-hover)] shadow-[0_0_15px_rgba(211,171,94,0.4)]"
+                      : "bg-gradient-to-t from-[var(--surface-raised)] to-[var(--accent)]/80 group-hover:to-[var(--accent)]"
                   }`}
                 />
 
                 {/* X-Axis Label */}
                 <span
-                  className={`mt-2 text-[10px] font-mono font-semibold transition-colors ${
-                    isHovered ? "text-[#d3ab5e]" : "text-slate-400"
+                  className={`mt-2 text-xs font-mono font-semibold transition-colors ${
+                    isHovered ? "text-[var(--accent)] font-bold" : "text-[var(--ink-muted)]"
                   }`}
                 >
                   {point.label}

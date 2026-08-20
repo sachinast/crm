@@ -57,13 +57,13 @@ export default function FlightBookingFields({
   return (
     <fieldset disabled={disabled} className="col-span-full grid grid-cols-1 gap-4 lg:grid-cols-12">
       {/* LEFT COLUMN: Airline & Carrier Specs (7 columns) */}
-      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5 lg:col-span-7">
-        <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
-          <Plane size={14} />
+      <div className="rounded-2xl border border-hairline bg-surface p-4 lg:col-span-7 space-y-4">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+          <Plane size={15} />
           <span>Flight & Carrier Specifications</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Booking reference">
             <input
               required
@@ -87,7 +87,7 @@ export default function FlightBookingFields({
               required
               value={value.pnr}
               onChange={(e) => onChange({ ...value, pnr: e.target.value })}
-              className="input font-mono uppercase"
+              className="input font-mono uppercase font-semibold"
               placeholder="e.g. 689968"
             />
           </Field>
@@ -119,7 +119,7 @@ export default function FlightBookingFields({
           </Field>
         </div>
 
-        <div className="mt-2.5">
+        <div>
           <DynamicFieldsBlock
             entityType="flight_booking"
             value={value.custom_fields}
@@ -130,14 +130,14 @@ export default function FlightBookingFields({
 
       {/* RIGHT COLUMN: Flight Routing (5 columns) */}
       <div className="space-y-3 lg:col-span-5">
-        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5">
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
-            <MapPin size={13} className="text-[var(--accent)]" />
+        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+            <MapPin size={15} />
             <span>Flight Routing</span>
           </div>
 
-          <div className="space-y-2.5">
-            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
+          <div className="space-y-3">
+            <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
               <Field label="Origin airport / city">
                 <input
                   required

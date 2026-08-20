@@ -74,24 +74,24 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-md rounded-2xl border border-[#232e47] bg-[#131a2b] p-6 sm:p-8 shadow-2xl z-10 space-y-5">
+      <div className="relative w-full max-w-md card p-6 sm:p-8 shadow-2xl z-10 space-y-5">
         {/* Close (✕) Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a3652] bg-[#182136] text-slate-400 transition-colors hover:border-[#d3ab5e] hover:text-white"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl border border-hairline bg-surface text-ink-muted transition-colors hover:border-accent hover:text-ink"
         >
           <X size={16} />
         </button>
 
         {/* Modal Brand Header */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#2a3652] bg-[#182136] text-xl font-extrabold text-[#d3ab5e] shadow-md">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-white text-xl font-extrabold shadow-md">
             P
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-white">Sign In to CRM PRO</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-xl font-bold tracking-tight text-ink">Sign In to CRM PRO</h2>
+            <p className="text-xs text-ink-muted">
               Access your role-based booking and operations console.
             </p>
           </div>
@@ -99,7 +99,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted">
             Email Address
             <input
               type="email"
@@ -107,13 +107,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#232e47] bg-[#0d1220] px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#d3ab5e] focus:outline-none"
+              className="input mt-1.5"
               placeholder="name@example.com"
               autoFocus
             />
           </label>
 
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted">
             Password
             <input
               type="password"
@@ -121,13 +121,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#232e47] bg-[#0d1220] px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#d3ab5e] focus:outline-none"
+              className="input mt-1.5"
               placeholder="••••••••"
             />
           </label>
 
           {error && (
-            <div className="rounded-xl border border-[#ef7b93]/30 bg-[#34131c] px-3.5 py-2.5 text-xs font-semibold text-[#ef7b93] animate-fadeIn">
+            <div className="alert-danger text-xs animate-fadeIn">
               {error}
             </div>
           )}
@@ -135,7 +135,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] py-2.5 text-sm font-bold text-slate-950 shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            className="btn-primary w-full py-2.5"
           >
             <span>{submitting ? "Signing in…" : "Sign In to Workspace"}</span>
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
@@ -143,8 +143,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </form>
 
         {/* Security Badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-400 pt-1">
-          <ShieldCheck size={13} className="text-[#3ecf9a]" />
+        <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-ink-muted pt-1">
+          <ShieldCheck size={14} className="text-success" />
           <span>Role-Based Authentication & AES PII Protection</span>
         </div>
       </div>

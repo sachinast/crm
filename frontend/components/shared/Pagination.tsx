@@ -64,18 +64,18 @@ export default function Pagination({
   }
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-400">
+    <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-sm text-[var(--ink-muted)]">
       {/* Left: Dynamic Entries Count & Page Size Selector */}
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          Showing <span className="font-semibold text-slate-200">{startItem}</span> to{" "}
-          <span className="font-semibold text-slate-200">{endItem}</span> of{" "}
-          <span className="font-semibold text-slate-200">{totalItems}</span> entries
+          Showing <span className="font-semibold text-[var(--ink)]">{startItem}</span> to{" "}
+          <span className="font-semibold text-[var(--ink)]">{endItem}</span> of{" "}
+          <span className="font-semibold text-[var(--ink)]">{totalItems}</span> entries
         </div>
 
         {pageSizeOptions && pageSizeOptions.length > 0 && (
-          <div className="flex items-center gap-1.5 border-l border-[#232e47] pl-3">
-            <span className="text-[11px] text-slate-400">Per page:</span>
+          <div className="flex items-center gap-2 border-l border-[var(--hairline)] pl-3">
+            <span className="text-xs text-[var(--ink-faint)]">Per page:</span>
             <div className="flex items-center gap-1">
               {pageSizeOptions.map((size) => {
                 const isActive = size === pageSize;
@@ -83,10 +83,10 @@ export default function Pagination({
                   <Link
                     key={size}
                     href={createPageSizeUrl(size)}
-                    className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
+                    className={`rounded-lg px-2 py-0.5 font-mono text-xs font-semibold transition-colors ${
                       isActive
-                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-xs"
-                        : "bg-[#182136] text-slate-400 hover:bg-[#232e47] hover:text-white"
+                        ? "bg-accent text-white font-bold shadow-xs"
+                        : "bg-surface-raised text-ink-muted hover:bg-surface hover:text-ink"
                     }`}
                   >
                     {size}
@@ -104,14 +104,14 @@ export default function Pagination({
         {currentPage > 1 ? (
           <Link
             href={createPageUrl(currentPage - 1)}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+            className="inline-flex items-center gap-1 rounded-xl border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size={14} />
             <span>Prev</span>
           </Link>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-lg border border-transparent px-2.5 py-1 text-xs font-semibold text-slate-600 cursor-not-allowed">
-            <ChevronLeft size={13} />
+          <span className="inline-flex items-center gap-1 rounded-xl border border-transparent px-3 py-1.5 text-xs font-semibold text-ink-faint opacity-50 cursor-not-allowed">
+            <ChevronLeft size={14} />
             <span>Prev</span>
           </span>
         )}
@@ -122,11 +122,11 @@ export default function Pagination({
             <>
               <Link
                 href={createPageUrl(1)}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3652] bg-[#131a2b] text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-hairline bg-surface text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
               >
                 1
               </Link>
-              {startPage > 2 && <span className="px-1 text-slate-600">…</span>}
+              {startPage > 2 && <span className="px-1 text-ink-faint">…</span>}
             </>
           )}
 
@@ -135,7 +135,7 @@ export default function Pagination({
             return isActive ? (
               <span
                 key={p}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#d3ab5e] text-xs font-bold text-slate-950 shadow-sm"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-xs font-bold text-white shadow-xs"
               >
                 {p}
               </span>
@@ -143,7 +143,7 @@ export default function Pagination({
               <Link
                 key={p}
                 href={createPageUrl(p)}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3652] bg-[#131a2b] text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-hairline bg-surface text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
               >
                 {p}
               </Link>
@@ -152,10 +152,10 @@ export default function Pagination({
 
           {endPage < totalPages && (
             <>
-              {endPage < totalPages - 1 && <span className="px-1 text-slate-600">…</span>}
+              {endPage < totalPages - 1 && <span className="px-1 text-[var(--ink-faint)]">…</span>}
               <Link
                 href={createPageUrl(totalPages)}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3652] bg-[#131a2b] text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--hairline)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {totalPages}
               </Link>
@@ -167,15 +167,15 @@ export default function Pagination({
         {currentPage < totalPages ? (
           <Link
             href={createPageUrl(currentPage + 1)}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+            className="inline-flex items-center gap-1 rounded-xl border border-[var(--hairline-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
             <span>Next</span>
-            <ChevronRight size={13} />
+            <ChevronRight size={14} />
           </Link>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-lg border border-transparent px-2.5 py-1 text-xs font-semibold text-slate-600 cursor-not-allowed">
+          <span className="inline-flex items-center gap-1 rounded-xl border border-transparent px-3 py-1.5 text-xs font-semibold text-[var(--ink-faint)] opacity-50 cursor-not-allowed">
             <span>Next</span>
-            <ChevronRight size={13} />
+            <ChevronRight size={14} />
           </span>
         )}
       </div>

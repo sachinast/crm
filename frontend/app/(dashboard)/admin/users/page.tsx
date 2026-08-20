@@ -72,11 +72,13 @@ export default async function AdminUsersPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Create User Card */}
         <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
-            <h2 className="mb-1 text-sm font-bold text-white">Create New Account</h2>
-            <p className="mb-4 text-xs text-slate-400">
-              Admin-provisioned credentials with role binding.
-            </p>
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-ink">Create New Account</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Admin-provisioned credentials with role binding.
+              </p>
+            </div>
             <CreateUserForm roles={roles} />
           </div>
         </div>
@@ -85,11 +87,13 @@ export default async function AdminUsersPage({
         <div className="lg:col-span-7">
           <DataTableCard
             headerContent={
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink">
                   Active User Directory
                 </span>
-                <span className="text-[11px] text-slate-400">{users.length} accounts</span>
+                <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
+                  {users.length} {users.length === 1 ? "account" : "accounts"}
+                </span>
               </div>
             }
             footerContent={
@@ -105,45 +109,45 @@ export default async function AdminUsersPage({
           >
             <table className="table-modern w-full">
               <thead>
-                <tr className="bg-[#182136]/30">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     User Name
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Email Address
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Assigned Role
                   </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#232e47]">
+              <tbody className="divide-y divide-hairline">
                 {pagedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                    <td colSpan={4} className="py-12 text-center text-sm text-ink-muted">
                       No user accounts found.
                     </td>
                   </tr>
                 ) : (
                   pagedUsers.map((u) => (
-                    <tr key={u.id} className="transition-colors hover:bg-[#182136]/60">
-                      <td className="px-4 py-3 font-semibold text-white">{u.name}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-300">{u.email}</td>
-                      <td className="px-4 py-3 capitalize text-slate-300">
-                        <span className="inline-flex items-center gap-1 rounded-md border border-[#2a3652] bg-[#182136] px-2 py-0.5 text-xs font-medium">
-                          <ShieldCheck size={11} className="text-[#d3ab5e]" />
+                    <tr key={u.id} className="transition-colors hover:bg-surface-raised">
+                      <td className="px-4 py-3 font-semibold text-sm text-ink">{u.name}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">{u.email}</td>
+                      <td className="px-4 py-3 capitalize text-sm text-ink">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-raised px-2.5 py-0.5 text-xs font-medium">
+                          <ShieldCheck size={13} className="text-accent" />
                           <span>{u.role.replace(/_/g, " ")}</span>
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${
                             u.is_active
-                              ? "bg-[#113028] text-[#3ecf9a] border border-[#3ecf9a]/30"
-                              : "bg-[#232e47] text-slate-400 border border-[#313f61]"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              : "bg-surface-raised text-ink-muted border-hairline"
                           }`}
                         >
                           {u.is_active ? "Active" : "Inactive"}

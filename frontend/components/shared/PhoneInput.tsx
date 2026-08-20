@@ -200,19 +200,17 @@ export default function PhoneInput({
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
         onKeyDown={handleTriggerKeyDown}
-        className="input flex w-[7.2rem] shrink-0 items-center justify-between gap-1.5 px-2.5 font-medium transition-all hover:border-[#d3ab5e] focus:border-[#d3ab5e]"
-        style={{
-          background: isOpen ? "#182136" : "#0d1220",
-          borderColor: isOpen ? "#d3ab5e" : undefined,
-        }}
+        className={`input flex w-[7.8rem] shrink-0 items-center justify-between gap-1.5 px-3 font-medium transition-all hover:border-accent focus:border-accent ${
+          isOpen ? "bg-surface-raised border-accent" : "bg-surface-sunken"
+        }`}
       >
         <span className="flex items-center gap-2 truncate">
           <FlagIcon code={selectedCountry.code} />
-          <span className="font-mono text-xs font-semibold text-white">+{selectedCountry.dialCode}</span>
+          <span className="font-mono text-sm font-semibold text-ink">+{selectedCountry.dialCode}</span>
         </span>
         <ChevronDown
-          className={`h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-[#d3ab5e]" : ""
+          className={`h-3.5 w-3.5 shrink-0 text-ink-muted transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-accent" : ""
           }`}
         />
       </button>
@@ -226,7 +224,7 @@ export default function PhoneInput({
         inputMode="numeric"
         value={nationalNumber}
         onChange={(e) => onNationalNumberChange(e.target.value.replace(/\D/g, ""))}
-        className="input flex-1 pr-9 font-mono text-xs tracking-wider"
+        className="input flex-1 pr-9 font-mono text-sm tracking-wider"
         placeholder="Phone number"
       />
 
@@ -234,35 +232,32 @@ export default function PhoneInput({
       {isOpen && (
         <div
           onKeyDown={handleDropdownKeyDown}
-          className="absolute left-0 top-full z-50 mt-1.5 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-[#313f61] bg-[#131a2b] p-2.5 shadow-2xl backdrop-blur-xl"
-          style={{
-            boxShadow: "0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3)",
-          }}
+          className="absolute left-0 top-full z-50 mt-1.5 w-84 max-w-[90vw] overflow-hidden rounded-2xl border border-hairline-strong bg-surface p-2.5 shadow-2xl backdrop-blur-xl"
         >
           {/* Search Header */}
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search country or code (91, India)..."
-              className="w-full rounded-xl border border-[#232e47] bg-[#0d1220] py-1.5 pl-8 pr-7 text-xs text-white placeholder-slate-400 outline-none transition-colors focus:border-[#d3ab5e] focus:ring-1 focus:ring-[#d3ab5e]"
+              className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--surface-sunken)] py-2 pl-8 pr-7 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
           {/* Quick Helper Badge */}
-          <div className="mb-1.5 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="mb-1.5 px-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
             {searchQuery ? `Results (${filteredCountries.length})` : "Popular & All Countries"}
           </div>
 
@@ -274,7 +269,7 @@ export default function PhoneInput({
             className="scrollbar-thin max-h-56 overflow-y-auto space-y-0.5"
           >
             {filteredCountries.length === 0 ? (
-              <li className="py-4 text-center text-xs text-slate-400">
+              <li className="py-4 text-center text-sm text-[var(--ink-muted)]">
                 No matching countries found.
               </li>
             ) : (
@@ -297,23 +292,23 @@ export default function PhoneInput({
                       handleSelect(c);
                     }}
                     onMouseEnter={() => setFocusedIndex(index)}
-                    className={`flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors ${
                       isSelected
-                        ? "bg-[#2a2311] text-[#d3ab5e] font-semibold"
+                        ? "bg-[var(--accent-soft)] text-[var(--accent-ink)] font-semibold"
                         : isFocused
-                          ? "bg-[#182136] text-white"
-                          : "text-slate-300 hover:bg-[#182136] hover:text-white"
+                          ? "bg-[var(--surface-raised)] text-[var(--ink)]"
+                          : "text-[var(--ink)] hover:bg-[var(--surface-raised)]"
                     }`}
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2.5 truncate">
                       <FlagIcon code={c.code} />
                       <span className="truncate">{c.name}</span>
-                      <span className="text-[10px] text-slate-400">({c.code})</span>
+                      <span className="text-xs text-[var(--ink-faint)]">({c.code})</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 pl-2">
-                      <span className="font-mono text-xs text-slate-300">+{c.dialCode}</span>
-                      {isSelected && <Check className="h-3 w-3 text-[#d3ab5e]" />}
+                      <span className="font-mono text-xs text-[var(--ink-muted)]">+{c.dialCode}</span>
+                      {isSelected && <Check className="h-3.5 w-3.5 text-[var(--accent)]" />}
                     </div>
                   </li>
                 );

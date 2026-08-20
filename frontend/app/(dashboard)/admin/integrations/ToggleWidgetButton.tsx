@@ -22,8 +22,9 @@ export default function ToggleWidgetButton({ widgetId, isActive }: { widgetId: s
     <button
       onClick={handleClick}
       disabled={submitting}
-      className="text-xs underline disabled:cursor-not-allowed disabled:opacity-50"
-      style={{ color: isActive ? "var(--danger)" : "var(--success)" }}
+      className={`text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50 ${
+        isActive ? "text-danger" : "text-success"
+      }`}
     >
       {submitting ? "…" : isActive ? "Deactivate" : "Reactivate"}
     </button>

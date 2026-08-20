@@ -73,32 +73,32 @@ function ShareDialog({ file, onClose }: { file: FileRecord; onClose: () => void 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(18,23,43,0.45)" }}>
-      <div className="card w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div className="card w-full max-w-md shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <p className="font-medium">Share “{file.file_name}”</p>
-          <button onClick={onClose} className="btn-ghost btn-sm px-1.5">
-            <X size={14} />
+          <p className="font-semibold text-ink">Share “{file.file_name}”</p>
+          <button onClick={onClose} className="btn-ghost btn-sm px-2 text-ink-muted">
+            <X size={16} />
           </button>
         </div>
 
         <button onClick={handleCreate} className="btn-secondary btn-sm mb-3">
-          <Link2 size={13} />
+          <Link2 size={14} />
           Create new link
         </button>
 
         {error && (
-          <p className="mb-2 text-xs" style={{ color: "var(--danger)" }}>
+          <p className="mb-2 text-xs text-danger">
             {error}
           </p>
         )}
 
         {loading ? (
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+          <p className="text-sm text-ink-faint">
             Loading…
           </p>
         ) : links.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+          <p className="text-sm text-ink-faint">
             No share links yet.
           </p>
         ) : (
@@ -106,25 +106,25 @@ function ShareDialog({ file, onClose }: { file: FileRecord; onClose: () => void 
             {links.map((l) => (
               <div key={l.id} className="card-flat">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="truncate font-mono text-xs" style={{ color: l.is_active ? "var(--ink)" : "var(--ink-faint)" }}>
+                  <p className={`truncate font-mono text-xs ${l.is_active ? "text-ink font-semibold" : "text-ink-faint"}`}>
                     {l.token.slice(0, 20)}…
                   </p>
                   {l.is_active ? (
                     <div className="flex shrink-0 gap-1.5">
-                      <button onClick={() => handleCopy(l)} className="text-xs font-medium" style={{ color: "var(--accent)" }}>
+                      <button onClick={() => handleCopy(l)} className="text-xs font-semibold text-accent hover:opacity-80">
                         {copiedId === l.id ? "Copied!" : "Copy"}
                       </button>
-                      <button onClick={() => handleRevoke(l.id)} className="text-xs font-medium" style={{ color: "var(--danger)" }}>
+                      <button onClick={() => handleRevoke(l.id)} className="text-xs font-semibold text-danger hover:opacity-80">
                         Revoke
                       </button>
                     </div>
                   ) : (
-                    <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                    <span className="text-xs text-ink-faint">
                       Revoked
                     </span>
                   )}
                 </div>
-                <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
+                <p className="text-xs text-ink-muted">
                   {l.view_count} view{l.view_count === 1 ? "" : "s"} · {l.click_count} download{l.click_count === 1 ? "" : "s"}
                 </p>
               </div>
@@ -203,39 +203,39 @@ export default function FileManager({ canViewAll }: { canViewAll: boolean }) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <label className="btn-primary cursor-pointer">
-          <Upload size={14} />
+          <Upload size={16} />
           {uploading ? `Uploading… ${progress}%` : "Upload file"}
           <input ref={inputRef} type="file" onChange={handleUpload} disabled={uploading} className="hidden" />
         </label>
         {canViewAll && (
-          <label className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-muted)" }}>
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+          <label className="flex items-center gap-2 text-sm text-ink-muted cursor-pointer">
+            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="h-4 w-4 rounded accent-amber-500" />
             Show every user&apos;s files
           </label>
         )}
       </div>
 
       {error && (
-        <p className="mb-4 text-sm" style={{ color: "var(--danger)" }}>
+        <p className="mb-4 alert-danger">
           {error}
         </p>
       )}
 
       <div className="card-flat overflow-x-auto p-0">
-        <table className="table-modern">
+        <table className="table-modern w-full">
           <thead>
             <tr>
-              <th>File</th>
-              {showAll && <th>Uploaded by</th>}
-              <th>Size</th>
-              <th>Uploaded</th>
+              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">File</th>
+              {showAll && <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Uploaded by</th>}
+              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Size</th>
+              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Uploaded</th>
               <th />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-hairline">
             {!loading && files.length === 0 && (
               <tr>
-                <td colSpan={showAll ? 5 : 4} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
+                <td colSpan={showAll ? 5 : 4} className="py-8 text-center text-sm text-ink-faint">
                   No files yet.
                 </td>
               </tr>
@@ -243,23 +243,23 @@ export default function FileManager({ canViewAll }: { canViewAll: boolean }) {
             {files.map((f) => {
               const Icon = KIND_ICON[f.kind];
               return (
-                <tr key={f.id}>
-                  <td className="flex items-center gap-2 font-medium">
-                    <Icon size={15} style={{ color: "var(--accent)" }} />
+                <tr key={f.id} className="hover:bg-surface-raised transition-colors">
+                  <td className="flex items-center gap-2.5 font-semibold text-ink text-sm">
+                    <Icon size={16} className="text-accent" />
                     {f.file_name}
                   </td>
-                  {showAll && <td>{f.uploader_name ?? "—"}</td>}
-                  <td>{fmtSize(f.size_bytes)}</td>
-                  <td>{fmtDate(f.created_at)}</td>
+                  {showAll && <td className="text-sm text-ink-muted">{f.uploader_name ?? "—"}</td>}
+                  <td className="text-sm text-ink-muted">{fmtSize(f.size_bytes)}</td>
+                  <td className="text-sm text-ink-muted">{fmtDate(f.created_at)}</td>
                   <td className="flex justify-end gap-1.5">
                     <button onClick={() => handleDownload(f)} className="btn-ghost btn-sm">
                       Download
                     </button>
-                    <button onClick={() => setShareFile(f)} className="btn-ghost btn-sm px-1.5" title="Share">
-                      <Link2 size={13} />
+                    <button onClick={() => setShareFile(f)} className="btn-ghost btn-sm px-2 text-ink-muted" title="Share">
+                      <Link2 size={14} />
                     </button>
-                    <button onClick={() => handleDelete(f.id)} className="btn-ghost btn-sm px-1.5" title="Delete">
-                      <Trash2 size={13} style={{ color: "var(--danger)" }} />
+                    <button onClick={() => handleDelete(f.id)} className="btn-ghost btn-sm px-2 text-danger" title="Delete">
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>

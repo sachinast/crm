@@ -62,7 +62,7 @@ export default function CreateEmbedWidgetForm({ agents }: { agents: AgentOption[
         </select>
       </label>
       {error && (
-        <p className="col-span-2 rounded-lg px-3 py-2" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="col-span-2 alert-danger">
           {error}
         </p>
       )}

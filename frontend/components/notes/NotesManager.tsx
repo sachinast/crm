@@ -81,14 +81,14 @@ export default function NotesManager({ initialNotes }: { initialNotes: Note[] })
       </div>
 
       {error && (
-        <p className="mb-4 text-sm" style={{ color: "var(--danger)" }}>
+        <p className="mb-4 alert-danger">
           {error}
         </p>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {notes.length === 0 && (
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+          <p className="text-sm text-ink-faint">
             No notes yet.
           </p>
         )}
@@ -119,19 +119,19 @@ export default function NotesManager({ initialNotes }: { initialNotes: Note[] })
             ) : (
               <div>
                 <div className="mb-1.5 flex items-start justify-between gap-2">
-                  <p className="font-medium">{n.title}</p>
-                  <button onClick={() => handleDelete(n.id)} className="btn-ghost btn-sm shrink-0 px-1.5" title="Delete">
-                    <Trash2 size={13} style={{ color: "var(--danger)" }} />
+                  <p className="font-semibold text-ink text-sm">{n.title}</p>
+                  <button onClick={() => handleDelete(n.id)} className="btn-ghost btn-sm shrink-0 px-1.5 text-danger" title="Delete">
+                    <Trash2 size={14} />
                   </button>
                 </div>
-                <p className="mb-2 whitespace-pre-wrap text-sm" style={{ color: "var(--ink-muted)" }}>
+                <p className="mb-2 whitespace-pre-wrap text-sm text-ink-muted">
                   {n.body}
                 </p>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  <p className="text-xs text-ink-faint">
                     {fmt(n.updated_at)}
                   </p>
-                  <button onClick={() => startEdit(n)} className="text-xs font-medium" style={{ color: "var(--accent)" }}>
+                  <button onClick={() => startEdit(n)} className="text-xs font-semibold text-accent hover:opacity-80">
                     Edit
                   </button>
                 </div>

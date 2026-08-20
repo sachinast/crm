@@ -99,23 +99,22 @@ export default function ChatWindow({
   const title = conversationTitle(conversation, currentUserId);
 
   return (
-    <div className="flex h-full flex-1 flex-col">
-      <div className="flex items-center gap-2.5 border-b px-5 py-4" style={{ borderColor: "var(--hairline)" }}>
+    <div className="flex h-full flex-1 flex-col bg-surface">
+      <div className="flex items-center gap-3 border-b border-hairline px-5 py-3.5 bg-surface-raised">
         {onBack && (
-          <button onClick={onBack} className="btn-ghost btn-sm shrink-0 px-1.5" title="Back to conversations">
-            <ArrowLeft size={15} />
+          <button onClick={onBack} className="btn-ghost btn-sm shrink-0 px-2 text-ink-muted" title="Back to conversations">
+            <ArrowLeft size={16} />
           </button>
         )}
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-          style={{ background: "var(--navy-soft)", color: "var(--accent)" }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold bg-surface text-accent border border-hairline"
         >
           {conversation.is_group ? <Users size={16} /> : title.slice(0, 2).toUpperCase()}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="truncate text-sm font-bold text-ink">{title}</p>
           {conversation.is_group && (
-            <p className="truncate text-xs" style={{ color: "var(--ink-faint)" }}>
+            <p className="truncate text-xs text-ink-muted">
               {conversation.participants.length} members
             </p>
           )}
@@ -124,11 +123,11 @@ export default function ChatWindow({
 
       <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4">
         {loading ? (
-          <p className="text-center text-xs" style={{ color: "var(--ink-faint)" }}>
+          <p className="text-center text-sm text-ink-faint">
             Loading…
           </p>
         ) : messages.length === 0 ? (
-          <p className="text-center text-xs" style={{ color: "var(--ink-faint)" }}>
+          <p className="text-center text-sm text-ink-faint">
             No messages yet — say hello.
           </p>
         ) : (

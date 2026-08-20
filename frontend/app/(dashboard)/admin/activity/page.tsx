@@ -131,21 +131,21 @@ export default async function AdminActivityPage({
 
       {/* Main System Activity Grid Card */}
       {activityForbidden ? (
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-6 text-sm text-slate-400">
+        <div className="card p-6 text-sm text-ink-muted">
           Your role does not have permission to view the system activity log.
         </div>
       ) : (
         <DataTableCard
           headerContent={
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
               {/* Category Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
                 <Link
                   href="/admin/activity"
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                  className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                     !category
-                      ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
-                      : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                      ? "bg-accent text-white font-bold shadow-xs"
+                      : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
                   }`}
                 >
                   All Events
@@ -156,10 +156,10 @@ export default async function AdminActivityPage({
                     <Link
                       key={c}
                       href={`/admin/activity?category=${c}`}
-                      className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                      className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold capitalize transition-all ${
                         isActive
-                          ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
-                          : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                          ? "bg-accent text-white font-bold shadow-xs"
+                          : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
                       }`}
                     >
                       {c}
@@ -168,7 +168,7 @@ export default async function AdminActivityPage({
                 })}
               </div>
 
-              <div className="text-xs text-slate-400 font-medium">
+              <div className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
                 {activity?.total ?? 0} total entries
               </div>
             </div>
@@ -188,41 +188,41 @@ export default async function AdminActivityPage({
         >
           <table className="table-modern w-full">
             <thead>
-              <tr className="bg-[#182136]/30">
-                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                   Timestamp
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                   Actor / User
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                   Event Action
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                   IP Address
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#232e47]">
+            <tbody className="divide-y divide-hairline">
               {(activity?.items.length ?? 0) === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={4} className="py-12 text-center text-sm text-ink-muted">
                     No activity recorded in this category.
                   </td>
                 </tr>
               ) : (
                 activity?.items.map((entry) => (
-                  <tr key={entry.id} className="transition-colors hover:bg-[#182136]/60">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                  <tr key={entry.id} className="transition-colors hover:bg-surface-raised">
+                    <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                       {new Date(entry.created_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-white">
-                      {entry.actor_name ?? <span className="font-normal text-slate-500">system</span>}
+                    <td className="px-4 py-3 font-semibold text-sm text-ink">
+                      {entry.actor_name ?? <span className="font-normal text-ink-faint">system</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-200">
+                    <td className="px-4 py-3 text-sm text-ink">
                       {summarize(entry)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                    <td className="px-4 py-3 text-right font-mono text-xs text-ink-muted">
                       {entry.ip_address ?? "—"}
                     </td>
                   </tr>
@@ -237,66 +237,66 @@ export default async function AdminActivityPage({
       <div className="space-y-3 pt-2">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldAlert size={16} className="text-[#d3ab5e]" />
-            <h2 className="text-base font-bold text-white">PII Reveal & Security Activity</h2>
+            <ShieldAlert size={16} className="text-accent" />
+            <h2 className="text-base font-bold text-ink">PII Reveal & Security Activity</h2>
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-ink-muted">
             Audit trail of customer data reveals and denied unmasked access attempts.
           </p>
         </div>
 
         {piiForbidden && activityForbidden ? (
-          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 text-sm text-slate-400">
+          <div className="card p-5 text-sm text-ink-muted">
             Your role does not have permission to view PII reveal records.
           </div>
         ) : (
           <DataTableCard>
             <table className="table-modern w-full">
               <thead>
-                <tr className="bg-[#182136]/30">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Timestamp
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Agent / User
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Security Event & Reason
                   </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                     IP Address
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#232e47]">
+              <tbody className="divide-y divide-hairline">
                 {combinedPii.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                    <td colSpan={4} className="py-12 text-center text-sm text-ink-muted">
                       No PII reveal activity logged yet.
                     </td>
                   </tr>
                 ) : (
                   combinedPii.map((row, i) => (
-                    <tr key={i} className="transition-colors hover:bg-[#182136]/60">
-                      <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                    <tr key={i} className="transition-colors hover:bg-surface-raised">
+                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                         {new Date(row.at).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs font-semibold text-white">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-ink">
                         {row.actor}
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-200">
+                      <td className="px-4 py-3 text-sm text-ink">
                         <span
                           className={`mr-2.5 inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
                             row.kind === "revealed"
-                              ? "bg-[#113028] text-[#3ecf9a] border-[#3ecf9a]/30"
-                              : "bg-[#34131c] text-[#ef7b93] border-[#ef7b93]/30"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
                           }`}
                         >
                           {row.kind === "revealed" ? "Revealed" : "Denied"}
                         </span>
                         <span>{row.detail}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                      <td className="px-4 py-3 text-right font-mono text-xs text-ink-muted">
                         {row.ip ?? "—"}
                       </td>
                     </tr>

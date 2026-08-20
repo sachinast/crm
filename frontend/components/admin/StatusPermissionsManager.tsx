@@ -72,14 +72,14 @@ export default function StatusPermissionsManager({
   }
 
   return (
-    <div className="flex h-[calc(100vh-13rem)] overflow-hidden rounded-2xl border border-[#232e47] bg-[#131a2b] shadow-sm">
+    <div className="flex h-[calc(100vh-13rem)] overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] shadow-xs">
       {/* Left Workflow Statuses Sidebar */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-[#232e47] bg-[#0d1220]/60">
-        <div className="border-b border-[#232e47] p-4 flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+      <div className="flex w-72 shrink-0 flex-col border-r border-[var(--hairline)] bg-[var(--surface-sunken)]">
+        <div className="border-b border-[var(--hairline)] p-4 flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Workflow States
           </span>
-          <span className="rounded-full bg-[#182136] px-2 py-0.5 text-[10px] font-bold text-slate-400">
+          <span className="rounded-full bg-[var(--surface-raised)] px-2 py-0.5 text-xs font-bold text-[var(--ink-muted)]">
             {statuses.length}
           </span>
         </div>
@@ -92,17 +92,17 @@ export default function StatusPermissionsManager({
               <li key={row.status}>
                 <button
                   onClick={() => selectStatus(row)}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all ${
                     isSelected
-                      ? "bg-[#182136] text-white border border-[#d3ab5e]/50 shadow-xs"
-                      : "text-slate-400 hover:bg-[#182136]/50 hover:text-slate-200 border border-transparent"
+                      ? "bg-[var(--surface-raised)] text-[var(--ink)] border border-[var(--accent)]/50 shadow-xs"
+                      : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)] border border-transparent"
                   }`}
                 >
-                  <Workflow size={13} className={isSelected ? "text-[#d3ab5e]" : "text-slate-500"} />
+                  <Workflow size={15} className={isSelected ? "text-[var(--accent)]" : "text-[var(--ink-faint)]"} />
                   <span className="truncate">{row.label}</span>
                   <span
-                    className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
-                      isSelected ? "bg-[#d3ab5e] text-slate-950" : "bg-[#131a2b] text-slate-500"
+                    className={`ml-auto rounded-lg px-2 py-0.5 text-xs font-mono font-bold ${
+                      isSelected ? "bg-accent text-white" : "bg-surface text-ink-muted border border-hairline"
                     }`}
                   >
                     {totalAssigned}
@@ -115,28 +115,28 @@ export default function StatusPermissionsManager({
       </div>
 
       {/* Right Workflow Configuration Area */}
-      <div className="flex flex-1 flex-col overflow-y-auto p-6 bg-[#131a2b]">
+      <div className="flex flex-1 flex-col overflow-y-auto p-6 bg-[var(--surface)]">
         {error && (
-          <p className="mb-4 flex items-center gap-1.5 rounded-lg border border-[#ef7b93]/30 bg-[#34131c] px-3 py-2 text-xs font-medium text-[#ef7b93]">
-            <AlertTriangle size={14} />
+          <p className="mb-4 alert-danger">
+            <AlertTriangle size={15} />
             <span>{error}</span>
           </p>
         )}
 
         {!selected || !draft ? (
-          <div className="flex h-full items-center justify-center text-xs text-slate-500">
+          <div className="flex h-full items-center justify-center text-sm text-[var(--ink-faint)]">
             Select a workflow status to configure role permissions.
           </div>
         ) : (
           <>
-            <div className="mb-5 border-b border-[#232e47] pb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <div className="mb-5 border-b border-[var(--hairline)] pb-4">
+              <h2 className="text-xl font-bold text-[var(--ink)] flex items-center gap-2">
                 <span>{selected.label}</span>
-                <span className="rounded-md border border-[#2a3652] bg-[#182136] px-2 py-0.5 font-mono text-[11px] font-semibold text-[#d3ab5e]">
+                <span className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--accent)]">
                   {selected.status}
                 </span>
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-sm text-[var(--ink-muted)]">
                 Configure role bindings for state transition permissions, alerts, and visibility retention.
               </p>
             </div>
@@ -145,32 +145,31 @@ export default function StatusPermissionsManager({
               {KIND_META.map((meta) => {
                 const currentSet = new Set(draft[meta.key]);
                 return (
-                  <div key={meta.key} className="rounded-xl border border-[#232e47] bg-[#182136]/40 p-4">
-                    <div className="mb-2.5">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#d3ab5e]">
+                  <div key={meta.key} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-4">
+                    <div className="mb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--accent)]">
                         {meta.label}
                       </h3>
-                      <p className="text-[11px] text-slate-400">{meta.hint}</p>
+                      <p className="text-xs text-[var(--ink-muted)]">{meta.hint}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                       {roles.map((r) => {
                         const checked = currentSet.has(r.id);
                         return (
                           <label
                             key={r.id}
-                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-colors ${
+                            className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-colors ${
                               checked
-                                ? "border-[#d3ab5e]/40 bg-[#182136] text-white font-semibold"
-                                : "border-[#232e47] bg-[#0d1220]/60 text-slate-400 hover:border-[#2a3652]"
+                                ? "border-[var(--accent)]/50 bg-[var(--surface)] text-[var(--ink)] font-semibold shadow-xs"
+                                : "border-[var(--hairline)] bg-[var(--surface-sunken)] text-[var(--ink-muted)] hover:border-[var(--hairline-strong)]"
                             }`}
                           >
                             <input
                               type="checkbox"
                               checked={checked}
                               onChange={() => toggle(meta.key, r.id)}
-                              className="h-3.5 w-3.5 rounded border-[#313f61] bg-[#0d1220]"
-                              style={{ accentColor: "#d3ab5e" }}
+                              className="h-4 w-4 rounded border-[var(--hairline-strong)] bg-surface text-accent focus:ring-accent accent-amber-500"
                             />
                             <span className="truncate capitalize">{r.name.replace(/_/g, " ")}</span>
                           </label>
@@ -183,17 +182,17 @@ export default function StatusPermissionsManager({
             </div>
 
             {/* Bottom Sticky Save Bar */}
-            <div className="sticky bottom-0 mt-6 flex items-center justify-between border-t border-[#232e47] bg-[#131a2b] pt-4">
+            <div className="sticky bottom-0 mt-6 flex items-center justify-between border-t border-[var(--hairline)] bg-[var(--surface)] pt-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSave}
                   disabled={!dirty || saving}
-                  className="btn-primary btn-sm text-xs"
+                  className="btn-primary"
                 >
                   {saving ? "Saving Status Workflow…" : "Save Workflow Configuration"}
                 </button>
                 {dirty && (
-                  <span className="text-xs font-medium text-[#e0bc78] animate-pulse">
+                  <span className="text-xs font-semibold text-[var(--accent)] animate-pulse">
                     ● Unsaved changes
                   </span>
                 )}

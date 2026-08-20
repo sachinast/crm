@@ -7,9 +7,9 @@ import { attachmentUrl, type AttachmentRead, type MessageRead } from "@/lib/mess
 import { parseMentionMarkup } from "@/lib/mentions";
 
 function StatusTicks({ status }: { status: MessageRead["status"] }) {
-  if (status === "read") return <CheckCheck size={13} style={{ color: "#bfe3ff" }} />;
-  if (status === "delivered") return <CheckCheck size={13} style={{ color: "rgba(255,255,255,0.7)" }} />;
-  return <Check size={13} style={{ color: "rgba(255,255,255,0.7)" }} />;
+  if (status === "read") return <CheckCheck size={14} className="text-sky-300" />;
+  if (status === "delivered") return <CheckCheck size={14} className="text-white/70" />;
+  return <Check size={14} className="text-white/70" />;
 }
 
 function AttachmentImage({ attachment }: { attachment: AttachmentRead }) {
@@ -28,10 +28,9 @@ function AttachmentImage({ attachment }: { attachment: AttachmentRead }) {
   if (!src) {
     return (
       <div
-        className="flex h-40 w-56 items-center justify-center rounded-lg"
-        style={{ background: "rgba(255,255,255,0.15)" }}
+        className="flex h-40 w-56 items-center justify-center rounded-xl bg-white/15"
       >
-        <Clock size={16} className="animate-pulse" />
+        <Clock size={18} className="animate-pulse text-white/60" />
       </div>
     );
   }
@@ -42,10 +41,7 @@ function AttachmentImage({ attachment }: { attachment: AttachmentRead }) {
       <img
         src={src}
         alt={attachment.file_name}
-        // Explicit width/height (not just max-*) so a low-resolution source
-        // still fills a sensible thumbnail box instead of rendering at its
-        // tiny natural size — object-cover then crops to fit.
-        className="h-40 w-56 rounded-lg object-cover"
+        className="h-40 w-56 rounded-xl object-cover"
       />
     </a>
   );
@@ -71,13 +67,14 @@ function AttachmentPdf({ attachment, isOwn }: { attachment: AttachmentRead; isOw
       href={href ?? "#"}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5"
-      style={{ background: isOwn ? "rgba(255,255,255,0.15)" : "var(--accent-soft)" }}
+      className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 ${
+        isOwn ? "bg-white/15 text-white" : "bg-accent-soft text-accent"
+      }`}
     >
-      <FileText size={20} style={{ color: isOwn ? "#fff" : "var(--accent)" }} />
+      <FileText size={20} className={isOwn ? "text-white" : "text-accent"} />
       <span className="min-w-0">
-        <span className="block max-w-40 truncate text-xs font-medium">{attachment.file_name}</span>
-        <span className="block text-[11px] opacity-75">{kb} KB · PDF</span>
+        <span className="block max-w-40 truncate text-xs font-semibold">{attachment.file_name}</span>
+        <span className="block text-xs opacity-75">{kb} KB · PDF</span>
       </span>
     </a>
   );
@@ -90,7 +87,7 @@ export default function MessageBubble({ message, isOwn }: { message: MessageRead
   return (
     <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
       {!isOwn && (
-        <span className="mb-1 px-1 text-[11px] font-medium" style={{ color: "var(--ink-faint)" }}>
+        <span className="mb-1 px-1 text-xs font-semibold text-ink-faint">
           {message.sender_name}
         </span>
       )}
@@ -98,10 +95,11 @@ export default function MessageBubble({ message, isOwn }: { message: MessageRead
       <div className={isOwn ? "chat-bubble-own" : "chat-bubble-other"}>
         {message.is_quick_response && (
           <div
-            className="mb-1.5 flex items-center gap-1 text-[11px] font-medium"
-            style={{ color: isOwn ? "#ffe9b8" : "var(--warning)" }}
+            className={`mb-1.5 flex items-center gap-1 text-xs font-bold ${
+              isOwn ? "text-amber-200" : "text-amber-400"
+            }`}
           >
-            <Zap size={11} />
+            <Zap size={13} />
             Quick response requested
           </div>
         )}
@@ -119,16 +117,14 @@ export default function MessageBubble({ message, isOwn }: { message: MessageRead
         )}
 
         {segments.length > 0 && (
-          <p className="whitespace-pre-wrap break-words">
+          <p className="whitespace-pre-wrap break-words text-sm">
             {segments.map((seg, i) =>
               seg.type === "mention" ? (
                 <span
                   key={i}
-                  className="chat-mention"
-                  style={{
-                    background: isOwn ? "rgba(255,255,255,0.25)" : "var(--accent-soft)",
-                    color: isOwn ? "#fff" : "var(--accent-ink)",
-                  }}
+                  className={`chat-mention rounded-md px-1 py-0.5 font-bold ${
+                    isOwn ? "bg-white/25 text-white" : "bg-accent-soft text-accent"
+                  }`}
                 >
                   @{seg.text}
                 </span>
@@ -140,7 +136,7 @@ export default function MessageBubble({ message, isOwn }: { message: MessageRead
         )}
       </div>
 
-      <div className="mt-1 flex items-center gap-1 px-1 text-[11px]" style={{ color: "var(--ink-faint)" }}>
+      <div className="mt-1 flex items-center gap-1.5 px-1 text-xs text-ink-faint">
         {time}
         {isOwn && <StatusTicks status={message.status} />}
       </div>

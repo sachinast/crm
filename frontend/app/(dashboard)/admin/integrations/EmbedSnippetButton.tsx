@@ -20,17 +20,17 @@ export default function EmbedSnippetButton({ widgetKey }: { widgetKey: string })
 
   return (
     <div>
-      <button onClick={() => setOpen((v) => !v)} className="text-xs font-medium" style={{ color: "var(--accent)" }}>
+      <button onClick={() => setOpen((v) => !v)} className="text-xs font-semibold text-accent hover:opacity-80">
         {open ? <ChevronUp size={12} className="mr-1 inline" /> : <ChevronDown size={12} className="mr-1 inline" />}
         Embed code
       </button>
       {open && (
-        <div className="mt-2 rounded-lg border p-3" style={{ background: "var(--background)", borderColor: "var(--hairline)" }}>
-          <p className="mb-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+        <div className="mt-2 rounded-xl border border-hairline bg-surface-sunken p-3">
+          <p className="mb-2 text-xs text-ink-muted">
             Paste this one tag anywhere in the landing page&apos;s HTML — Flights, Hotels, and Cabs all come with it,
             styled after MakeMyTrip&apos;s search widget.
           </p>
-          <pre className="mb-2 overflow-x-auto rounded-lg border p-2.5 text-xs" style={{ background: "var(--surface)", borderColor: "var(--hairline-strong)" }}>
+          <pre className="mb-2 overflow-x-auto rounded-lg border border-hairline-strong bg-surface p-2.5 font-mono text-xs text-ink">
             {snippet}
           </pre>
           <div className="flex gap-2">

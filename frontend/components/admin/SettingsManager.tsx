@@ -73,22 +73,22 @@ function SettingRow({ setting, onChanged }: { setting: AppSettingDef; onChanged:
   }
 
   return (
-    <div className="rounded-xl border border-[#232e47] bg-[#182136]/50 p-4 transition-colors hover:border-[#2a3652] space-y-3">
+    <div className="rounded-2xl border border-hairline bg-surface p-4 transition-colors hover:border-hairline-strong space-y-3 shadow-xs">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-white">{setting.label}</p>
-          <p className="font-mono text-[10px] text-[#d3ab5e]">{setting.key}</p>
+          <p className="text-xs font-bold text-ink">{setting.label}</p>
+          <p className="font-mono text-[11px] text-accent font-semibold">{setting.key}</p>
           {setting.description && (
-            <p className="mt-1 text-[11px] text-slate-400">{setting.description}</p>
+            <p className="mt-1 text-xs text-ink-muted">{setting.description}</p>
           )}
         </div>
         <button
           onClick={handleDelete}
           disabled={saving}
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-[#34131c] hover:text-[#ef7b93] transition-colors"
+          className="rounded-xl p-1.5 text-ink-faint hover:bg-rose-500/10 hover:text-danger transition-colors"
           title="Delete setting"
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </div>
 
@@ -120,8 +120,8 @@ function SettingRow({ setting, onChanged }: { setting: AppSettingDef; onChanged:
       </div>
 
       {error && (
-        <p className="text-[11px] text-[#ef7b93] flex items-center gap-1">
-          <AlertTriangle size={11} />
+        <p className="text-xs text-danger flex items-center gap-1.5">
+          <AlertTriangle size={13} />
           <span>{error}</span>
         </p>
       )}
@@ -130,12 +130,12 @@ function SettingRow({ setting, onChanged }: { setting: AppSettingDef; onChanged:
         <button
           onClick={handleSave}
           disabled={!dirty || saving}
-          className="btn-primary btn-sm text-[11px]"
+          className="btn-primary btn-sm"
         >
           {saving ? "Saving…" : "Save Setting"}
         </button>
         {dirty && (
-          <span className="text-[11px] text-[#e0bc78] animate-pulse">
+          <span className="text-xs font-semibold text-warning animate-pulse">
             ● Unsaved
           </span>
         )}
@@ -187,35 +187,35 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
   return (
     <div className="space-y-6">
       {/* Top Action Bar */}
-      <div className="flex items-center justify-between rounded-2xl border border-[#232e47] bg-[#131a2b] p-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface p-4 shadow-xs">
         <div>
-          <p className="text-xs font-semibold text-white">Runtime System Flags & Configurations</p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-xs font-semibold text-ink">Runtime System Flags & Configurations</p>
+          <p className="text-xs text-ink-muted">
             Changes apply instantly to live workers and API endpoints without deployment.
           </p>
         </div>
 
         <button
           onClick={() => setShowNew(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-3 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="btn-primary"
         >
-          <Plus size={13} strokeWidth={2.5} />
+          <Plus size={15} strokeWidth={2.5} />
           <span>New Setting</span>
         </button>
       </div>
 
       {showNew && (
-        <div className="rounded-2xl border border-[#d3ab5e] bg-[#131a2b] p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between border-b border-[#232e47] pb-3">
-            <h2 className="text-sm font-bold text-white">Define New System Configuration Key</h2>
-            <button onClick={() => setShowNew(false)} className="text-slate-400 hover:text-white">
+        <div className="rounded-2xl border border-accent/40 bg-surface p-5 shadow-lg space-y-4">
+          <div className="flex items-center justify-between border-b border-hairline pb-3">
+            <h2 className="text-sm font-bold text-ink">Define New System Configuration Key</h2>
+            <button onClick={() => setShowNew(false)} className="text-ink-muted hover:text-ink">
               <X size={16} />
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Config Key</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Config Key</label>
               <input
                 placeholder="e.g. leads.duplicate_window_days"
                 value={newSetting.key}
@@ -225,7 +225,7 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Label</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Label</label>
               <input
                 placeholder="e.g. Duplicate Window (Days)"
                 value={newSetting.label}
@@ -235,7 +235,7 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Category</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Category</label>
               <input
                 placeholder="e.g. Leads, Security, Messaging"
                 value={newSetting.category}
@@ -245,7 +245,7 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Value Type</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Value Type</label>
               <select
                 value={newSetting.value_type}
                 onChange={(e) => setNewSetting({ ...newSetting, value_type: e.target.value as SettingValueType })}
@@ -259,7 +259,7 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Initial Value</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Initial Value</label>
               <input
                 placeholder="Initial setting value"
                 value={newSetting.value}
@@ -269,7 +269,7 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             </div>
 
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Description (optional)</label>
+              <label className="mb-1 block text-xs font-semibold text-ink-muted">Description (optional)</label>
               <input
                 placeholder="Explanation of how this configuration affects system behaviors"
                 value={newSetting.description}
@@ -280,8 +280,8 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
           </div>
 
           {error && (
-            <p className="rounded-lg bg-[#34131c] px-3 py-1.5 text-xs font-medium text-[#ef7b93] border border-[#ef7b93]/30 flex items-center gap-1.5">
-              <AlertTriangle size={13} />
+            <p className="alert-danger flex items-center gap-1.5">
+              <AlertTriangle size={14} />
               <span>{error}</span>
             </p>
           )}
@@ -290,11 +290,11 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
             <button
               onClick={handleCreate}
               disabled={creating || !newSetting.key.trim() || !newSetting.label.trim()}
-              className="btn-primary btn-sm text-xs"
+              className="btn-primary"
             >
               {creating ? "Creating…" : "Save Configuration"}
             </button>
-            <button onClick={() => setShowNew(false)} className="btn-ghost btn-sm text-xs">
+            <button onClick={() => setShowNew(false)} className="btn-ghost">
               Cancel
             </button>
           </div>
@@ -307,15 +307,17 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
           <DataTableCard
             key={category}
             headerContent={
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink">
                   {category} Configurations
                 </span>
-                <span className="text-[11px] text-slate-400">{rows.length} parameters</span>
+                <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
+                  {rows.length} {rows.length === 1 ? "parameter" : "parameters"}
+                </span>
               </div>
             }
           >
-            <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2 bg-surface-raised/20">
               {rows.map((s) => (
                 <SettingRow key={s.key} setting={s} onChanged={handleChanged} />
               ))}
