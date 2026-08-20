@@ -7,15 +7,15 @@ import Link from "next/link";
 // until a dedicated queue view is built.
 export default function BillingPage() {
   return (
-    <div className="card flex max-w-xl flex-col items-start gap-3 text-sm">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-        <CreditCard size={18} style={{ color: "var(--accent)" }} />
+    <div className="card flex max-w-xl flex-col items-start gap-4 text-sm">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+        <CreditCard size={20} />
       </div>
       <div>
-        <h1 className="text-lg font-semibold">Billing queue</h1>
-        <p className="mt-1" style={{ color: "var(--ink-muted)" }}>
+        <h1 className="text-xl font-bold text-ink">Billing Queue</h1>
+        <p className="mt-1.5 text-ink-muted">
           Card charge/decline actions live on each lead&apos;s detail page. Open{" "}
-          <Link href="/leads" className="underline" style={{ color: "var(--accent)" }}>
+          <Link href="/leads" className="font-semibold underline text-accent hover:opacity-80">
             Leads
           </Link>{" "}
           to find records tagged &ldquo;Transferred to Billing.&rdquo;

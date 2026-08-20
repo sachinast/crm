@@ -66,12 +66,12 @@ export default function MessagingApp({
 
   const emptyState = (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--accent-soft)" }}>
-        <MessageCircle size={24} style={{ color: "var(--accent)" }} />
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+        <MessageCircle size={28} />
       </div>
       <div>
-        <p className="text-sm font-medium">Select a conversation</p>
-        <p className="mt-0.5 text-xs" style={{ color: "var(--ink-faint)" }}>
+        <p className="text-base font-semibold text-ink">Select a conversation</p>
+        <p className="mt-1 text-sm text-ink-muted">
           or start a new one to message any colleague directly.
         </p>
       </div>
@@ -81,7 +81,7 @@ export default function MessagingApp({
   return (
     <div className={isCompact ? "flex h-full overflow-hidden" : "card flex h-[calc(100vh-11rem)] overflow-hidden p-0"}>
       {loading ? (
-        <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "var(--ink-faint)" }}>
+        <div className="flex flex-1 items-center justify-center text-sm text-ink-faint">
           Loading conversations…
         </div>
       ) : isCompact ? (

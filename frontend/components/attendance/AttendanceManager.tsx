@@ -54,22 +54,22 @@ function RecordsTable({
       headerContent={
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div>{headerFilter}</div>
-          <span className="text-xs text-slate-400 font-medium">
+          <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
             {records.length} records
           </span>
         </div>
       }
       footerContent={
-        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-400">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-ink-muted">
           <div className="flex flex-wrap items-center gap-3">
             <div>
-              Showing <span className="font-semibold text-slate-200">{startItem}</span> to{" "}
-              <span className="font-semibold text-slate-200">{endItem}</span> of{" "}
-              <span className="font-semibold text-slate-200">{records.length}</span> entries
+              Showing <span className="font-semibold text-ink">{startItem}</span> to{" "}
+              <span className="font-semibold text-ink">{endItem}</span> of{" "}
+              <span className="font-semibold text-ink">{records.length}</span> entries
             </div>
 
-            <div className="flex items-center gap-1.5 border-l border-[#232e47] pl-3">
-              <span className="text-[11px] text-slate-400">Per page:</span>
+            <div className="flex items-center gap-1.5 border-l border-hairline pl-3">
+              <span className="text-xs text-ink-muted">Per page:</span>
               <div className="flex items-center gap-1">
                 {[10, 25, 50, 100].map((size) => (
                   <button
@@ -78,10 +78,10 @@ function RecordsTable({
                       setPageSize(size);
                       setPage(1);
                     }}
-                    className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
+                    className={`rounded-lg px-2 py-0.5 font-mono text-xs font-semibold transition-all ${
                       pageSize === size
-                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-xs"
-                        : "bg-[#182136] text-slate-400 hover:bg-[#232e47] hover:text-white"
+                        ? "bg-accent text-white font-bold shadow-xs"
+                        : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
                     }`}
                   >
                     {size}
@@ -95,31 +95,31 @@ function RecordsTable({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-semibold ${
                 page > 1
-                  ? "border border-[#2a3652] bg-[#182136] text-slate-300 hover:border-[#d3ab5e] hover:text-white"
-                  : "border border-transparent text-slate-600 cursor-not-allowed"
+                  ? "border border-hairline bg-surface text-ink hover:bg-surface-raised"
+                  : "border border-transparent text-ink-faint cursor-not-allowed opacity-50"
               }`}
             >
-              <ChevronLeft size={13} />
+              <ChevronLeft size={14} />
               <span>Prev</span>
             </button>
 
-            <span className="inline-flex h-7 px-2.5 items-center justify-center rounded-lg bg-[#d3ab5e] text-xs font-bold text-slate-950 shadow-sm">
+            <span className="inline-flex h-7 px-2.5 items-center justify-center rounded-xl bg-accent text-xs font-bold text-white shadow-xs">
               Page {page} of {totalPages}
             </span>
 
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-semibold ${
                 page < totalPages
-                  ? "border border-[#2a3652] bg-[#182136] text-slate-300 hover:border-[#d3ab5e] hover:text-white"
-                  : "border border-transparent text-slate-600 cursor-not-allowed"
+                  ? "border border-hairline bg-surface text-ink hover:bg-surface-raised"
+                  : "border border-transparent text-ink-faint cursor-not-allowed opacity-50"
               }`}
             >
               <span>Next</span>
-              <ChevronRight size={13} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -127,51 +127,51 @@ function RecordsTable({
     >
       <table className="table-modern w-full">
         <thead>
-          <tr className="bg-[#182136]/30">
+          <tr>
             {showUser && (
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Staff / Agent
               </th>
             )}
-            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
               Work Date
             </th>
-            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
               Check-In Time
             </th>
-            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
               Check-Out Time
             </th>
-            <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
               Working Duration
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#232e47]">
+        <tbody className="divide-y divide-hairline">
           {pagedRecords.length === 0 ? (
             <tr>
-              <td colSpan={showUser ? 5 : 4} className="py-12 text-center text-xs text-slate-400">
+              <td colSpan={showUser ? 5 : 4} className="py-12 text-center text-sm text-ink-muted">
                 No attendance logs found for this filter criteria.
               </td>
             </tr>
           ) : (
             pagedRecords.map((r) => (
-              <tr key={r.id} className="transition-colors hover:bg-[#182136]/60">
+              <tr key={r.id} className="transition-colors hover:bg-surface-raised">
                 {showUser && (
-                  <td className="px-4 py-3 font-semibold text-white">
+                  <td className="px-4 py-3 font-semibold text-sm text-ink">
                     {r.user_name ?? "—"}
                   </td>
                 )}
-                <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                   {fmtDate(r.work_date)}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-[#3ecf9a]">
+                <td className="px-4 py-3 font-mono text-xs font-semibold text-success">
                   {fmtTime(r.check_in_at)}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                   {fmtTime(r.check_out_at)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-xs font-bold text-[#d3ab5e]">
+                <td className="px-4 py-3 text-right font-mono text-xs font-bold text-accent">
                   {hoursBetween(r.check_in_at, r.check_out_at)}
                 </td>
               </tr>
@@ -250,14 +250,14 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
   return (
     <div className="space-y-6">
       {/* Today's Check-in / Punch Status Card */}
-      <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm sm:flex sm:items-center sm:justify-between gap-4">
+      <div className="card p-5 sm:flex sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3.5 mb-4 sm:mb-0">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#2a3652] bg-[#182136] text-[#d3ab5e] shadow-xs shrink-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent border border-accent/20 shadow-xs shrink-0">
             <Clock size={20} />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white">Daily Punch In / Out Console</h2>
-            <p className="mt-0.5 text-xs text-slate-400">
+            <h2 className="text-sm font-bold text-ink">Daily Punch In / Out Console</h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
               {today?.checked_in
                 ? today.record?.check_out_at
                   ? `Checked in at ${fmtTime(today.record.check_in_at)} • Checked out at ${fmtTime(today.record.check_out_at)}`
@@ -272,22 +272,22 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
             <button
               onClick={handleCheckIn}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-4 py-2 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="btn-primary"
             >
-              <LogIn size={14} strokeWidth={2.5} />
+              <LogIn size={15} strokeWidth={2.5} />
               <span>Punch In Now</span>
             </button>
           ) : !today.record?.check_out_at ? (
             <button
               onClick={handleCheckOut}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#ef7b93]/40 bg-[#34131c] px-4 py-2 text-xs font-bold text-[#ef7b93] shadow-md transition-all hover:border-[#ef7b93] hover:bg-[#461825]"
+              className="btn-danger"
             >
-              <LogOut size={14} strokeWidth={2.5} />
+              <LogOut size={15} strokeWidth={2.5} />
               <span>Punch Out & End Shift</span>
             </button>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#3ecf9a]/30 bg-[#113028] px-3.5 py-2 text-xs font-bold text-[#3ecf9a]">
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               <span>Shift Completed</span>
             </span>
           )}
@@ -295,7 +295,7 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
       </div>
 
       {error && (
-        <p className="rounded-lg border border-[#ef7b93]/30 bg-[#34131c] px-3 py-2 text-xs font-medium text-[#ef7b93]">
+        <p className="alert-danger">
           {error}
         </p>
       )}
@@ -309,20 +309,20 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setTab("mine")}
-                  className="rounded-lg bg-[#d3ab5e] px-3 py-1 text-xs font-bold text-slate-950 shadow-sm"
+                  className="rounded-xl bg-accent px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
                 >
                   My Attendance History
                 </button>
                 <button
                   onClick={() => setTab("team")}
-                  className="rounded-lg border border-[#232e47] bg-[#0d1220] px-3 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+                  className="rounded-xl border border-hairline bg-surface px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:bg-surface-raised hover:text-ink transition-all"
                 >
-                  <Users size={12} className="mr-1.5 inline" />
+                  <Users size={13} className="mr-1.5 inline" />
                   Team Attendance
                 </button>
               </div>
             ) : (
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink">
                 My Attendance History
               </span>
             )
@@ -337,15 +337,15 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setTab("mine")}
-                  className="rounded-lg border border-[#232e47] bg-[#0d1220] px-3 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+                  className="rounded-xl border border-hairline bg-surface px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:bg-surface-raised hover:text-ink transition-all"
                 >
                   My Attendance
                 </button>
                 <button
                   onClick={() => setTab("team")}
-                  className="rounded-lg bg-[#d3ab5e] px-3 py-1 text-xs font-bold text-slate-950 shadow-sm"
+                  className="rounded-xl bg-accent px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
                 >
-                  <Users size={12} className="mr-1.5 inline" />
+                  <Users size={13} className="mr-1.5 inline" />
                   Team Attendance
                 </button>
               </div>
@@ -358,7 +358,7 @@ export default function AttendanceManager({ canViewAll }: { canViewAll: boolean 
                   onChange={(e) => setDateFrom(e.target.value)}
                   className="input text-xs py-1"
                 />
-                <span className="text-xs text-slate-500">to</span>
+                <span className="text-xs text-ink-faint">to</span>
                 <input
                   type="date"
                   value={dateTo}

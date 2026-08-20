@@ -27,6 +27,7 @@ import {
   Sparkles,
   Compass,
   ShieldAlert,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,6 +43,7 @@ export const CATEGORY_ICONS = {
 
 export const ICONS = {
   dashboard: Gauge,
+  newLead: Flame,
   leads: Users,
   billing: CreditCard,
   audit: ShieldCheck,
@@ -65,6 +67,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: keyof typeof ICONS;
+  badge?: string;
+  badgeVariant?: "hot" | "danger" | "accent";
 }
 
 export interface NavCategory {
@@ -109,7 +113,7 @@ export default function SidebarNav({ categories }: { categories: NavCategory[] }
   };
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {categories.map((category) => {
         if (category.items.length === 0) return null;
 
@@ -122,73 +126,82 @@ export default function SidebarNav({ categories }: { categories: NavCategory[] }
         return (
           <div
             key={category.id}
-            className="rounded-xl border border-[#232e47]/60 bg-[#131a2b]/50 overflow-hidden transition-all"
+            className="space-y-1"
           >
             {/* Collapsible Category Header Button */}
             <button
               type="button"
               onClick={() => toggleCategory(category.id)}
-              className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-colors hover:bg-[#182136] hover:text-slate-200"
+              className="flex w-full items-center justify-between px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-sidebar-ink-faint transition-colors hover:text-sidebar-ink"
             >
               <div className="flex items-center gap-2">
                 {CategoryIcon && (
                   <CategoryIcon
-                    size={13}
-                    className={hasActiveChild ? "text-[#d3ab5e]" : "text-slate-400"}
+                    size={14}
+                    className={hasActiveChild ? "text-accent" : "text-sidebar-ink-faint"}
                   />
                 )}
-                <span className={hasActiveChild ? "text-white" : "text-slate-300"}>
+                <span className={hasActiveChild ? "text-sidebar-ink font-extrabold" : "text-sidebar-ink-muted"}>
                   {category.title}
                 </span>
                 {hasActiveChild && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#d3ab5e]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 text-slate-400">
-                <span className="font-mono text-[10px] font-semibold text-slate-400">
+              <div className="flex items-center gap-1 text-sidebar-ink-faint">
+                <span className="font-mono text-[10px] font-semibold text-sidebar-ink-muted">
                   {category.items.length}
                 </span>
-                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </div>
             </button>
 
             {/* Collapsible Children Item List */}
             {isOpen && (
-              <nav className="flex flex-col gap-0.5 px-1.5 pb-1.5 pt-0.5 animate-fadeIn">
+              <nav className="flex flex-col gap-0.5 animate-fadeIn">
                 {category.items.map((item) => {
                   const Icon = ICONS[item.icon];
                   const isActive =
                     item.href === "/dashboard"
                       ? pathname === item.href
                       : pathname.startsWith(item.href);
-                  const badge =
+                  const unreadBadge =
                     item.icon === "messages" && unreadMessages > 0 ? unreadMessages : null;
 
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+                      className={`group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                         isActive
-                          ? "bg-gradient-to-r from-[#d3ab5e]/20 to-[#d3ab5e]/5 text-white border-l-2 border-[#d3ab5e] font-semibold shadow-xs"
-                          : "text-slate-300 hover:bg-[#182136] hover:text-white"
+                          ? "bg-accent-soft text-accent font-bold border-l-2 border-accent shadow-xs"
+                          : "text-sidebar-ink-muted hover:bg-sidebar-surface hover:text-sidebar-ink"
                       }`}
                     >
                       <Icon
-                        size={15}
+                        size={17}
                         strokeWidth={isActive ? 2.3 : 1.8}
                         className={
-                          isActive
-                            ? "text-[#d3ab5e]"
-                            : "text-slate-400 group-hover:text-slate-200"
+                          item.icon === "newLead"
+                            ? "text-amber-400 fill-amber-400/30 group-hover:scale-110 transition-transform"
+                            : isActive
+                              ? "text-accent"
+                              : "text-sidebar-ink-faint group-hover:text-sidebar-ink"
                         }
                       />
                       <span className="truncate">{item.label}</span>
 
-                      {badge !== null && (
-                        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef7b93] px-1 text-[10px] font-bold text-white shadow-xs">
-                          {badge > 9 ? "9+" : badge}
+                      {item.badgeVariant === "hot" && (
+                        <span className="ml-auto flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-400 shadow-xs">
+                          <Flame size={11} className="fill-amber-400 animate-pulse" />
+                          <span>{item.badge ?? "HOT"}</span>
+                        </span>
+                      )}
+
+                      {unreadBadge !== null && (
+                        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white shadow-xs">
+                          {unreadBadge > 9 ? "9+" : unreadBadge}
                         </span>
                       )}
                     </Link>

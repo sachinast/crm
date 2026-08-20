@@ -39,22 +39,13 @@ async function fetchSharedFile(token: string): Promise<{ file: SharedFile | null
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main
-      className="flex min-h-screen justify-center p-6 sm:p-10"
-      style={{
-        background:
-          "radial-gradient(circle at 20% 10%, rgba(179,135,47,0.10), transparent 45%), radial-gradient(circle at 85% 90%, rgba(18,23,43,0.06), transparent 50%), var(--background)",
-      }}
-    >
+    <main className="flex min-h-screen justify-center p-6 sm:p-10 bg-background">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
-            style={{ background: "var(--navy)", color: "var(--accent)" }}
-          >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold bg-navy text-accent">
             P
           </div>
-          <span className="text-sm font-semibold tracking-tight">CRM PRO</span>
+          <span className="text-sm font-semibold tracking-tight text-ink">CRM PRO</span>
         </div>
         {children}
       </div>
@@ -69,7 +60,7 @@ export default async function SharedFilePage({ params }: { params: Promise<{ tok
   if (!file) {
     return (
       <Shell>
-        <div className="card text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+        <div className="card text-center text-sm text-ink-muted">
           <p>{error}</p>
         </div>
       </Shell>
@@ -81,18 +72,15 @@ export default async function SharedFilePage({ params }: { params: Promise<{ tok
   return (
     <Shell>
       <div className="card text-center">
-        <div
-          className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl"
-          style={{ background: "var(--accent-soft)" }}
-        >
-          <Icon size={26} style={{ color: "var(--accent)" }} />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          <Icon size={28} />
         </div>
-        <p className="mb-1 break-words font-medium">{file.file_name}</p>
-        <p className="mb-5 text-xs" style={{ color: "var(--ink-faint)" }}>
+        <p className="mb-1 break-words font-semibold text-ink text-base">{file.file_name}</p>
+        <p className="mb-5 text-xs text-ink-faint">
           {fmtSize(file.size_bytes)}
         </p>
         <a href={`${API_BASE_URL}/s/${token}/download`} className="btn-primary inline-flex">
-          <Download size={14} />
+          <Download size={16} />
           Download
         </a>
       </div>

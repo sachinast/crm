@@ -53,26 +53,25 @@ export default function RevealField({
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span>{maskedValue}</span>
       {!showPrompt && (
-        <button type="button" onClick={() => setShowPrompt(true)} className="text-xs underline" style={{ color: "var(--accent)" }}>
+        <button type="button" onClick={() => setShowPrompt(true)} className="text-xs font-semibold underline text-accent hover:opacity-80">
           Reveal
         </button>
       )}
       {showPrompt && (
-        <form onSubmit={handleReveal} className="inline-flex items-center gap-1">
+        <form onSubmit={handleReveal} className="inline-flex items-center gap-1.5">
           <input
             required
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason for access"
-            className="input"
-            style={{ width: 160, padding: "0.125rem 0.5rem" }}
+            className="input w-40 px-2 py-0.5 text-xs"
           />
-          <button type="submit" disabled={submitting} className="text-xs underline" style={{ color: "var(--accent)" }}>
+          <button type="submit" disabled={submitting} className="text-xs font-semibold underline text-accent hover:opacity-80">
             {submitting ? "…" : "Confirm"}
           </button>
         </form>
       )}
-      {error && <span className="text-xs" style={{ color: "var(--danger)" }}>{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </span>
   );
 }

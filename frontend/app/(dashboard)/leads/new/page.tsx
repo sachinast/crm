@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check } from "lucide-react";
+import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check, Flame } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -50,9 +50,9 @@ function toIsoUtc(localValue: string): string {
 
 function CheckTick({ status }: { status: CheckStatus }) {
   if (status === "idle") return null;
-  if (status === "checking") return <Loader2 size={14} className="animate-spin text-slate-400" />;
-  if (status === "exists") return <XCircle size={14} className="text-[var(--danger)]" />;
-  return <CheckCircle2 size={14} className="text-[var(--success)]" />;
+  if (status === "checking") return <Loader2 size={16} className="animate-spin text-ink-muted" />;
+  if (status === "exists") return <XCircle size={16} className="text-danger" />;
+  return <CheckCircle2 size={16} className="text-success" />;
 }
 
 function useContactCheck(value: string, field: "email" | "phone", formatValid: boolean): CheckStatus {
@@ -268,35 +268,37 @@ export default function NewLeadPage() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-3.5 pb-8">
+    <div className="w-full max-w-7xl mx-auto space-y-4 pb-8">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">New Lead Intake</h1>
-          <p className="text-[11px] text-slate-400">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-xs">
+              <Flame size={20} className="fill-amber-500/20 animate-pulse" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">New Lead Intake</h1>
+          </div>
+          <p className="mt-1 text-sm text-ink-muted">
             Single-step client verification and unified booking dispatch.
           </p>
         </div>
 
-        <Link href="/leads" className="btn-secondary btn-sm text-xs">
+        <Link href="/leads" className="btn-secondary btn-sm">
           Cancel Intake
         </Link>
       </div>
 
       {pendingConfirmLead ? (
-        <div className="card flex flex-col gap-3">
-          <div
-            className="flex items-start gap-2.5 rounded-xl p-3 text-xs"
-            style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
-          >
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <div className="card flex flex-col gap-4">
+          <div className="alert-warning">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
             <span>A similarly-named client already exists — do you still want to proceed?</span>
           </div>
-          <ul className="flex flex-col gap-2 text-xs">
+          <ul className="flex flex-col gap-2.5 text-sm">
             {pendingCandidates.map((c) => (
-              <li key={c.id} className="card-flat py-2.5">
-                <p className="font-medium text-white">{c.name}</p>
-                <p className="text-slate-400">
+              <li key={c.id} className="card-flat py-3">
+                <p className="font-semibold text-ink">{c.name}</p>
+                <p className="text-sm text-ink-muted">
                   {c.phone} · {c.email} · {c.status}
                 </p>
               </li>
@@ -312,7 +314,7 @@ export default function NewLeadPage() {
             />
           </Field>
           {error && (
-            <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+            <p className="alert-danger">
               {error}
             </p>
           )}
@@ -320,25 +322,25 @@ export default function NewLeadPage() {
             type="button"
             onClick={handlePendingConfirm}
             disabled={submitting || !pendingReason.trim()}
-            className="btn-primary text-xs"
+            className="btn-primary"
           >
             {submitting ? "Confirming…" : "Yes, proceed anyway"}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* STEP 1: Client Information Card */}
-          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-4 shadow-sm">
-            <div className="mb-2.5 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                 Client Information
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs font-medium text-ink-faint">
                 Verified against duplicates
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Email Address">
                 <div className="relative">
                   <input
@@ -349,17 +351,17 @@ export default function NewLeadPage() {
                     placeholder="client@example.com"
                     className="input pr-8"
                   />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
                     <CheckTick status={emailCheck} />
                   </span>
                 </div>
                 {email.trim().length > 0 && !emailFormatOk && (
-                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                  <span className="mt-1 block text-xs text-danger">
                     Enter a valid email address
                   </span>
                 )}
                 {emailCheck === "exists" && (
-                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                  <span className="mt-1 block text-xs text-danger">
                     A lead with this email already exists
                   </span>
                 )}
@@ -373,17 +375,17 @@ export default function NewLeadPage() {
                     onCountryChange={setCountry}
                     onNationalNumberChange={setNationalNumber}
                   />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
                     <CheckTick status={phoneCheck} />
                   </span>
                 </div>
                 {nationalNumber.trim().length > 0 && !phoneFormatOk && (
-                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                  <span className="mt-1 block text-xs text-danger">
                     Enter a valid number
                   </span>
                 )}
                 {phoneCheck === "exists" && (
-                  <span className="mt-1 block text-[10px] text-[var(--danger)]">
+                  <span className="mt-1 block text-xs text-danger">
                     A lead with this number already exists
                   </span>
                 )}
@@ -402,33 +404,36 @@ export default function NewLeadPage() {
             </div>
 
             {showDuplicateWarning && (
-              <div
-                className="mt-3 flex flex-col gap-1.5 rounded-xl p-2.5 text-xs"
-                style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
-              >
-                <div className="flex items-start gap-2 font-medium">
-                  <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+              <div className="alert-warning flex flex-col gap-2">
+                <div className="flex items-start gap-2 font-semibold">
+                  <AlertTriangle size={17} className="mt-0.5 shrink-0" />
                   <span>This contact is already on file. Provide an override reason to proceed:</span>
                 </div>
                 <input
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                   placeholder="e.g. different customer, corporate group booking"
-                  className="input text-xs"
+                  className="input"
                 />
               </div>
             )}
 
-            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
             </div>
           </div>
 
-          {/* Gated Booking Container */}
-          <fieldset disabled={!unlocked} className="space-y-3.5" style={!unlocked ? { opacity: 0.4 } : undefined}>
+          {/* Gated Booking Section */}
+          {!unlocked && (
+            <div className="alert-info">
+              <span>Enter and verify valid client email & phone number above to configure booking details.</span>
+            </div>
+          )}
+
+          <fieldset disabled={!unlocked} className={`space-y-4 transition-opacity duration-200 ${!unlocked ? "opacity-60 pointer-events-none select-none" : "opacity-100"}`}>
             {/* STEP 2: Service Selection Card */}
-            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-3.5 shadow-sm">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="card">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
                 {SERVICE_TYPES.map((t) => {
                   const Icon = t.icon;
                   const active = serviceType === t.value;
@@ -437,28 +442,28 @@ export default function NewLeadPage() {
                       key={t.value}
                       type="button"
                       onClick={() => setServiceType(t.value)}
-                      className={`group flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                      className={`group flex items-center gap-3.5 rounded-2xl border p-3.5 text-left transition-all ${
                         active
-                          ? "border-[#d3ab5e] bg-[#182136] shadow-md ring-1 ring-[#d3ab5e]"
-                          : "border-[#232e47] bg-[#0d1220] hover:border-[#38486e]"
+                          ? "border-accent bg-accent-soft shadow-md ring-1 ring-accent"
+                          : "border-hairline bg-surface hover:border-hairline-strong hover:bg-surface-raised"
                       }`}
                     >
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                           active
-                            ? "bg-[#d3ab5e] text-slate-900 shadow-sm"
-                            : "bg-[#161d30] text-[#d3ab5e] border border-[#2a3652]"
+                            ? "bg-accent text-accent-ink shadow-sm"
+                            : "bg-surface-raised text-accent border border-hairline"
                         }`}
                       >
-                        <Icon size={17} strokeWidth={2} />
+                        <Icon size={19} strokeWidth={2} />
                       </div>
 
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white">{t.label}</span>
-                          {active && <Check size={13} className="text-[#d3ab5e]" />}
+                          <span className={`text-sm font-bold ${active ? "text-accent-ink" : "text-ink"}`}>{t.label}</span>
+                          {active && <Check size={15} className="text-accent" />}
                         </div>
-                        <p className="text-[10px] text-slate-400">{t.sublabel}</p>
+                        <p className="text-xs text-ink-muted">{t.sublabel}</p>
                       </div>
                     </button>
                   );
@@ -468,7 +473,7 @@ export default function NewLeadPage() {
 
             {/* STEP 3: Booking Specifications Card */}
             {serviceType && (
-              <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-4 shadow-sm">
+              <div className="card">
                 <div className="grid grid-cols-1 gap-4">
                   {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
                   {serviceType === "hotel" && <HotelBookingFields value={hotelForm} onChange={setHotelForm} />}
@@ -478,12 +483,12 @@ export default function NewLeadPage() {
             )}
 
             {/* STEP 4: Financial Summary & Actions Toolbar */}
-            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-3.5 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="card">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Financial Breakdown Inputs */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 rounded-xl bg-[#0d1220] px-3 py-1.5 border border-[#232e47]">
-                    <span className="text-[11px] font-semibold text-slate-300">Prepaid ($):</span>
+                <div className="flex flex-wrap items-center gap-3.5">
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-sunken px-3.5 py-2 border border-hairline">
+                    <span className="text-xs font-semibold text-ink-muted">Prepaid ($):</span>
                     <input
                       required
                       type="number"
@@ -491,12 +496,12 @@ export default function NewLeadPage() {
                       step="0.01"
                       value={prepaid}
                       onChange={(e) => updateFinancials(Number(e.target.value), counter)}
-                      className="w-20 rounded-lg border border-[#313f61] bg-[#141b2d] px-2 py-0.5 font-mono text-xs font-bold text-white outline-none focus:border-[#d3ab5e]"
+                      className="w-24 rounded-lg border border-hairline-strong bg-surface px-2.5 py-1 font-mono text-sm font-bold text-ink outline-none focus:border-accent"
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 rounded-xl bg-[#0d1220] px-3 py-1.5 border border-[#232e47]">
-                    <span className="text-[11px] font-semibold text-slate-300">Pay at Counter ($):</span>
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-sunken px-3.5 py-2 border border-hairline">
+                    <span className="text-xs font-semibold text-ink-muted">Pay at Counter ($):</span>
                     <input
                       required
                       type="number"
@@ -504,38 +509,38 @@ export default function NewLeadPage() {
                       step="0.01"
                       value={counter}
                       onChange={(e) => updateFinancials(prepaid, Number(e.target.value))}
-                      className="w-20 rounded-lg border border-[#313f61] bg-[#141b2d] px-2 py-0.5 font-mono text-xs font-bold text-white outline-none focus:border-[#d3ab5e]"
+                      className="w-24 rounded-lg border border-hairline-strong bg-surface px-2.5 py-1 font-mono text-sm font-bold text-ink outline-none focus:border-accent"
                     />
                   </div>
 
                   {/* Grand Total Badge */}
-                  <div className="flex items-center gap-2 rounded-xl bg-[#2a2311] px-3.5 py-1.5 border border-[#d3ab5e]/40">
-                    <span className="text-[11px] font-medium text-[#f7e9c9]">Total Booking Value:</span>
-                    <span className="font-mono text-sm font-extrabold text-[#d3ab5e]">
+                  <div className="flex items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 border border-accent/40">
+                    <span className="text-xs font-semibold text-accent-ink">Total Value:</span>
+                    <span className="font-mono text-base font-extrabold text-accent">
                       ${total.toFixed(2)} USD
                     </span>
                   </div>
                 </div>
 
                 {/* Right-aligned Submit & Cancel Actions */}
-                <div className="flex items-center gap-2.5">
-                  <Link href="/leads" className="btn-secondary btn-sm text-xs">
+                <div className="flex items-center gap-3">
+                  <Link href="/leads" className="btn-secondary">
                     Cancel
                   </Link>
 
                   <button
                     type="submit"
                     disabled={submitting || !serviceType || !unlocked}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-5 py-2 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-primary"
                   >
                     <span>{submitting ? "Processing…" : "Create Lead"}</span>
-                    <ArrowRight size={13} />
+                    <ArrowRight size={15} />
                   </button>
                 </div>
               </div>
 
               {error && (
-                <p className="mt-2 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--danger)]" style={{ background: "var(--danger-soft)" }}>
+                <p className="mt-3 alert-danger">
                   {error}
                 </p>
               )}

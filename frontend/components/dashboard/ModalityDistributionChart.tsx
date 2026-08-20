@@ -13,9 +13,9 @@ interface ModalitySlice {
 }
 
 const MODALITY_DATA: ModalitySlice[] = [
-  { type: "flight", label: "Flight Bookings", count: 184, revenue: 142000, color: "#3ecf9a", icon: Plane },
-  { type: "hotel", label: "Hotel Reservations", count: 126, revenue: 98400, color: "#d3ab5e", icon: Hotel },
-  { type: "car", label: "Car Rentals", count: 82, revenue: 34200, color: "#6366f1", icon: Car },
+  { type: "flight", label: "Flight Bookings", count: 184, revenue: 142000, color: "#3b82f6", icon: Plane },
+  { type: "hotel", label: "Hotel Reservations", count: 126, revenue: 98400, color: "#8b5cf6", icon: Hotel },
+  { type: "car", label: "Car Rentals", count: 82, revenue: 34200, color: "#10b981", icon: Car },
 ];
 
 export default function ModalityDistributionChart() {
@@ -40,19 +40,19 @@ export default function ModalityDistributionChart() {
   const displayTarget = activeSlice ?? MODALITY_DATA[0];
 
   return (
-    <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-4">
+    <div className="card space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <PieChart size={16} className="text-[#d3ab5e]" />
-            <h3 className="text-sm font-bold text-white">Booking Modality Share</h3>
+            <PieChart size={18} className="text-[var(--accent)]" />
+            <h3 className="text-sm font-bold text-[var(--ink)]">Booking Modality Share</h3>
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
             Portfolio distribution by service vertical.
           </p>
         </div>
-        <span className="rounded-full border border-[#2a3652] bg-[#182136] px-2.5 py-0.5 font-mono text-[11px] font-bold text-slate-300">
+        <span className="rounded-full border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-0.5 font-mono text-xs font-bold text-[var(--ink-muted)]">
           {totalCount} total
         </span>
       </div>
@@ -67,7 +67,7 @@ export default function ModalityDistributionChart() {
               cy="50"
               r={radius}
               fill="transparent"
-              stroke="#182136"
+              stroke="var(--hairline)"
               strokeWidth="12"
             />
             {/* Slices */}
@@ -94,10 +94,10 @@ export default function ModalityDistributionChart() {
 
           {/* Center Callout */}
           <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
-            <span className="font-mono text-base font-extrabold text-white">
+            <span className="font-mono text-base font-extrabold text-[var(--ink)]">
               {Math.round((displayTarget.count / totalCount) * 100)}%
             </span>
-            <span className="text-[10px] font-semibold capitalize text-slate-400">
+            <span className="text-xs font-semibold capitalize text-[var(--ink-muted)]">
               {displayTarget.type}
             </span>
           </div>
@@ -117,28 +117,27 @@ export default function ModalityDistributionChart() {
                 onMouseLeave={() => setActiveSlice(null)}
                 className={`flex items-center justify-between rounded-xl border p-2.5 transition-all cursor-pointer ${
                   isSelected
-                    ? "border-[#d3ab5e]/60 bg-[#182136]"
-                    : "border-[#232e47] bg-[#0d1220]/60 hover:border-[#2a3652]"
+                    ? "border-[var(--accent)]/60 bg-[var(--surface-raised)]"
+                    : "border-[var(--hairline)] bg-[var(--surface-sunken)] hover:border-[var(--hairline-strong)]"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="flex h-7 w-7 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: `${slice.color}20`, color: slice.color }}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-soft text-accent"
                   >
-                    <Icon size={14} />
+                    <Icon size={16} />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">{slice.label}</p>
-                    <p className="font-mono text-[10px] text-slate-400">
+                    <p className="text-xs font-semibold text-[var(--ink)]">{slice.label}</p>
+                    <p className="font-mono text-xs text-[var(--ink-muted)]">
                       ${slice.revenue.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="font-mono text-xs font-bold text-white">{slice.count}</span>
-                  <span className="ml-1 text-[11px] font-semibold text-slate-400">({pct}%)</span>
+                  <span className="font-mono text-xs font-bold text-[var(--ink)]">{slice.count}</span>
+                  <span className="ml-1 text-xs font-semibold text-[var(--ink-muted)]">({pct}%)</span>
                 </div>
               </div>
             );

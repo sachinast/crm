@@ -91,13 +91,15 @@ export default async function IntegrationsPage() {
       {/* Section 1: Inbound Webhooks & API Keys */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
-            <h2 className="mb-1 text-sm font-bold text-white">Generate Integration API Key</h2>
-            <p className="mb-4 text-xs text-slate-400">
-              Authenticate external Zapier, Make, or custom HTTP webhooks.
-            </p>
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-ink">Generate Integration API Key</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Authenticate external Zapier, Make, or custom HTTP webhooks.
+              </p>
+            </div>
             {agents.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[#313f61] p-4 text-xs text-slate-400">
+              <p className="rounded-xl border border-dashed border-hairline p-4 text-xs text-ink-muted">
                 Create at least one Agent user first to assign incoming leads.
               </p>
             ) : (
@@ -109,43 +111,45 @@ export default async function IntegrationsPage() {
         <div className="lg:col-span-7">
           <DataTableCard
             headerContent={
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink">
                   Active Inbound API Keys
                 </span>
-                <span className="text-[11px] text-slate-400">{keys.length} keys</span>
+                <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
+                  {keys.length} keys
+                </span>
               </div>
             }
           >
             <table className="table-modern w-full">
               <thead>
-                <tr className="bg-[#182136]/30">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Name</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Key Prefix</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Lead Owner</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Action</th>
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Key Prefix</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Lead Owner</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#232e47]">
+              <tbody className="divide-y divide-hairline">
                 {keys.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-xs text-slate-400">No integration keys generated yet.</td>
+                    <td colSpan={5} className="py-12 text-center text-sm text-ink-muted">No integration keys generated yet.</td>
                   </tr>
                 ) : (
                   keys.map((k) => (
-                    <tr key={k.id} className="transition-colors hover:bg-[#182136]/60">
-                      <td className="px-4 py-3 font-semibold text-white">{k.name}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">{k.key_prefix}...</td>
-                      <td className="px-4 py-3 text-xs text-slate-300">
+                    <tr key={k.id} className="transition-colors hover:bg-surface-raised">
+                      <td className="px-4 py-3 font-semibold text-sm text-ink">{k.name}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-accent font-semibold">{k.key_prefix}...</td>
+                      <td className="px-4 py-3 text-sm text-ink">
                         {agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${
                             k.is_active
-                              ? "bg-[#113028] text-[#3ecf9a] border border-[#3ecf9a]/30"
-                              : "bg-[#232e47] text-slate-400 border border-[#313f61]"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              : "bg-surface-raised text-ink-muted border-hairline"
                           }`}
                         >
                           {k.is_active ? "Active" : "Revoked"}
@@ -164,26 +168,28 @@ export default async function IntegrationsPage() {
       </div>
 
       {/* Section 2: Embed Booking Widgets */}
-      <div className="space-y-4 pt-4 border-t border-[#232e47]">
+      <div className="space-y-4 pt-4 border-t border-hairline">
         <div>
           <div className="flex items-center gap-2">
-            <Code2 size={18} className="text-[#d3ab5e]" />
-            <h2 className="text-lg font-bold text-white">Embeddable Booking Widgets</h2>
+            <Code2 size={18} className="text-accent" />
+            <h2 className="text-lg font-bold text-ink">Embeddable Booking Widgets</h2>
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-ink-muted">
             One-tag copy-paste interactive booking widget for any website landing page.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
-              <h3 className="mb-1 text-sm font-bold text-white">Create New Web Widget</h3>
-              <p className="mb-4 text-xs text-slate-400">
-                Deploy dynamic Flight, Hotel, and Cab booking intake forms.
-              </p>
+            <div className="card p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-ink">Create New Web Widget</h3>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Deploy dynamic Flight, Hotel, and Cab booking intake forms.
+                </p>
+              </div>
               {agents.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-[#313f61] p-4 text-xs text-slate-400">
+                <p className="rounded-xl border border-dashed border-hairline p-4 text-xs text-ink-muted">
                   Create at least one Agent user first to assign submissions.
                 </p>
               ) : (
@@ -195,45 +201,47 @@ export default async function IntegrationsPage() {
           <div className="lg:col-span-7">
             <DataTableCard
               headerContent={
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink">
                     Active Web Widgets
                   </span>
-                  <span className="text-[11px] text-slate-400">{widgets.length} widgets</span>
+                  <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
+                    {widgets.length} widgets
+                  </span>
                 </div>
               }
             >
               <table className="table-modern w-full">
                 <thead>
-                  <tr className="bg-[#182136]/30">
-                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Widget Name</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Assigned Agent</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</th>
-                    <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Code / Embed</th>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Widget Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Assigned Agent</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Leads Captured</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">Code / Embed</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#232e47]">
+                <tbody className="divide-y divide-hairline">
                   {widgets.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-xs text-slate-400">No web widgets created yet.</td>
+                      <td colSpan={5} className="py-12 text-center text-sm text-ink-muted">No web widgets created yet.</td>
                     </tr>
                   ) : (
                     widgets.map((w) => (
-                      <tr key={w.id} className="transition-colors hover:bg-[#182136]/60">
-                        <td className="px-4 py-3 font-semibold text-white">{w.name}</td>
-                        <td className="px-4 py-3 text-xs text-slate-300">
+                      <tr key={w.id} className="transition-colors hover:bg-surface-raised">
+                        <td className="px-4 py-3 font-semibold text-sm text-ink">{w.name}</td>
+                        <td className="px-4 py-3 text-sm text-ink">
                           {agentById.get(w.assigned_agent_id)?.name ?? w.assigned_agent_id.slice(0, 8)}
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-[#d3ab5e]">
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-accent">
                           {w.submission_count}
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${
                               w.is_active
-                                ? "bg-[#113028] text-[#3ecf9a] border border-[#3ecf9a]/30"
-                                : "bg-[#232e47] text-slate-400 border border-[#313f61]"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                : "bg-surface-raised text-ink-muted border-hairline"
                             }`}
                           >
                             {w.is_active ? "Active" : "Inactive"}

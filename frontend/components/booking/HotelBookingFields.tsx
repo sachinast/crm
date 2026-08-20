@@ -44,13 +44,13 @@ export default function HotelBookingFields({
   return (
     <fieldset disabled={disabled} className="col-span-full grid grid-cols-1 gap-4 lg:grid-cols-12">
       {/* LEFT COLUMN: Hotel Property & Room Details (7 columns) */}
-      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5 lg:col-span-7">
-        <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
-          <Hotel size={14} />
+      <div className="rounded-2xl border border-hairline bg-surface p-4 lg:col-span-7 space-y-4">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+          <Hotel size={15} />
           <span>Property & Room Details</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Booking reference">
             <input
               required
@@ -98,7 +98,7 @@ export default function HotelBookingFields({
           </div>
         </div>
 
-        <div className="mt-2.5">
+        <div>
           <DynamicFieldsBlock
             entityType="hotel_booking"
             value={value.custom_fields}
@@ -107,16 +107,19 @@ export default function HotelBookingFields({
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Stay Schedule (5 columns) */}
+      {/* RIGHT COLUMN: Stay Schedule & Dates (5 columns) */}
       <div className="space-y-3 lg:col-span-5">
-        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5">
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
-            <Calendar size={13} className="text-[var(--accent)]" />
+        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent">
+            <Calendar size={15} />
             <span>Stay Schedule</span>
           </div>
 
-          <div className="space-y-2.5">
-            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
+          <div className="space-y-3">
+            <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
+              <div className="text-xs font-bold uppercase tracking-wider text-accent">
+                Check-in / Check-out
+              </div>
               <Field label="Check-in date">
                 <input
                   required
@@ -124,10 +127,9 @@ export default function HotelBookingFields({
                   value={value.check_in_date}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   onChange={(e) => onChange({ ...value, check_in_date: e.target.value })}
-                  className="input"
+                  className="input font-mono"
                 />
               </Field>
-
               <Field label="Check-out date">
                 <input
                   required
@@ -135,7 +137,7 @@ export default function HotelBookingFields({
                   value={value.check_out_date}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   onChange={(e) => onChange({ ...value, check_out_date: e.target.value })}
-                  className="input"
+                  className="input font-mono"
                 />
               </Field>
             </div>

@@ -49,24 +49,22 @@ export default function PaymentActions({ leadId }: { leadId: string }) {
         <button
           onClick={() => handleProcess("charged")}
           disabled={submitting !== null}
-          className="btn-sm inline-flex items-center gap-1.5 rounded-lg font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: "var(--success-soft)", color: "var(--success)" }}
+          className="btn-sm inline-flex items-center gap-1.5 rounded-xl font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200 transition-all disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <CheckCircle2 size={14} />
+          <CheckCircle2 size={16} />
           {submitting === "charged" ? "…" : "Card Charged"}
         </button>
         <button
           onClick={() => handleProcess("declined")}
           disabled={submitting !== null}
-          className="btn-sm inline-flex items-center gap-1.5 rounded-lg font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
+          className="btn-sm inline-flex items-center gap-1.5 rounded-xl font-semibold bg-rose-950/40 text-rose-400 border border-rose-800/40 [data-theme=light]:bg-rose-50 [data-theme=light]:text-rose-700 [data-theme=light]:border-rose-200 transition-all disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <XCircle size={14} />
+          <XCircle size={16} />
           {submitting === "declined" ? "…" : "Card Declined"}
         </button>
       </div>
       {error && (
-        <p className="mt-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="mt-2 alert-danger">
           {error}
         </p>
       )}

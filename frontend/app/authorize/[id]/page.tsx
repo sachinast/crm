@@ -47,22 +47,13 @@ const HIGHLIGHT_FIELDS: Record<string, { key: string; label: string }[]> = {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main
-      className="flex min-h-screen justify-center p-6 sm:p-10"
-      style={{
-        background:
-          "radial-gradient(circle at 20% 10%, rgba(179,135,47,0.10), transparent 45%), radial-gradient(circle at 85% 90%, rgba(18,23,43,0.06), transparent 50%), var(--background)",
-      }}
-    >
+    <main className="flex min-h-screen justify-center p-6 sm:p-10 bg-background">
       <div className="w-full max-w-lg">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
-            style={{ background: "var(--navy)", color: "var(--accent)" }}
-          >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold bg-navy text-accent">
             P
           </div>
-          <span className="text-sm font-semibold tracking-tight">CRM PRO</span>
+          <span className="text-sm font-semibold tracking-tight text-ink">CRM PRO</span>
         </div>
         {children}
       </div>
@@ -77,7 +68,7 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
   if (!summary) {
     return (
       <Shell>
-        <div className="card text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+        <div className="card text-center text-sm text-ink-muted">
           <p>{error}</p>
         </div>
       </Shell>
@@ -87,7 +78,7 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
   if (summary.status !== "authorization_pending") {
     return (
       <Shell>
-        <div className="card text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+        <div className="card text-center text-sm text-ink-muted">
           <p>This booking has already been processed — no further action is needed.</p>
         </div>
       </Shell>
@@ -98,21 +89,21 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
 
   return (
     <Shell>
-      <h1 className="mb-1 text-center text-2xl font-semibold tracking-tight">Confirm your booking</h1>
-      <p className="mb-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+      <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-ink">Confirm your booking</h1>
+      <p className="mb-6 text-center text-sm text-ink-muted">
         Hi {summary.customer_name}, please review the details below.
       </p>
 
       <div className="card mb-4 text-sm">
         <h2 className="section-label mb-3 flex items-center gap-1.5">
-          <FileCheck size={13} />
+          <FileCheck size={14} />
           <span className="capitalize">{summary.service_type} booking</span>
         </h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
           {highlights.map((f) => (
             <div key={f.key} className="contents">
-              <dt style={{ color: "var(--ink-faint)" }}>{f.label}</dt>
-              <dd>{String(summary.booking[f.key] ?? "—")}</dd>
+              <dt className="text-ink-faint">{f.label}</dt>
+              <dd className="text-ink font-semibold">{String(summary.booking[f.key] ?? "—")}</dd>
             </div>
           ))}
         </dl>
@@ -120,16 +111,16 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
 
       <div className="card mb-4 text-sm">
         <h2 className="section-label mb-3 flex items-center gap-1.5">
-          <CreditCard size={13} />
+          <CreditCard size={14} />
           Payment breakdown
         </h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          <dt style={{ color: "var(--ink-faint)" }}>Prepaid amount</dt>
-          <dd>${Number(summary.booking.prepaid_amount).toFixed(2)}</dd>
-          <dt style={{ color: "var(--ink-faint)" }}>Pay at counter</dt>
-          <dd>${Number(summary.booking.pay_at_counter_amount).toFixed(2)}</dd>
-          <dt className="font-medium">Total</dt>
-          <dd className="font-medium">${Number(summary.booking.total_amount).toFixed(2)}</dd>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+          <dt className="text-ink-faint">Prepaid amount</dt>
+          <dd className="text-ink font-semibold">${Number(summary.booking.prepaid_amount).toFixed(2)}</dd>
+          <dt className="text-ink-faint">Pay at counter</dt>
+          <dd className="text-ink font-semibold">${Number(summary.booking.pay_at_counter_amount).toFixed(2)}</dd>
+          <dt className="font-bold text-ink">Total</dt>
+          <dd className="font-bold text-accent">${Number(summary.booking.total_amount).toFixed(2)}</dd>
         </dl>
       </div>
 

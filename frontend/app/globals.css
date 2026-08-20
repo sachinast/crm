@@ -1,85 +1,136 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------
-   Design tokens — a premium travel-CRM palette: deep navy ink + a muted
-   gold accent, warm ivory surfaces instead of stark white/gray. Every
-   token below is registered in @theme so it's available as a normal
-   Tailwind utility (bg-accent, text-ink, border-hairline, etc).
+   Design tokens — 2-Theme System:
+   1. Slate & Indigo Night (Dark Mode: Deep Slate #0b0f19 + Rich Indigo #6366f1)
+   2. Ocean & Emerald Clean (Light Mode: Soft Slate #f8fafc + Ocean Blue #2563eb + Emerald #10b981)
    ------------------------------------------------------------------- */
-:root {
-  --background: #f6f4ef;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --ink: #12172b;
-  --ink-muted: #5b6274;
-  --ink-faint: #8a90a1;
-  --hairline: #e6e2d8;
-  --hairline-strong: #d8d3c4;
 
-  --accent: #b3872f;
-  --accent-hover: #9a7327;
-  --accent-soft: #f4e9d3;
-  --accent-ink: #3a2c0c;
+:root,
+[data-theme="dark"],
+.dark {
+  --background: #0b0f19;
+  --surface: #111827;
+  --surface-raised: #1e293b;
+  --surface-sunken: #070a12;
+  --ink: #f8fafc;
+  --ink-muted: #94a3b8;
+  --ink-faint: #64748b;
+  --hairline: #1e293b;
+  --hairline-strong: #334155;
 
-  --navy: #12172b;
-  --navy-soft: #1c2440;
+  --sidebar-bg: #0f172a;
+  --sidebar-surface: #111827;
+  --sidebar-surface-raised: #1e293b;
+  --sidebar-sunken: #090d16;
+  --sidebar-ink: #f8fafc;
+  --sidebar-ink-muted: #94a3b8;
+  --sidebar-ink-faint: #64748b;
+  --sidebar-hairline: #1e293b;
+  --sidebar-hairline-strong: #334155;
 
-  --success: #0f7a5c;
-  --success-soft: #e1f3ec;
-  --danger: #b8425b;
-  --danger-soft: #fbe9ed;
-  --warning: #b06a1c;
-  --warning-soft: #f8ecd9;
-  --info: #2c6faa;
-  --info-soft: #e6f0f8;
+  --header-bg: #0f172a;
+  --header-ink: #f8fafc;
+  --header-ink-muted: #94a3b8;
+  --header-hairline: #1e293b;
+
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-soft: #1e1b4b;
+  --accent-ink: #c7d2fe;
+
+  --navy: #0f172a;
+  --navy-soft: #1e293b;
+
+  --success: #10b981;
+  --success-soft: #064e3b;
+  --danger: #f43f5e;
+  --danger-soft: #4c0519;
+  --warning: #f59e0b;
+  --warning-soft: #451a03;
+  --info: #8b5cf6;
+  --info-soft: #2e1065;
 
   --radius-card: 1rem;
-  --shadow-card: 0 1px 2px rgba(18, 23, 43, 0.04), 0 8px 24px -12px rgba(18, 23, 43, 0.12);
-  --shadow-card-hover: 0 2px 4px rgba(18, 23, 43, 0.06), 0 16px 32px -12px rgba(18, 23, 43, 0.18);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 10px 24px -6px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4), 0 16px 32px -8px rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #090c14;
-    --surface: #131a2b;
-    --surface-raised: #182136;
-    --ink: #f8fafc;
-    --ink-muted: #94a3b8;
-    --ink-faint: #64748b;
-    --hairline: #232e47;
-    --hairline-strong: #313f61;
+[data-theme="light"] {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-raised: #f1f5f9;
+  --surface-sunken: #e2e8f0;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --ink-faint: #94a3b8;
+  --hairline: #e2e8f0;
+  --hairline-strong: #cbd5e1;
 
-    --accent: #d3ab5e;
-    --accent-hover: #e0bc78;
-    --accent-soft: #2d2411;
-    --accent-ink: #f7e9c9;
+  /* Left and Top Bar in Light Theme: Dark / Grey Slate */
+  --sidebar-bg: #0f172a;
+  --sidebar-surface: #1e293b;
+  --sidebar-surface-raised: #334155;
+  --sidebar-sunken: #090d16;
+  --sidebar-ink: #f8fafc;
+  --sidebar-ink-muted: #94a3b8;
+  --sidebar-ink-faint: #64748b;
+  --sidebar-hairline: #1e293b;
+  --sidebar-hairline-strong: #334155;
 
-    --navy: #090c14;
-    --navy-soft: #182136;
+  --header-bg: #0f172a;
+  --header-ink: #f8fafc;
+  --header-ink-muted: #94a3b8;
+  --header-hairline: #1e293b;
 
-    --success: #3ecf9a;
-    --success-soft: #113028;
-    --danger: #ef7b93;
-    --danger-soft: #34131c;
-    --warning: #e3a854;
-    --warning-soft: #332411;
-    --info: #6badea;
-    --info-soft: #12253a;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-ink: #1d4ed8;
 
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-    --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 32px -12px rgba(0, 0, 0, 0.7);
-  }
+  --navy: #0f172a;
+  --navy-soft: #1e293b;
+
+  --success: #10b981;
+  --success-soft: #d1fae5;
+  --danger: #ef4444;
+  --danger-soft: #fee2e2;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+  --info: #3b82f6;
+  --info-soft: #dbeafe;
+
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 6px 16px -4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 4px 6px rgba(15, 23, 42, 0.05), 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+  --shadow-popover: 0 16px 36px -6px rgba(15, 23, 42, 0.1), 0 4px 14px rgba(15, 23, 42, 0.05);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-ink-faint: var(--ink-faint);
   --color-hairline: var(--hairline);
   --color-hairline-strong: var(--hairline-strong);
+
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-surface: var(--sidebar-surface);
+  --color-sidebar-surface-raised: var(--sidebar-surface-raised);
+  --color-sidebar-sunken: var(--sidebar-sunken);
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-ink-muted: var(--sidebar-ink-muted);
+  --color-sidebar-ink-faint: var(--sidebar-ink-faint);
+  --color-sidebar-hairline: var(--sidebar-hairline);
+  --color-sidebar-hairline-strong: var(--sidebar-hairline-strong);
+
+  --color-header-bg: var(--header-bg);
+  --color-header-ink: var(--header-ink);
+  --color-header-ink-muted: var(--header-ink-muted);
+  --color-header-hairline: var(--header-hairline);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
@@ -105,101 +156,113 @@
 body {
   background: var(--background);
   color: var(--ink);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: -0.006em;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* ---------------------------------------------------------------------
-   Component classes — shared across every page so a look/feel change
-   here cascades everywhere, instead of one-off Tailwind strings per file.
-   Tailwind v4's @apply can only reference real utilities, not other
-   custom classes, so each variant below repeats the shared shape
-   utilities rather than chaining "@apply btn" — the standard pattern for
-   component classes in v4.
+   Component classes — standard 14px typography and flexible theme tokens
    ------------------------------------------------------------------- */
 @layer components {
   .input {
-    @apply w-full rounded-xl border px-3 py-1.5 text-xs transition-all outline-none;
-    background: #0d1220;
+    @apply w-full rounded-xl border px-3.5 py-2 text-sm transition-all outline-none;
+    background: var(--surface-sunken);
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
   .input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(211, 171, 94, 0.25);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
   }
   .input::placeholder {
     color: var(--ink-faint);
   }
+  .input:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  select.input option {
+    background-color: var(--surface);
+    color: var(--ink);
+  }
 
   .card {
-    @apply rounded-2xl border p-4;
+    @apply rounded-2xl border p-4.5;
     background: var(--surface);
     border-color: var(--hairline);
     box-shadow: var(--shadow-card);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   .card-flat {
-    @apply rounded-2xl border p-5;
-    background: var(--surface);
+    @apply rounded-2xl border p-4.5;
+    background: var(--surface-raised);
     border-color: var(--hairline);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   .stat-card {
-    @apply flex flex-col gap-1 rounded-2xl border p-5;
+    @apply flex flex-col gap-1.5 rounded-2xl border p-5;
     background: var(--surface);
     border-color: var(--hairline);
     box-shadow: var(--shadow-card);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-xs transition-all disabled:cursor-not-allowed disabled:opacity-50;
     background: var(--accent);
-    color: #fff;
   }
   .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
+    transform: translateY(-0.5px);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
     background: var(--surface);
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
   .btn-secondary:hover:not(:disabled) {
-    background: var(--accent-soft);
+    background: var(--surface-raised);
     border-color: var(--accent);
+    color: var(--accent);
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
     color: var(--ink-muted);
   }
   .btn-ghost:hover:not(:disabled) {
-    background: var(--accent-soft);
+    background: var(--surface-raised);
     color: var(--ink);
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50;
     background: var(--danger);
-    color: #fff;
   }
   .btn-danger:hover:not(:disabled) {
     filter: brightness(0.92);
   }
 
   .btn-sm {
-    @apply px-2.5 py-1.5 text-xs;
+    @apply px-3 py-1.5 text-xs rounded-lg;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
   }
 
   .link-muted {
     color: var(--ink-muted);
+    transition: color 0.15s ease;
   }
   .link-muted:hover {
     color: var(--ink);
@@ -211,13 +274,15 @@ body {
     border-spacing: 0;
   }
   .table-modern thead th {
-    @apply px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide;
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider;
     color: var(--ink-faint);
+    background: var(--surface-raised);
     border-bottom: 1px solid var(--hairline);
   }
   .table-modern tbody td {
-    @apply px-3 py-3;
+    @apply px-4 py-3 text-sm;
     border-bottom: 1px solid var(--hairline);
+    color: var(--ink);
   }
   .table-modern tbody tr:last-child td {
     border-bottom: none;
@@ -226,58 +291,125 @@ body {
     transition: background-color 0.12s ease;
   }
   .table-modern tbody tr:hover {
-    background: var(--accent-soft);
+    background: var(--surface-raised);
   }
 
   .section-label {
-    @apply text-xs font-semibold uppercase tracking-wider;
+    @apply text-xs font-bold uppercase tracking-wider;
     color: var(--ink-faint);
   }
 
   .nav-link {
-    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors;
-    color: #aeb4cc;
+    @apply flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors;
+    color: var(--ink-muted);
   }
   .nav-link:hover {
-    background: rgba(211, 171, 94, 0.08);
-    color: #e9ecf5;
+    background: var(--surface-raised);
+    color: var(--ink);
   }
   .nav-link-active {
-    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors;
-    background: rgba(211, 171, 94, 0.16);
-    color: #f0d9a3;
+    @apply flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
   }
 
-  /* In-app messaging — chat bubbles, mention chips, scrollbar */
+  /* In-app messaging — chat bubbles */
   .chat-bubble-own {
-    @apply max-w-md rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm;
+    @apply max-w-md rounded-2xl rounded-br-md px-4 py-2.5 text-sm;
     background: var(--accent);
-    color: #fff;
+    color: #000;
   }
 
   .chat-bubble-other {
-    @apply max-w-md rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm;
+    @apply max-w-md rounded-2xl rounded-bl-md px-4 py-2.5 text-sm;
     background: var(--surface);
     border: 1px solid var(--hairline);
     color: var(--ink);
   }
 
   .chat-mention {
-    @apply rounded px-1 py-0.5 font-medium;
+    @apply rounded px-1.5 py-0.5 font-semibold;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
   }
 
   .scrollbar-thin {
     scrollbar-width: thin;
   }
+
+  /* Utility classes to completely replace inline CSS styles */
+  .text-ink { color: var(--ink); }
+  .text-ink-muted { color: var(--ink-muted); }
+  .text-ink-faint { color: var(--ink-faint); }
+  .text-accent { color: var(--accent); }
+  .text-accent-ink { color: var(--accent-ink); }
+  .text-success { color: var(--success); }
+  .text-danger { color: var(--danger); }
+  .text-warning { color: var(--warning); }
+  .text-info { color: var(--info); }
+
+  .bg-background { background-color: var(--background); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-surface-raised { background-color: var(--surface-raised); }
+  .bg-surface-sunken { background-color: var(--surface-sunken); }
+  .bg-accent { background-color: var(--accent); }
+  .bg-accent-soft { background-color: var(--accent-soft); }
+  .bg-success { background-color: var(--success); }
+  .bg-success-soft { background-color: var(--success-soft); }
+  .bg-danger { background-color: var(--danger); }
+  .bg-danger-soft { background-color: var(--danger-soft); }
+  .bg-warning { background-color: var(--warning); }
+  .bg-warning-soft { background-color: var(--warning-soft); }
+  .bg-info { background-color: var(--info); }
+  .bg-info-soft { background-color: var(--info-soft); }
+
+  .border-hairline { border-color: var(--hairline); }
+  .border-hairline-strong { border-color: var(--hairline-strong); }
+  .border-accent { border-color: var(--accent); }
+
+  .alert-warning {
+    @apply flex items-start gap-2.5 rounded-xl p-3 text-sm font-medium;
+    background-color: var(--warning-soft);
+    color: var(--warning);
+  }
+  .alert-danger {
+    @apply flex items-start gap-2.5 rounded-xl p-3 text-sm font-medium;
+    background-color: var(--danger-soft);
+    color: var(--danger);
+  }
+  .alert-success {
+    @apply flex items-start gap-2.5 rounded-xl p-3 text-sm font-medium;
+    background-color: var(--success-soft);
+    color: var(--success);
+  }
+  .alert-info {
+    @apply flex items-start gap-2.5 rounded-xl p-3 text-sm font-medium;
+    background-color: var(--info-soft);
+    color: var(--info);
+  }
 }
 
 /* ---------------------------------------------------------------------
-   Date / DateTime / Time Pickers — Highly visible calendar icon & full-box click
+   Date / DateTime / Time Pickers — Highly visible calendar icon
    ------------------------------------------------------------------- */
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {
   cursor: pointer;
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="datetime-local"],
+[data-theme="dark"] input[type="time"],
+.dark input[type="date"],
+.dark input[type="datetime-local"],
+.dark input[type="time"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="datetime-local"],
+[data-theme="light"] input[type="time"] {
   color-scheme: light;
 }
 
@@ -285,11 +417,17 @@ input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 3px;
-  opacity: 0.85;
-  filter: invert(45%) sepia(85%) saturate(450%) hue-rotate(5deg) brightness(95%);
+  opacity: 0.9;
+  filter: invert(70%) sepia(40%) saturate(600%) hue-rotate(5deg) brightness(110%);
   transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(30%) sepia(80%) saturate(450%) hue-rotate(5deg) brightness(85%);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
@@ -299,21 +437,8 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   transform: scale(1.15);
 }
 
-@media (prefers-color-scheme: dark) {
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="time"] {
-    color-scheme: dark;
-  }
-
-  input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator {
-    filter: invert(80%) sepia(45%) saturate(600%) hue-rotate(5deg) brightness(110%);
-    opacity: 0.95;
-  }
-}
-
 ::selection {
   background: var(--accent-soft);
+  color: var(--accent-ink);
 }
+

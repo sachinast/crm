@@ -85,46 +85,46 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
     <div className="space-y-4">
       {/* Create New Field Modal / Drawer Card */}
       {showNew && (
-        <div className="rounded-2xl border border-[#d3ab5e] bg-[#131a2b] p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between border-b border-[#232e47] pb-3">
-            <h2 className="text-sm font-bold text-white">
+        <div className="rounded-2xl border border-[var(--accent)] bg-[var(--surface-raised)] p-5 shadow-lg space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--hairline)] pb-3">
+            <h2 className="text-sm font-bold text-[var(--ink)]">
               Add New Custom Field for {ENTITY_TABS.find((t) => t.value === activeEntity)?.label}
             </h2>
             <button
               onClick={() => setShowNew(false)}
-              className="text-slate-400 hover:text-white"
+              className="text-[var(--ink-muted)] hover:text-[var(--ink)]"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Field Database Key</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Field Database Key</label>
               <input
                 placeholder="e.g. referral_source"
                 value={newField.key}
                 onChange={(e) => setNewField({ ...newField, key: e.target.value })}
-                className="input font-mono text-xs"
+                className="input font-mono text-sm"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Display Label</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Display Label</label>
               <input
                 placeholder="e.g. Referral Source"
                 value={newField.label}
                 onChange={(e) => setNewField({ ...newField, label: e.target.value })}
-                className="input text-xs font-medium"
+                className="input text-sm font-medium"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-300">Data Type</label>
+              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Data Type</label>
               <select
                 value={newField.field_type}
                 onChange={(e) => setNewField({ ...newField, field_type: e.target.value as FieldType })}
-                className="input text-xs"
+                className="input text-sm"
               >
                 {FIELD_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -135,13 +135,12 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
             </div>
 
             <div className="flex items-center pt-5">
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-200 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={newField.is_required}
                   onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })}
-                  className="h-4 w-4 rounded border-[#313f61] bg-[#0d1220]"
-                  style={{ accentColor: "#d3ab5e" }}
+                  className="h-4 w-4 rounded border-[var(--hairline-strong)] bg-surface text-accent focus:ring-accent accent-amber-500"
                 />
                 <span>Required field on intake</span>
               </label>
@@ -149,20 +148,20 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
 
             {newField.field_type === "select" && (
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold text-slate-300">Dropdown Options (comma separated)</label>
+                <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Dropdown Options (comma separated)</label>
                 <input
                   placeholder="e.g. Direct, Google, Referral, Affiliate"
                   value={newField.options}
                   onChange={(e) => setNewField({ ...newField, options: e.target.value })}
-                  className="input text-xs"
+                  className="input text-sm"
                 />
               </div>
             )}
           </div>
 
           {error && (
-            <p className="rounded-lg bg-[#34131c] px-3 py-1.5 text-xs font-medium text-[#ef7b93] border border-[#ef7b93]/30 flex items-center gap-1.5">
-              <AlertTriangle size={13} />
+            <p className="alert-danger">
+              <AlertTriangle size={15} />
               <span>{error}</span>
             </p>
           )}
@@ -171,11 +170,11 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
             <button
               onClick={handleCreate}
               disabled={saving || !newField.key.trim() || !newField.label.trim()}
-              className="btn-primary btn-sm text-xs"
+              className="btn-primary"
             >
               {saving ? "Creating…" : "Save Custom Field"}
             </button>
-            <button onClick={() => setShowNew(false)} className="btn-ghost btn-sm text-xs">
+            <button onClick={() => setShowNew(false)} className="btn-ghost">
               Cancel
             </button>
           </div>
@@ -194,10 +193,10 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
                   <button
                     key={tab.value}
                     onClick={() => setActiveEntity(tab.value)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                       isActive
-                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
-                        : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                        ? "bg-accent text-white font-bold shadow-xs"
+                        : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
                     }`}
                   >
                     {tab.label}
@@ -207,15 +206,15 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400 font-medium">
+              <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
                 {visibleFields.length} {visibleFields.length === 1 ? "field" : "fields"}
               </span>
 
               <button
                 onClick={() => setShowNew(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-3 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="btn-primary"
               >
-                <Plus size={13} strokeWidth={2.5} />
+                <Plus size={15} strokeWidth={2.5} />
                 <span>New Field</span>
               </button>
             </div>
@@ -224,69 +223,69 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
       >
         <table className="table-modern w-full">
           <thead>
-            <tr className="bg-[#182136]/30">
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Display Label
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Database Key
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Field Type
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Required
               </th>
-              <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#232e47]">
+          <tbody className="divide-y divide-[var(--hairline)]">
             {visibleFields.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-xs text-slate-400">
+                <td colSpan={5} className="py-12 text-center text-sm text-[var(--ink-muted)]">
                   No custom fields defined for {ENTITY_TABS.find((t) => t.value === activeEntity)?.label} yet.
                 </td>
               </tr>
             ) : (
               visibleFields.map((f) => (
-                <tr key={f.id} className="transition-colors hover:bg-[#182136]/60">
-                  <td className="px-4 py-3 font-semibold text-white">
+                <tr key={f.id} className="transition-colors hover:bg-[var(--surface-raised)]">
+                  <td className="px-4 py-3.5 font-semibold text-sm text-[var(--ink)]">
                     {f.label}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                  <td className="px-4 py-3.5 font-mono text-sm text-[var(--accent)] font-semibold">
                     {f.key}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-300">
-                    <span className="inline-flex items-center rounded-md border border-[#2a3652] bg-[#182136] px-2 py-0.5 font-mono text-[11px] uppercase font-semibold text-slate-300">
+                  <td className="px-4 py-3.5 text-sm text-[var(--ink-muted)]">
+                    <span className="inline-flex items-center rounded-lg border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-0.5 font-mono text-xs uppercase font-semibold text-[var(--ink)]">
                       {f.field_type}
                     </span>
                     {f.field_type === "select" && f.options && (
-                      <span className="ml-2 text-[11px] text-slate-400">
+                      <span className="ml-2 text-xs text-[var(--ink-faint)]">
                         ({f.options.join(", ")})
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <button
                       onClick={() => handleToggleRequired(f)}
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border transition-colors ${
                         f.is_required
-                          ? "bg-[#113028] text-[#3ecf9a] border-[#3ecf9a]/30"
-                          : "bg-[#232e47] text-slate-400 border-[#313f61]"
+                          ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200"
+                          : "bg-slate-800/50 text-slate-400 border-slate-700/50 [data-theme=light]:bg-slate-100 [data-theme=light]:text-slate-700 [data-theme=light]:border-slate-200"
                       }`}
                     >
                       {f.is_required ? "Required" : "Optional"}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3.5 text-right">
                     <button
                       onClick={() => handleDelete(f)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-[#34131c] hover:text-[#ef7b93] transition-colors"
+                      className="rounded-xl p-2 text-[var(--ink-muted)] hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
                       title="Delete field definition"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </td>
                 </tr>

@@ -70,10 +70,10 @@ export default function HeaderClocks() {
         <div className="flex items-center gap-3">
           {clocks.map((c) => (
             <div key={c.timezone} className="text-right">
-              <p className="text-xs font-medium leading-tight">
+              <p className="text-xs font-semibold leading-tight text-header-ink">
                 {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: c.timezone })}
               </p>
-              <p className="text-[10px] leading-tight" style={{ color: "var(--ink-faint)" }}>
+              <p className="text-[10px] leading-tight text-header-ink-muted">
                 {c.label}
               </p>
             </div>
@@ -82,10 +82,12 @@ export default function HeaderClocks() {
       )}
       <button
         onClick={toggle}
-        className="btn-ghost btn-sm px-1.5"
+        className={`flex h-8 w-8 items-center justify-center rounded-xl border border-header-hairline bg-sidebar-surface transition-colors ${
+          visible ? "text-accent border-accent/40" : "text-header-ink-muted hover:text-header-ink hover:bg-sidebar-surface-raised"
+        }`}
         title={visible ? "Hide world clocks" : "Show world clocks"}
       >
-        <Clock size={15} style={visible ? { color: "var(--accent)" } : undefined} />
+        <Clock size={15} />
       </button>
     </div>
   );

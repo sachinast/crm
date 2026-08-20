@@ -1,4 +1,4 @@
-import { Plus, Search, Car, Hotel, Plane, ChevronRight, User, Phone, Mail, Filter } from "lucide-react";
+import { Plus, Search, Car, Hotel, Plane, ChevronRight, User, Phone, Mail, Filter, Flame } from "lucide-react";
 import Link from "next/link";
 
 import { apiFetch } from "@/lib/api-client";
@@ -43,12 +43,12 @@ async function fetchLeads(params: SearchParams): Promise<LeadRow[]> {
 }
 
 function ServiceTypeBadge({ type }: { type: string | null }) {
-  if (!type) return <span className="text-slate-500">—</span>;
+  if (!type) return <span className="text-[var(--ink-faint)]">—</span>;
 
   if (type === "car") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-slate-200">
-        <Car size={13} className="text-[#d3ab5e]" />
+      <span className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)]">
+        <Car size={14} className="text-[var(--accent)]" />
         <span>Car Rental</span>
       </span>
     );
@@ -56,8 +56,8 @@ function ServiceTypeBadge({ type }: { type: string | null }) {
 
   if (type === "hotel") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-slate-200">
-        <Hotel size={13} className="text-[#d3ab5e]" />
+      <span className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)]">
+        <Hotel size={14} className="text-[var(--accent)]" />
         <span>Hotel</span>
       </span>
     );
@@ -65,14 +65,14 @@ function ServiceTypeBadge({ type }: { type: string | null }) {
 
   if (type === "flight") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-slate-200">
-        <Plane size={13} className="text-[#d3ab5e]" />
+      <span className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)]">
+        <Plane size={14} className="text-[var(--accent)]" />
         <span>Flight</span>
       </span>
     );
   }
 
-  return <span className="text-xs font-medium capitalize text-slate-300">{type}</span>;
+  return <span className="text-xs font-semibold capitalize text-[var(--ink-muted)]">{type}</span>;
 }
 
 export default async function LeadsPage({
@@ -101,9 +101,9 @@ export default async function LeadsPage({
         actions={
           <Link
             href="/leads/new"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-4 py-2 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="btn-primary flex items-center gap-1.5"
           >
-            <Plus size={15} strokeWidth={2.5} />
+            <Flame size={16} className="text-amber-300 fill-amber-400/30 animate-pulse" />
             <span>New Lead</span>
           </Link>
         }
@@ -116,43 +116,43 @@ export default async function LeadsPage({
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="relative min-w-[220px]">
                 <Search
-                  size={13}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={15}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
                 />
                 <input
                   name="email"
                   defaultValue={params.email}
                   placeholder="Filter by email address..."
-                  className="input w-full pl-8 text-xs"
+                  className="input w-full pl-9 text-sm"
                 />
               </div>
 
               <div className="relative min-w-[200px]">
                 <Search
-                  size={13}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={15}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
                 />
                 <input
                   name="mobile"
                   defaultValue={params.mobile}
                   placeholder="Filter by mobile number..."
-                  className="input w-full pl-8 text-xs"
+                  className="input w-full pl-9 text-sm"
                 />
               </div>
 
-              <button type="submit" className="btn-secondary btn-sm flex items-center gap-1.5 text-xs">
-                <Filter size={12} />
+              <button type="submit" className="btn-secondary btn-sm flex items-center gap-1.5">
+                <Filter size={13} />
                 <span>Apply Filters</span>
               </button>
 
               {(params.email || params.mobile) && (
-                <Link href="/leads" className="btn-ghost btn-sm text-xs">
+                <Link href="/leads" className="btn-ghost btn-sm">
                   Clear Filters
                 </Link>
               )}
             </div>
 
-            <div className="text-xs text-slate-400 font-medium">
+            <div className="text-sm text-[var(--ink-muted)] font-medium">
               {leads.length} total leads
             </div>
           </form>
@@ -170,93 +170,116 @@ export default async function LeadsPage({
       >
         <table className="table-modern w-full">
           <thead>
-            <tr className="bg-[#182136]/30">
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Customer Name
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Contact Details
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Service Type
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Workflow Status
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Intake Date
               </th>
-              <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
                 Action
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#232e47]">
+          <tbody className="divide-y divide-[var(--hairline)]">
             {pagedLeads.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-14 text-center">
                   <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#232e47] bg-[#182136] text-slate-400">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] text-[var(--ink-muted)]">
                       <Search size={20} />
                     </div>
-                    <p className="text-sm font-semibold text-white">No matching leads found</p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="text-sm font-semibold text-[var(--ink)]">No matching leads found</p>
+                    <p className="mt-1 text-xs text-[var(--ink-muted)]">
                       Try adjusting your search criteria or create a new lead intake record.
                     </p>
                   </div>
                 </td>
               </tr>
             ) : (
-              pagedLeads.map((lead) => (
-                <tr key={lead.id} className="transition-colors hover:bg-[#182136]/60">
-                  {/* Customer Name & Duplicate Pill */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#2a3652] bg-[#182136] text-xs font-bold text-white">
-                        {lead.name ? lead.name[0]?.toUpperCase() : "?"}
+              pagedLeads.map((lead) => {
+                const isHot =
+                  lead.status.toLowerCase() === "new" ||
+                  lead.status.toLowerCase() === "authorization_pending" ||
+                  lead.status.toLowerCase() === "pending";
+
+                return (
+                  <tr key={lead.id} className="transition-colors hover:bg-surface-raised">
+                    {/* Customer Name & Duplicate Pill */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-sm font-bold ${
+                            isHot
+                              ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                              : "border-hairline bg-surface-raised text-ink"
+                          }`}
+                        >
+                          {lead.name ? lead.name[0]?.toUpperCase() : "?"}
+                          {isHot && (
+                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs">
+                              <Flame size={9} className="fill-white" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-sm text-ink">{lead.name || "Unnamed Lead"}</span>
+                          {/* {isHot && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 shadow-xs">
+                              <Flame size={12} className="fill-amber-500 text-amber-500 animate-pulse shrink-0" />
+                              <span>HOT</span>
+                            </span>
+                          )} */}
+                          {lead.is_duplicate && (
+                            <span className="inline-flex items-center rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-danger">
+                              Duplicate
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-semibold text-white">{lead.name || "Unnamed Lead"}</span>
-                        {lead.is_duplicate && (
-                          <span className="ml-2 inline-flex items-center rounded-full border border-[#ef7b93]/30 bg-[#34131c] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#ef7b93]">
-                            Duplicate
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
+                    </td>
 
                   {/* Contact Details */}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-0.5 text-xs">
+                  <td className="px-4 py-3.5">
+                    <div className="flex flex-col gap-0.5 text-sm">
                       {lead.phone && (
-                        <span className="font-mono text-slate-300">
+                        <span className="font-mono text-sm text-[var(--ink)]">
                           {lead.phone}
                         </span>
                       )}
                       {lead.email && (
-                        <span className="font-mono text-xs text-slate-400">
+                        <span className="font-mono text-xs text-[var(--ink-muted)]">
                           {lead.email}
                         </span>
                       )}
                       {!lead.phone && !lead.email && (
-                        <span className="text-slate-500">—</span>
+                        <span className="text-[var(--ink-faint)]">—</span>
                       )}
                     </div>
                   </td>
 
                   {/* Service Type */}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <ServiceTypeBadge type={lead.service_type} />
                   </td>
 
                   {/* Workflow Status */}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <StatusBadge status={lead.status} />
                   </td>
 
                   {/* Created At */}
-                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                  <td className="px-4 py-3.5 font-mono text-sm text-[var(--ink-muted)]">
                     {new Date(lead.created_at).toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
@@ -265,18 +288,19 @@ export default async function LeadsPage({
                   </td>
 
                   {/* Action Link */}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3.5 text-right">
                     <Link
                       href={`/leads/${lead.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#2a3652] bg-[#182136] px-2.5 py-1 text-xs font-semibold text-[#d3ab5e] transition-colors hover:border-[#d3ab5e] hover:bg-[#1f2b47]"
+                      className="inline-flex items-center gap-1 rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-colors hover:border-[var(--accent)] hover:bg-[var(--surface)]"
                     >
                       <span>Workspace</span>
                       <ChevronRight size={13} />
                     </Link>
                   </td>
                 </tr>
-              ))
-            )}
+              );
+            })
+          )}
           </tbody>
         </table>
       </DataTableCard>

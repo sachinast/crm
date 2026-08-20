@@ -26,16 +26,15 @@ export default function FloatingChatWidget({ currentUserId }: { currentUserId: s
     <>
       {open && (
         <div
-          className="card fixed bottom-24 right-6 z-40 flex h-[32rem] w-[380px] flex-col overflow-hidden p-0"
-          style={{ boxShadow: "var(--shadow-card-hover)" }}
+          className="card fixed bottom-24 right-6 z-40 flex h-[32rem] w-[380px] flex-col overflow-hidden p-0 shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: "var(--hairline)" }}>
-            <span className="flex items-center gap-1.5 text-sm font-semibold">
-              <MessageCircle size={15} style={{ color: "var(--accent)" }} />
+          <div className="flex items-center justify-between border-b border-hairline px-4 py-3 bg-surface-raised">
+            <span className="flex items-center gap-2 text-sm font-bold text-ink">
+              <MessageCircle size={16} className="text-accent" />
               Messages
             </span>
-            <button onClick={() => setOpen(false)} className="btn-ghost btn-sm px-1.5" title="Close">
-              <X size={15} />
+            <button onClick={() => setOpen(false)} className="btn-ghost btn-sm px-2 text-ink-muted" title="Close">
+              <X size={16} />
             </button>
           </div>
           <div className="min-h-0 flex-1">
@@ -46,15 +45,13 @@ export default function FloatingChatWidget({ currentUserId }: { currentUserId: s
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full transition-transform hover:scale-105"
-        style={{ background: "var(--accent)", color: "#fff", boxShadow: "var(--shadow-card-hover)" }}
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white font-bold shadow-xl transition-transform hover:scale-105 active:scale-95"
         title={open ? "Close chat" : "Open chat"}
       >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
+        {open ? <X size={24} /> : <MessageCircle size={24} />}
         {!open && unread > 0 && (
           <span
-            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold text-white"
-            style={{ background: "var(--danger)", border: "2px solid var(--background)" }}
+            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white bg-danger border-2 border-surface"
           >
             {unread > 9 ? "9+" : unread}
           </span>

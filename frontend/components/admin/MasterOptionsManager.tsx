@@ -20,6 +20,7 @@ const FIELDS: { value: MasterFieldKey; label: string }[] = [
   { value: "car_provider", label: "Car Provider" },
   { value: "vehicle_type", label: "Vehicle Type" },
   { value: "transmission", label: "Transmission" },
+  { value: "fuel_policy", label: "Fuel Policy" },
 ];
 
 export default function MasterOptionsManager({ initialOptions }: { initialOptions: MasterOption[] }) {
@@ -72,10 +73,10 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
                   <button
                     key={f.value}
                     onClick={() => setActive(f.value)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                       isActive
-                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
-                        : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                        ? "bg-accent text-white font-bold shadow-xs"
+                        : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
                     }`}
                   >
                     {f.label}
@@ -84,14 +85,14 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
               })}
             </div>
 
-            <div className="text-xs text-slate-400 font-medium">
+            <div className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
               {visible.length} {visible.length === 1 ? "option" : "options"}
             </div>
           </div>
         }
       >
         {/* Quick Add Toolbar */}
-        <div className="p-3.5 bg-[#182136]/20 border-b border-[#232e47]">
+        <div className="p-3.5 bg-surface-raised/40 border-b border-hairline">
           <div className="flex items-center gap-2 max-w-md">
             <input
               value={newValue}
@@ -103,16 +104,16 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
             <button
               onClick={handleAdd}
               disabled={saving || !newValue.trim()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 shrink-0"
+              className="btn-primary btn-sm shrink-0"
             >
-              <Plus size={13} strokeWidth={2.5} />
+              <Plus size={14} strokeWidth={2.5} />
               <span>Add</span>
             </button>
           </div>
 
           {error && (
-            <p className="mt-2 text-xs text-[#ef7b93] flex items-center gap-1">
-              <AlertTriangle size={12} />
+            <p className="mt-2 alert-danger flex items-center gap-1.5">
+              <AlertTriangle size={13} />
               <span>{error}</span>
             </p>
           )}
@@ -120,38 +121,38 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
 
         <table className="table-modern w-full">
           <thead>
-            <tr className="bg-[#182136]/30">
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Option Display Value
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Category Master
               </th>
-              <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Action
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#232e47]">
+          <tbody className="divide-y divide-hairline">
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={3} className="py-12 text-center text-xs text-slate-400">
+                <td colSpan={3} className="py-12 text-center text-sm text-ink-muted">
                   No dropdown values defined for this category yet.
                 </td>
               </tr>
             ) : (
               visible.map((opt) => (
-                <tr key={opt.id} className="transition-colors hover:bg-[#182136]/60">
-                  <td className="px-4 py-3 font-semibold text-white">
+                <tr key={opt.id} className="transition-colors hover:bg-surface-raised">
+                  <td className="px-4 py-3 font-semibold text-sm text-ink">
                     {opt.value}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                  <td className="px-4 py-3 font-mono text-xs text-accent">
                     {opt.field_key}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleDelete(opt.id)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-[#34131c] hover:text-[#ef7b93] transition-colors"
+                      className="rounded-xl p-1.5 text-ink-faint hover:bg-rose-500/10 hover:text-danger transition-colors"
                       title="Delete option"
                     >
                       <Trash2 size={14} />

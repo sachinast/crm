@@ -2,7 +2,7 @@
 
 export type MasterFieldKey =
   | "booking_platform" | "airline" | "cabin_class" | "hotel_name" | "room_type"
-  | "car_provider" | "vehicle_type" | "transmission";
+  | "car_provider" | "vehicle_type" | "transmission" | "fuel_policy";
 
 export interface MasterOption {
   id: string;

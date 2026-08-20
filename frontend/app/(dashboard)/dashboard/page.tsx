@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   Sparkles,
   ChevronRight,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -104,27 +105,27 @@ export default async function DashboardPage() {
         title={`Welcome back, ${user.name.split(" ")[0]}`}
         subtitle={`Operational intelligence and pipeline analytics for your ${roleName} workspace.`}
         badge={
-          <span className="inline-flex items-center gap-1 text-[#d3ab5e]">
-            <Sparkles size={11} />
+          <span className="inline-flex items-center gap-1 text-accent font-semibold">
+            <Sparkles size={13} />
             <span className="capitalize">{roleName}</span>
           </span>
         }
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Overview" }]}
         icon={<LayoutDashboard size={18} />}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Link
               href="/leads"
-              className="inline-flex items-center gap-1 rounded-xl border border-[#2a3652] bg-[#182136] px-3.5 py-2 text-xs font-semibold text-slate-300 transition-colors hover:border-[#d3ab5e] hover:text-white"
+              className="btn-secondary"
             >
               <span>View All Leads</span>
-              <ChevronRight size={13} />
+              <ChevronRight size={14} />
             </Link>
             <Link
               href="/leads/new"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-4 py-2 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="btn-primary flex items-center gap-1.5"
             >
-              <Plus size={15} strokeWidth={2.5} />
+              <Flame size={16} className="text-amber-300 fill-amber-400/30 animate-pulse" />
               <span>New Lead</span>
             </Link>
           </div>
@@ -134,81 +135,81 @@ export default async function DashboardPage() {
       {/* Top Row: 4 Practical Enterprise KPI Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total Realized Revenue */}
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-2 relative overflow-hidden">
+        <div className="card flex flex-col justify-between p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
               Total Realized Revenue
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3652] bg-[#182136] text-[#d3ab5e]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-soft text-accent border border-accent/20">
               <Banknote size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl font-extrabold text-white font-mono tracking-tight">
+            <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
               {currency(revenueDisplay)}
             </p>
-            <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#3ecf9a]">
-              <TrendingUp size={12} />
+            <p className="mt-1 flex items-center gap-1 text-xs font-bold text-success">
+              <TrendingUp size={13} />
               <span>+18.4% vs last month</span>
             </p>
           </div>
         </div>
 
         {/* Card 2: Active Pipeline & Lead Volume */}
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-2 relative overflow-hidden">
+        <div className="card flex flex-col justify-between p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
               Active Lead Pipeline
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3652] bg-[#182136] text-[#3ecf9a]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
               <Users size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl font-extrabold text-white font-mono tracking-tight">
-              {summary.total_visible_leads} <span className="text-sm font-normal text-slate-400">leads</span>
+            <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
+              {summary.total_visible_leads} <span className="text-sm font-normal text-ink-muted">leads</span>
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              <span className="font-bold text-[#d3ab5e]">36%</span> overall conversion win rate
+            <p className="mt-1 text-xs text-ink-muted">
+              <span className="font-bold text-accent">36%</span> overall conversion win rate
             </p>
           </div>
         </div>
 
         {/* Card 3: Action Center Queue */}
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-2 relative overflow-hidden">
+        <div className="card flex flex-col justify-between p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
               Action Items Required
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#ef7b93]/30 bg-[#34131c] text-[#ef7b93]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
               <ShieldCheck size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl font-extrabold text-white font-mono tracking-tight">
-              {activePendingActionCount} <span className="text-sm font-normal text-slate-400">pending</span>
+            <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
+              {activePendingActionCount} <span className="text-sm font-normal text-ink-muted">pending</span>
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-xs text-ink-muted">
               {summary.pending_qc_count ?? 0} QC review • {summary.pending_payment_count ?? 0} payment
             </p>
           </div>
         </div>
 
         {/* Card 4: Individual / Team Realization */}
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm space-y-2 relative overflow-hidden">
+        <div className="card flex flex-col justify-between p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
               {user.role === "agent" ? "My Realized Volume" : "Average Order Value"}
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3652] bg-[#182136] text-[#6366f1]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
               <Wallet size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl font-extrabold text-white font-mono tracking-tight">
+            <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
               {user.role === "agent" ? currency(myRevenueDisplay) : "$1,420.00"}
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-xs text-ink-muted">
               Across flight, hotel & cab verticals
             </p>
           </div>
@@ -234,74 +235,100 @@ export default async function DashboardPage() {
         <div className="lg:col-span-7">
           <DataTableCard
             headerContent={
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between w-full">
                 <div>
-                  <h3 className="text-sm font-bold text-white">Recent Active Pipeline</h3>
-                  <p className="text-[11px] text-slate-400">Latest customer intakes and status mutations.</p>
+                  <h3 className="text-sm font-bold text-ink">Recent Active Pipeline</h3>
+                  <p className="text-xs text-ink-muted">Latest customer intakes and status mutations.</p>
                 </div>
                 <Link
                   href="/leads"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#d3ab5e] hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
                 >
                   <span>Open Full Queue</span>
-                  <ChevronRight size={13} />
+                  <ChevronRight size={14} />
                 </Link>
               </div>
             }
           >
             <table className="table-modern w-full">
               <thead>
-                <tr className="bg-[#182136]/30">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Customer Name
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Contact
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                     Action
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#232e47]">
+              <tbody className="divide-y divide-hairline">
                 {summary.recent_leads.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
+                    <td colSpan={4} className="py-12 text-center text-sm text-ink-muted">
                       No recent leads found.
                     </td>
                   </tr>
                 ) : (
-                  summary.recent_leads.map((lead) => (
-                    <tr key={lead.id} className="transition-colors hover:bg-[#182136]/60">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#2a3652] bg-[#182136] text-xs font-bold text-white">
-                            {lead.name ? lead.name[0]?.toUpperCase() : "?"}
+                  summary.recent_leads.map((lead) => {
+                    const isHot =
+                      lead.status.toLowerCase() === "new" ||
+                      lead.status.toLowerCase() === "authorization_pending" ||
+                      lead.status.toLowerCase() === "pending";
+
+                    return (
+                      <tr key={lead.id} className="transition-colors hover:bg-surface-raised">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${
+                                isHot
+                                  ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                  : "border-hairline bg-surface-raised text-ink"
+                              }`}
+                            >
+                              {lead.name ? lead.name[0]?.toUpperCase() : "?"}
+                              {isHot && (
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs">
+                                  <Flame size={8} className="fill-white" />
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-sm text-ink">{lead.name || "Unnamed Lead"}</span>
+                              {isHot && (
+                                <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 shadow-xs">
+                                  <Flame size={11} className="fill-amber-500 text-amber-500 animate-pulse shrink-0" />
+                                  <span>HOT</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <span className="font-semibold text-white">{lead.name || "Unnamed Lead"}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                        </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
                         {lead.email || lead.phone || "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <StatusBadge status={lead.status} />
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         <Link
                           href={`/leads/${lead.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[#2a3652] bg-[#182136] px-2 py-1 text-[11px] font-semibold text-[#d3ab5e] transition-colors hover:border-[#d3ab5e]"
+                          className="btn-secondary btn-sm"
                         >
                           <span>Open</span>
-                          <ChevronRight size={11} />
+                          <ChevronRight size={13} />
                         </Link>
                       </td>
                     </tr>
-                  ))
-                )}
+                  );
+                })
+              )}
               </tbody>
             </table>
           </DataTableCard>

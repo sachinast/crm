@@ -30,6 +30,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import LoginModal from "@/components/auth/LoginModal";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 interface LandingProps {
   isBackendHealthy: boolean;
@@ -90,16 +91,18 @@ export default function LandingView({
             </a>
           </nav>
 
-          {/* Right Action Bar & Health Status */}
+          {/* Right Action Bar & Health Status & Theme Switcher */}
           <div className="flex items-center gap-3">
+            {/* Theme Switcher */}
+            <ThemeToggle />
+
             {/* Live Health Badge */}
             <div
-              className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-md"
-              style={{
-                background: isBackendHealthy ? "var(--success-soft)" : "var(--danger-soft)",
-                borderColor: isBackendHealthy ? "rgba(15,122,92,0.25)" : "rgba(184,66,91,0.25)",
-                color: isBackendHealthy ? "var(--success)" : "var(--danger)",
-              }}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md ${
+                isBackendHealthy
+                  ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200"
+                  : "bg-rose-950/40 text-rose-400 border-rose-800/40 [data-theme=light]:bg-rose-50 [data-theme=light]:text-rose-700 [data-theme=light]:border-rose-200"
+              }`}
             >
               <span className="relative flex h-2 w-2">
                 {isBackendHealthy && (

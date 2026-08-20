@@ -67,37 +67,36 @@ export default function AuthorizeForm({ leadId }: { leadId: string }) {
 
   if (done) {
     return (
-      <div className="card flex items-start gap-3 text-sm" style={{ background: "var(--success-soft)", borderColor: "var(--success)" }}>
-        <CheckCircle2 size={20} className="mt-0.5 shrink-0" style={{ color: "var(--success)" }} />
+      <div className="card flex items-start gap-3 text-sm alert-success">
+        <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-success" />
         <div>
-          <p className="font-medium" style={{ color: "var(--success)" }}>Thank you — your booking is confirmed.</p>
-          <p className="mt-1" style={{ color: "var(--ink-muted)" }}>Our team will process your payment shortly.</p>
+          <p className="font-semibold text-emerald-400">Thank you — your booking is confirmed.</p>
+          <p className="mt-1 text-ink-muted">Our team will process your payment shortly.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card flex flex-col gap-3 text-sm">
+    <form onSubmit={handleSubmit} className="card flex flex-col gap-3.5 text-sm">
       <h2 className="section-label">Authorization &amp; consent</h2>
       {CONSENT_ITEMS.map((item) => (
-        <label key={item.key} className="flex items-start gap-2.5">
+        <label key={item.key} className="flex items-start gap-2.5 text-ink cursor-pointer">
           <input
             type="checkbox"
             checked={consent[item.key]}
             onChange={(e) => setConsent({ ...consent, [item.key]: e.target.checked })}
-            className="mt-0.5"
-            style={{ accentColor: "var(--accent)" }}
+            className="mt-0.5 h-4 w-4 rounded accent-amber-500"
           />
           <span>{item.label}</span>
         </label>
       ))}
-      <label className="flex items-start gap-2.5 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
-        <span style={{ color: "var(--ink-muted)" }}>By clicking below, I agree to all terms and conditions of this booking.</span>
+      <label className="flex items-start gap-2.5 pt-3 border-t border-hairline">
+        <span className="text-xs text-ink-muted">By clicking below, I agree to all terms and conditions of this booking.</span>
       </label>
 
       {error && (
-        <p className="rounded-lg px-3 py-2" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="alert-danger">
           {error}
         </p>
       )}

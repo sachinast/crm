@@ -10,8 +10,8 @@ export default function Field({
   className?: string;
 }) {
   return (
-    <label className={`block text-xs font-semibold text-slate-200 dark:text-slate-100 ${className}`}>
-      <span className="block mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-300 dark:text-slate-200">
+    <label className={`block text-sm font-medium text-[var(--ink)] ${className}`}>
+      <span className="block mb-1.5 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
         {label}
       </span>
       {children}

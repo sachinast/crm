@@ -108,7 +108,7 @@ export default function ModificationsPanel({
             className="input col-span-2"
           />
           {error && (
-            <p className="col-span-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+            <p className="col-span-2 alert-danger">
               {error}
             </p>
           )}
@@ -119,15 +119,15 @@ export default function ModificationsPanel({
       )}
 
       {history.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--ink-faint)" }}>No modifications recorded.</p>
+        <p className="text-sm text-ink-faint">No modifications recorded.</p>
       ) : (
-        <ul className="flex flex-col gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+        <ul className="flex flex-col gap-2.5 text-sm text-ink-muted">
           {history.map((m) => (
             <li key={m.id}>
-              <strong style={{ color: "var(--ink)" }}>{m.field_name}</strong>: {String(m.original_value)} → {String(m.revised_value)}
+              <strong className="text-ink font-semibold">{m.field_name}</strong>: {String(m.original_value)} → {String(m.revised_value)}
               {m.modification_amount !== 0 && ` (${m.modification_amount > 0 ? "+" : ""}$${m.modification_amount.toFixed(2)})`}
               {" · "}
-              {new Date(m.created_at).toLocaleString()}
+              <span className="text-xs text-ink-faint">{new Date(m.created_at).toLocaleString()}</span>
             </li>
           ))}
         </ul>

@@ -203,7 +203,7 @@ export default function Composer({
   const canSend = (body.trim().length > 0 || attachments.some((a) => a.status === "ready")) && !attachments.some((a) => a.status === "uploading");
 
   return (
-    <div className="border-t px-4 py-3" style={{ borderColor: "var(--hairline)" }}>
+    <div className="border-t border-hairline px-4 py-3 bg-surface">
       <div className="mb-2 flex flex-wrap gap-1.5">
         {quickReplies.map((reply) => (
           <button
@@ -220,22 +220,22 @@ export default function Composer({
       {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {attachments.map((a) => (
-            <div key={a.localId} className="card-flat relative flex items-center gap-2 py-1.5 pl-2 pr-6 text-xs">
+            <div key={a.localId} className="card-flat relative flex items-center gap-2 py-1.5 pl-2 pr-6 text-xs bg-surface-raised">
               {a.previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={a.previewUrl} alt={a.file.name} className="h-8 w-8 rounded object-cover" />
               ) : (
-                <FileText size={16} style={{ color: "var(--accent)" }} />
+                <FileText size={16} className="text-accent" />
               )}
-              <span className="max-w-32 truncate">{a.file.name}</span>
-              {a.status === "uploading" && <span style={{ color: "var(--ink-faint)" }}>{a.progress}%</span>}
+              <span className="max-w-32 truncate text-ink font-medium">{a.file.name}</span>
+              {a.status === "uploading" && <span className="text-ink-faint">{a.progress}%</span>}
               {a.status === "failed" && (
-                <span className="flex items-center gap-0.5" style={{ color: "var(--danger)" }}>
+                <span className="flex items-center gap-0.5 text-danger font-semibold">
                   <AlertTriangle size={11} /> {a.error}
                 </span>
               )}
-              <button onClick={() => removeAttachment(a.localId)} className="absolute right-1 top-1.5">
-                <X size={12} style={{ color: "var(--ink-faint)" }} />
+              <button onClick={() => removeAttachment(a.localId)} className="absolute right-1 top-1.5 text-ink-faint hover:text-ink">
+                <X size={13} />
               </button>
             </div>
           ))}
@@ -243,29 +243,27 @@ export default function Composer({
       )}
 
       {mentionQuery !== null && mentionResults.length > 0 && (
-        <div className="card-flat mb-2 max-h-40 overflow-y-auto p-1">
+        <div className="card-flat mb-2 max-h-40 overflow-y-auto p-1 bg-surface-raised border border-hairline">
           {mentionResults.map((u) => (
             <button
               key={u.id}
               onClick={() => pickMention(u)}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:opacity-80"
-              style={{ background: "transparent" }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent-soft text-ink"
               onMouseDown={(e) => e.preventDefault()}
             >
               <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
-                style={{ background: "var(--navy-soft)", color: "var(--accent)" }}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold bg-surface text-accent border border-hairline"
               >
                 {u.name.slice(0, 2).toUpperCase()}
               </span>
-              {u.name}
+              <span className="font-semibold">{u.name}</span>
             </button>
           ))}
         </div>
       )}
 
       {error && (
-        <p className="mb-2 rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="mb-2 alert-danger">
           {error}
         </p>
       )}
@@ -282,17 +280,16 @@ export default function Composer({
             e.target.value = "";
           }}
         />
-        <button onClick={() => fileInputRef.current?.click()} className="btn-ghost btn-sm px-2" title="Attach file">
-          <Paperclip size={16} />
+        <button onClick={() => fileInputRef.current?.click()} className="btn-ghost btn-sm px-2 text-ink-muted hover:text-ink" title="Attach file">
+          <Paperclip size={18} />
         </button>
 
         <button
           onClick={() => setQuickResponse((v) => !v)}
-          className="btn-ghost btn-sm px-2"
+          className={`btn-ghost btn-sm px-2 ${quickResponse ? "bg-amber-950/40 text-amber-400 border border-amber-500/30" : "text-ink-muted hover:text-ink"}`}
           title="Mark as quick response"
-          style={quickResponse ? { background: "var(--warning-soft)", color: "var(--warning)" } : undefined}
         >
-          <Zap size={16} />
+          <Zap size={18} />
         </button>
 
         <textarea
@@ -302,19 +299,18 @@ export default function Composer({
           onKeyDown={handleKeyDown}
           placeholder="Type a message… use @ to mention someone"
           rows={1}
-          className="input flex-1 resize-none"
-          style={{ maxHeight: 120 }}
+          className="input flex-1 resize-none max-h-28 text-sm"
         />
 
         <div className="relative">
-          <button onClick={() => setShowEmoji((v) => !v)} className="btn-ghost btn-sm px-2" title="Emoji">
-            <Smile size={16} />
+          <button onClick={() => setShowEmoji((v) => !v)} className="btn-ghost btn-sm px-2 text-ink-muted hover:text-ink" title="Emoji">
+            <Smile size={18} />
           </button>
           {showEmoji && <EmojiPicker onPick={insertEmoji} onClose={() => setShowEmoji(false)} />}
         </div>
 
         <button onClick={() => doSend()} disabled={!canSend || sending} className="btn-primary btn-sm px-3">
-          <Send size={15} />
+          <Send size={16} />
         </button>
       </div>
     </div>

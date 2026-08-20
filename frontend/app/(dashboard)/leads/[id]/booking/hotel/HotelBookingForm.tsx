@@ -51,7 +51,7 @@ export default function HotelBookingForm({
       <HotelBookingFields value={form} onChange={setForm} />
 
       {error && (
-        <p className="col-span-2 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+        <p className="col-span-2 alert-danger">
           {error}
         </p>
       )}

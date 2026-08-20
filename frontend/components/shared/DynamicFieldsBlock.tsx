@@ -43,10 +43,12 @@ export default function DynamicFieldsBlock({
   return (
     <>
       {definitions.map((def) => (
-        <label key={def.id} className="text-sm font-medium">
-          {def.label}
-          {def.is_required && <span style={{ color: "var(--danger)" }}> *</span>}
-          <div className="mt-1.5">
+        <label key={def.id} className="block text-sm font-medium text-[var(--ink)]">
+          <span className="block mb-1.5 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            {def.label}
+            {def.is_required && <span className="text-danger"> *</span>}
+          </span>
+          <div>
             {def.field_type === "text" && (
               <input
                 required={def.is_required}
@@ -61,7 +63,7 @@ export default function DynamicFieldsBlock({
                 type="number"
                 value={(value[def.key] as number) ?? ""}
                 onChange={(e) => setField(def.key, e.target.value === "" ? "" : Number(e.target.value))}
-                className="input"
+                className="input font-mono"
               />
             )}
             {def.field_type === "date" && (
@@ -71,7 +73,7 @@ export default function DynamicFieldsBlock({
                 value={(value[def.key] as string) ?? ""}
                 onClick={(e) => e.currentTarget.showPicker?.()}
                 onChange={(e) => setField(def.key, e.target.value)}
-                className="input"
+                className="input font-mono"
               />
             )}
             {def.field_type === "select" && (
@@ -96,7 +98,7 @@ export default function DynamicFieldsBlock({
                 type="checkbox"
                 checked={Boolean(value[def.key])}
                 onChange={(e) => setField(def.key, e.target.checked)}
-                style={{ accentColor: "var(--accent)" }}
+                className="h-4 w-4 rounded text-accent focus:ring-accent accent-amber-500"
               />
             )}
           </div>

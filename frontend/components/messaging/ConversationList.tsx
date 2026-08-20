@@ -61,29 +61,28 @@ export default function ConversationList({
 
   return (
     <div
-      className={compact ? "flex h-full w-full flex-col" : "flex h-full w-72 shrink-0 flex-col border-r"}
-      style={compact ? undefined : { borderColor: "var(--hairline)" }}
+      className={compact ? "flex h-full w-full flex-col" : "flex h-full w-72 shrink-0 flex-col border-r border-hairline"}
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-4">
-        <h1 className="text-lg font-semibold tracking-tight">Messages</h1>
+      <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-hairline">
+        <h1 className="text-lg font-bold tracking-tight text-ink">Messages</h1>
         <button onClick={onNewConversation} className="btn-primary btn-sm px-2.5" title="New conversation">
-          <Plus size={15} strokeWidth={2.5} />
+          <Plus size={16} strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="relative px-3 pb-3">
-        <Search size={13} className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2" style={{ color: "var(--ink-faint)" }} />
+      <div className="relative px-3 py-3 border-b border-hairline bg-surface-sunken">
+        <Search size={15} className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-ink-muted" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search conversations"
-          className="input pl-8 text-sm"
+          className="input pl-9 text-sm"
         />
       </div>
 
-      <ul className="flex-1 overflow-y-auto scrollbar-thin px-2 pb-3">
+      <ul className="flex-1 overflow-y-auto scrollbar-thin px-2 py-3 space-y-1">
         {filtered.length === 0 && (
-          <li className="px-3 py-8 text-center text-xs" style={{ color: "var(--ink-faint)" }}>
+          <li className="px-3 py-8 text-center text-sm text-ink-faint">
             {conversations.length === 0 ? "No conversations yet — start one." : "No matches."}
           </li>
         )}
@@ -101,32 +100,31 @@ export default function ConversationList({
             <li key={c.id}>
               <button
                 onClick={() => onSelect(c.id)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left transition-colors"
-                style={{ background: isActive ? "var(--accent-soft)" : "transparent" }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                  isActive ? "bg-accent-soft text-ink font-semibold" : "hover:bg-surface-raised text-ink"
+                }`}
               >
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                  style={{ background: "var(--navy-soft)", color: "var(--accent)" }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold bg-surface-raised text-accent border border-hairline"
                 >
                   {initials(title)}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-1">
-                    <span className="truncate text-sm font-medium">{title}</span>
+                    <span className="truncate text-sm font-semibold text-ink">{title}</span>
                     {c.last_message && (
-                      <span className="shrink-0 text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                      <span className="shrink-0 text-xs text-ink-faint">
                         {relativeTime(c.last_message.created_at)}
                       </span>
                     )}
                   </span>
-                  <span className="flex items-center justify-between gap-1">
-                    <span className="truncate text-xs" style={{ color: "var(--ink-muted)" }}>
+                  <span className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="truncate text-xs text-ink-muted">
                       {preview}
                     </span>
                     {c.unread_count > 0 && (
                       <span
-                        className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white"
-                        style={{ background: "var(--accent)" }}
+                        className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-bold text-white bg-accent shadow-xs"
                       >
                         {c.unread_count > 9 ? "9+" : c.unread_count}
                       </span>

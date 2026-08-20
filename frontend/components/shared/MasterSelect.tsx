@@ -12,16 +12,17 @@ import { fetchMasterOptions, type MasterFieldKey } from "@/lib/master-options-ap
  * instance isn't blocked before an admin populates any masters. */
 export default function MasterSelect({
   fieldKey,
-  value,
+  value = "",
   onChange,
   required = true,
 }: {
   fieldKey: MasterFieldKey;
-  value: string;
+  value?: string | null;
   onChange: (value: string) => void;
   required?: boolean;
 }) {
   const [options, setOptions] = useState<string[] | null>(null);
+  const safeValue = value ?? "";
 
   useEffect(() => {
     let cancelled = false;
@@ -34,14 +35,20 @@ export default function MasterSelect({
   }, [fieldKey]);
 
   if (options === null) {
-    return <input disabled className="input" placeholder="Loading…" />;
+    return (
+      <select disabled value="" className="input opacity-60 cursor-wait">
+        <option value="" disabled>
+          Loading options…
+        </option>
+      </select>
+    );
   }
 
   if (options.length === 0) {
     return (
       <input
         required={required}
-        value={value}
+        value={safeValue}
         onChange={(e) => onChange(e.target.value)}
         className="input"
         placeholder="No masters defined yet — Admin > Masters"
@@ -50,7 +57,7 @@ export default function MasterSelect({
   }
 
   return (
-    <select required={required} value={value} onChange={(e) => onChange(e.target.value)} className="input">
+    <select required={required} value={safeValue} onChange={(e) => onChange(e.target.value)} className="input">
       <option value="" disabled>
         Select…
       </option>

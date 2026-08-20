@@ -15,10 +15,10 @@ export default function DataTableCard({
 }: DataTableCardProps) {
   return (
     <div
-      className={`rounded-2xl border border-[#232e47] bg-[#131a2b] shadow-sm overflow-hidden ${className}`}
+      className={`card p-0 overflow-hidden ${className}`}
     >
       {headerContent && (
-        <div className="border-b border-[#232e47] bg-[#182136]/50 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="border-b border-[var(--hairline)] bg-[var(--surface-raised)] p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
           {headerContent}
         </div>
       )}
@@ -28,7 +28,7 @@ export default function DataTableCard({
       </div>
 
       {footerContent && (
-        <div className="border-t border-[#232e47] bg-[#182136]/30 px-4 py-3 text-xs text-slate-400">
+        <div className="border-t border-[var(--hairline)] bg-[var(--surface-raised)] px-4 py-3 text-sm text-[var(--ink-muted)]">
           {footerContent}
         </div>
       )}

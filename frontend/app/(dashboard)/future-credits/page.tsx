@@ -53,7 +53,7 @@ export default async function FutureCreditsPage({
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Future Credits" }]}
           icon={<Gift size={18} />}
         />
-        <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-6 text-sm text-slate-400">
+        <div className="card p-6 text-sm text-ink-muted">
           Your role does not have access to future credits.
         </div>
       </div>
@@ -78,11 +78,13 @@ export default async function FutureCreditsPage({
         {/* Create Future Credit Card */}
         {canCreate && (
           <div className="lg:col-span-5">
-            <div className="rounded-2xl border border-[#232e47] bg-[#131a2b] p-5 shadow-sm">
-              <h2 className="mb-1 text-sm font-bold text-white">Create Future Credit</h2>
-              <p className="mb-4 text-xs text-slate-400">
-                Issue compensation vouchers linked to a source lead.
-              </p>
+            <div className="card p-5 space-y-4">
+              <div>
+                <h2 className="text-sm font-bold text-ink">Create Future Credit</h2>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Issue compensation vouchers linked to a source lead.
+                </p>
+              </div>
               <CreateFutureCreditForm />
             </div>
           </div>
@@ -92,11 +94,13 @@ export default async function FutureCreditsPage({
         <div className={canCreate ? "lg:col-span-7" : "lg:col-span-12"}>
           <DataTableCard
             headerContent={
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink">
                   Issued Vouchers
                 </span>
-                <span className="text-[11px] text-slate-400">{credits.length} records</span>
+                <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
+                  {credits.length} records
+                </span>
               </div>
             }
             footerContent={
@@ -112,39 +116,39 @@ export default async function FutureCreditsPage({
           >
             <table className="table-modern w-full">
               <thead>
-                <tr className="bg-[#182136]/30">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Source Lead</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Voucher Amount</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Vouchers</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Validity Date</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Created</th>
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Source Lead</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Voucher Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Vouchers</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Validity Date</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">Created</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#232e47]">
+              <tbody className="divide-y divide-hairline">
                 {pagedCredits.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-xs text-slate-400">
+                    <td colSpan={5} className="py-12 text-center text-sm text-ink-muted">
                       No future credits issued yet.
                     </td>
                   </tr>
                 ) : (
                   pagedCredits.map((c) => (
-                    <tr key={c.id} className="transition-colors hover:bg-[#182136]/60">
-                      <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                    <tr key={c.id} className="transition-colors hover:bg-surface-raised">
+                      <td className="px-4 py-3 font-mono text-xs text-accent font-semibold">
                         {c.source_lead_id.slice(0, 8)}...
                       </td>
-                      <td className="px-4 py-3 font-bold text-white">
+                      <td className="px-4 py-3 font-bold text-sm text-ink">
                         ${c.voucher_amount.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-slate-300">
-                        <span className="inline-flex items-center rounded-md border border-[#2a3652] bg-[#182136] px-2 py-0.5 font-mono text-xs font-semibold text-slate-200">
+                      <td className="px-4 py-3 text-ink">
+                        <span className="inline-flex items-center rounded-lg border border-hairline bg-surface-raised px-2.5 py-0.5 font-mono text-xs font-semibold text-ink">
                           {c.number_of_vouchers}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-300">
+                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                         {c.validity_date}
                       </td>
-                      <td className="px-4 py-3 text-right text-xs text-slate-400">
+                      <td className="px-4 py-3 text-right text-xs text-ink-muted">
                         {new Date(c.created_at).toLocaleDateString()}
                       </td>
                     </tr>
