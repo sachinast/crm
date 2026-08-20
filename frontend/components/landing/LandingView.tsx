@@ -55,8 +55,8 @@ export default function LandingView({
         <div className="absolute top-[55%] -right-40 h-[500px] w-[550px] rounded-full bg-[rgba(211,171,94,0.08)] blur-[110px]" />
       </div>
 
-      {/* Sticky Navbar */}
-      <header className="sticky top-0 z-50 border-b border-[var(--hairline)] bg-[var(--background)]/80 backdrop-blur-xl transition-colors">
+      {/* Fixed Navbar */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--hairline)] bg-[var(--background)]/90 backdrop-blur-xl transition-colors shadow-xs">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <Link href="/" className="group flex items-center gap-3">
@@ -129,7 +129,7 @@ export default function LandingView({
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <main className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16">
         
         {/* HERO SECTION */}
         <section className="pt-16 pb-20 text-center lg:pt-24 lg:pb-28">

@@ -18,8 +18,7 @@ import {
 import Link from "next/link";
 
 import PageHeader from "@/components/shared/PageHeader";
-import DataTableCard from "@/components/shared/DataTableCard";
-import StatusBadge from "@/components/shared/StatusBadge";
+import DashboardRecentLeadsClient from "@/components/dashboard/DashboardRecentLeadsClient";
 import RevenueTrendChart from "@/components/dashboard/RevenueTrendChart";
 import ModalityDistributionChart from "@/components/dashboard/ModalityDistributionChart";
 import ConversionFunnelChart from "@/components/dashboard/ConversionFunnelChart";
@@ -233,105 +232,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Recent Leads Queue */}
         <div className="lg:col-span-7">
-          <DataTableCard
-            headerContent={
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <h3 className="text-sm font-bold text-ink">Recent Active Pipeline</h3>
-                  <p className="text-xs text-ink-muted">Latest customer intakes and status mutations.</p>
-                </div>
-                <Link
-                  href="/leads"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
-                >
-                  <span>Open Full Queue</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </div>
-            }
-          >
-            <table className="table-modern w-full">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                    Customer Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                    Contact
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {summary.recent_leads.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-12 text-center text-sm text-ink-muted">
-                      No recent leads found.
-                    </td>
-                  </tr>
-                ) : (
-                  summary.recent_leads.map((lead) => {
-                    const isHot =
-                      lead.status.toLowerCase() === "new" ||
-                      lead.status.toLowerCase() === "authorization_pending" ||
-                      lead.status.toLowerCase() === "pending";
-
-                    return (
-                      <tr key={lead.id} className="transition-colors hover:bg-surface-raised">
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${
-                                isHot
-                                  ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                  : "border-hairline bg-surface-raised text-ink"
-                              }`}
-                            >
-                              {lead.name ? lead.name[0]?.toUpperCase() : "?"}
-                              {isHot && (
-                                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs">
-                                  <Flame size={8} className="fill-white" />
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-sm text-ink">{lead.name || "Unnamed Lead"}</span>
-                              {isHot && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 shadow-xs">
-                                  <Flame size={11} className="fill-amber-500 text-amber-500 animate-pulse shrink-0" />
-                                  <span>HOT</span>
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
-                        {lead.email || lead.phone || "—"}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <StatusBadge status={lead.status} />
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <Link
-                          href={`/leads/${lead.id}`}
-                          className="btn-secondary btn-sm"
-                        >
-                          <span>Open</span>
-                          <ChevronRight size={13} />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-              </tbody>
-            </table>
-          </DataTableCard>
+          <DashboardRecentLeadsClient leads={summary.recent_leads} />
         </div>
 
         {/* Right Column: Funnel & Leaderboard */}

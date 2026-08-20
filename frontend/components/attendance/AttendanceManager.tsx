@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import DataTableCard from "@/components/shared/DataTableCard";
 import {
+  EmptyTableState,
+  SortableHeader,
+  TableSearchBar,
+  useTableSortAndFilter,
+} from "@/components/shared/SortableTable";
+import {
   checkIn,
   checkOut,
   fetchAllAttendance,
@@ -13,14 +19,19 @@ import {
   type AttendanceRecord,
   type CheckInResult,
 } from "@/lib/attendance-api";
+import { formatDate } from "@/lib/formatters";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  try {
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  return formatDate(iso);
 }
 
 function hoursBetween(inAt: string, outAt: string | null): string {
@@ -41,22 +52,53 @@ function RecordsTable({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
-  const startItem = records.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const endItem = Math.min(page * pageSize, records.length);
-  const pagedRecords = useMemo(
-    () => records.slice((page - 1) * pageSize, page * pageSize),
-    [records, page, pageSize],
-  );
+  const {
+    items: filteredRecords,
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortDirection,
+    toggleSort,
+    resetFilters,
+    isFiltered,
+    totalCount,
+    filteredCount,
+  } = useTableSortAndFilter<AttendanceRecord>({
+    data: records,
+    searchFields: ["user_name", "work_date", "check_in_at", "check_out_at"],
+    initialSortKey: "work_date",
+    initialSortDirection: "desc",
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredCount / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startItem = filteredCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endItem = Math.min(safePage * pageSize, filteredCount);
+  const pagedRecords = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  function handleReset() {
+    resetFilters();
+    setPage(1);
+  }
 
   return (
     <DataTableCard
       headerContent={
-        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-          <div>{headerFilter}</div>
-          <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
-            {records.length} records
-          </span>
+        <div className="flex flex-col gap-3 w-full">
+          <TableSearchBar
+            searchQuery={searchQuery}
+            onSearchChange={(q) => {
+              setSearchQuery(q);
+              setPage(1);
+            }}
+            placeholder={showUser ? "Filter by staff name, date..." : "Filter by date..."}
+            totalCount={totalCount}
+            filteredCount={filteredCount}
+            isFiltered={isFiltered}
+            onResetFilters={handleReset}
+          >
+            {headerFilter}
+          </TableSearchBar>
         </div>
       }
       footerContent={
@@ -65,7 +107,7 @@ function RecordsTable({
             <div>
               Showing <span className="font-semibold text-ink">{startItem}</span> to{" "}
               <span className="font-semibold text-ink">{endItem}</span> of{" "}
-              <span className="font-semibold text-ink">{records.length}</span> entries
+              <span className="font-semibold text-ink">{filteredCount}</span> entries
             </div>
 
             <div className="flex items-center gap-1.5 border-l border-hairline pl-3">
@@ -94,9 +136,9 @@ function RecordsTable({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
+              disabled={safePage <= 1}
               className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-semibold ${
-                page > 1
+                safePage > 1
                   ? "border border-hairline bg-surface text-ink hover:bg-surface-raised"
                   : "border border-transparent text-ink-faint cursor-not-allowed opacity-50"
               }`}
@@ -106,14 +148,14 @@ function RecordsTable({
             </button>
 
             <span className="inline-flex h-7 px-2.5 items-center justify-center rounded-xl bg-accent text-xs font-bold text-white shadow-xs">
-              Page {page} of {totalPages}
+              Page {safePage} of {totalPages}
             </span>
 
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
+              disabled={safePage >= totalPages}
               className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-semibold ${
-                page < totalPages
+                safePage < totalPages
                   ? "border border-hairline bg-surface text-ink hover:bg-surface-raised"
                   : "border border-transparent text-ink-faint cursor-not-allowed opacity-50"
               }`}
@@ -129,19 +171,35 @@ function RecordsTable({
         <thead>
           <tr>
             {showUser && (
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Staff / Agent
-              </th>
+              <SortableHeader
+                label="Staff / Agent"
+                columnKey="user_name"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
             )}
-            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-              Work Date
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-              Check-In Time
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-              Check-Out Time
-            </th>
+            <SortableHeader
+              label="Work Date"
+              columnKey="work_date"
+              currentSortKey={sortKey as string | null}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+            />
+            <SortableHeader
+              label="Check-In Time"
+              columnKey="check_in_at"
+              currentSortKey={sortKey as string | null}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+            />
+            <SortableHeader
+              label="Check-Out Time"
+              columnKey="check_out_at"
+              currentSortKey={sortKey as string | null}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+            />
             <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
               Working Duration
             </th>
@@ -149,11 +207,15 @@ function RecordsTable({
         </thead>
         <tbody className="divide-y divide-hairline">
           {pagedRecords.length === 0 ? (
-            <tr>
-              <td colSpan={showUser ? 5 : 4} className="py-12 text-center text-sm text-ink-muted">
-                No attendance logs found for this filter criteria.
-              </td>
-            </tr>
+            <EmptyTableState
+              title={isFiltered ? "No matching attendance logs" : "No attendance logs found"}
+              subtitle={
+                isFiltered
+                  ? "Try clearing your search query."
+                  : "Attendance check-ins will appear here automatically."
+              }
+              onReset={isFiltered ? handleReset : undefined}
+            />
           ) : (
             pagedRecords.map((r) => (
               <tr key={r.id} className="transition-colors hover:bg-surface-raised">

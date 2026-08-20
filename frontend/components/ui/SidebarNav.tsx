@@ -75,6 +75,7 @@ export interface NavCategory {
   id: string;
   title: string;
   icon?: keyof typeof CATEGORY_ICONS;
+  defaultOpen?: boolean;
   items: NavItem[];
 }
 
@@ -89,11 +90,13 @@ export default function SidebarNav({ categories }: { categories: NavCategory[] }
     ),
   )?.id;
 
-  // Track open state for all categories (default all open)
+  // Track open state for categories (Administration default collapsed unless actively navigating inside it)
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
     const initialState: Record<string, boolean> = {};
     categories.forEach((cat) => {
-      initialState[cat.id] = true;
+      const isDefaultOpen =
+        cat.defaultOpen !== undefined ? cat.defaultOpen : cat.id !== "admin";
+      initialState[cat.id] = isDefaultOpen;
     });
     return initialState;
   });

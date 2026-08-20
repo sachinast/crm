@@ -30,8 +30,15 @@ export default function StatusPermissionsManager({
       ? { set_by: initialStatuses[0].set_by, notifies: initialStatuses[0].notifies, relevant: initialStatuses[0].relevant }
       : null,
   );
+  const [statusSearch, setStatusSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const filteredStatuses = statuses.filter((s) => {
+    if (!statusSearch.trim()) return true;
+    const q = statusSearch.trim().toLowerCase();
+    return s.label.toLowerCase().includes(q) || s.status.toLowerCase().includes(q);
+  });
 
   const selected = statuses.find((s) => s.status === selectedStatus) ?? null;
   const dirty =
@@ -84,8 +91,18 @@ export default function StatusPermissionsManager({
           </span>
         </div>
 
+        {/* Workflow search input */}
+        <div className="p-2 border-b border-[var(--hairline)]">
+          <input
+            value={statusSearch}
+            onChange={(e) => setStatusSearch(e.target.value)}
+            placeholder="Filter workflow states..."
+            className="input w-full py-1 text-xs"
+          />
+        </div>
+
         <ul className="flex-1 overflow-y-auto p-2 space-y-1">
-          {statuses.map((row) => {
+          {filteredStatuses.map((row) => {
             const isSelected = row.status === selectedStatus;
             const totalAssigned = row.set_by.length + row.notifies.length + row.relevant.length;
             return (

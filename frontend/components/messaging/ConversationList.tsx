@@ -3,6 +3,7 @@
 import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { formatDate } from "@/lib/formatters";
 import type { ConversationRead } from "@/lib/messaging-api";
 import { parseMentionMarkup } from "@/lib/mentions";
 
@@ -31,7 +32,7 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString();
+  return formatDate(iso);
 }
 
 export default function ConversationList({

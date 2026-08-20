@@ -9,6 +9,7 @@
 :root,
 [data-theme="dark"],
 .dark {
+  color-scheme: dark;
   --background: #0b0f19;
   --surface: #111827;
   --surface-raised: #1e293b;
@@ -58,6 +59,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --background: #f8fafc;
   --surface: #ffffff;
   --surface-raised: #f1f5f9;
@@ -183,9 +185,42 @@ body {
     cursor: not-allowed;
   }
 
-  select.input option {
-    background-color: var(--surface);
+  select,
+  .select {
+    @apply rounded-xl border px-3 py-1.5 text-sm transition-all outline-none cursor-pointer;
+    background-color: var(--surface-sunken);
+    border-color: var(--hairline-strong);
     color: var(--ink);
+  }
+  select:focus,
+  .select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  }
+
+  select option,
+  .select option,
+  select.input option,
+  option {
+    background-color: var(--surface) !important;
+    color: var(--ink) !important;
+  }
+
+  [data-theme="dark"] select option,
+  [data-theme="dark"] .select option,
+  [data-theme="dark"] option,
+  .dark select option,
+  .dark .select option,
+  .dark option {
+    background-color: #111827 !important;
+    color: #f8fafc !important;
+  }
+
+  [data-theme="light"] select option,
+  [data-theme="light"] .select option,
+  [data-theme="light"] option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
   }
 
   .card {
