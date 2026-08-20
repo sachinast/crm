@@ -1,6 +1,7 @@
 import { FolderOpen } from "lucide-react";
 
 import FileManager from "@/components/files/FileManager";
+import PageHeader from "@/components/shared/PageHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -9,18 +10,13 @@ export default async function FilesPage() {
   const canViewAll = hasPermission(user, "files.view_all");
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <FolderOpen size={18} style={{ color: "var(--accent)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Files</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Upload, share, and track image, PDF, PPT, video, and audio files.
-          </p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="File Vault"
+        subtitle="Upload, preview, share, and track PDF tickets, vouchers, PPTs, image, and media attachments."
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Files" }]}
+        icon={<FolderOpen size={18} />}
+      />
 
       <FileManager canViewAll={canViewAll} />
     </div>

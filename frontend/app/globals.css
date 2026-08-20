@@ -40,22 +40,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0b0e19;
-    --surface: #131829;
-    --surface-raised: #171d33;
-    --ink: #eef0f6;
-    --ink-muted: #a7acc0;
-    --ink-faint: #6c7288;
-    --hairline: #232a44;
-    --hairline-strong: #2c3454;
+    --background: #090c14;
+    --surface: #131a2b;
+    --surface-raised: #182136;
+    --ink: #f8fafc;
+    --ink-muted: #94a3b8;
+    --ink-faint: #64748b;
+    --hairline: #232e47;
+    --hairline-strong: #313f61;
 
     --accent: #d3ab5e;
     --accent-hover: #e0bc78;
-    --accent-soft: #2a2311;
+    --accent-soft: #2d2411;
     --accent-ink: #f7e9c9;
 
-    --navy: #0b0e19;
-    --navy-soft: #171d33;
+    --navy: #090c14;
+    --navy-soft: #182136;
 
     --success: #3ecf9a;
     --success-soft: #113028;
@@ -66,8 +66,8 @@
     --info: #6badea;
     --info-soft: #12253a;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
-    --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 32px -12px rgba(0, 0, 0, 0.6);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 32px -12px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -119,21 +119,21 @@ body {
    ------------------------------------------------------------------- */
 @layer components {
   .input {
-    @apply w-full rounded-lg border px-3 py-2 text-sm transition-colors outline-none;
-    background: var(--surface);
+    @apply w-full rounded-xl border px-3 py-1.5 text-xs transition-all outline-none;
+    background: #0d1220;
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
   .input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    box-shadow: 0 0 0 2px rgba(211, 171, 94, 0.25);
   }
   .input::placeholder {
     color: var(--ink-faint);
   }
 
   .card {
-    @apply rounded-2xl border p-5;
+    @apply rounded-2xl border p-4;
     background: var(--surface);
     border-color: var(--hairline);
     box-shadow: var(--shadow-card);
@@ -268,6 +268,49 @@ body {
 
   .scrollbar-thin {
     scrollbar-width: thin;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Date / DateTime / Time Pickers — Highly visible calendar icon & full-box click
+   ------------------------------------------------------------------- */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  cursor: pointer;
+  color-scheme: light;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 3px;
+  opacity: 0.85;
+  filter: invert(45%) sepia(85%) saturate(450%) hue-rotate(5deg) brightness(95%);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(80%) sepia(45%) saturate(600%) hue-rotate(5deg) brightness(110%);
+    opacity: 0.95;
   }
 }
 

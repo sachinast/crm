@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -31,10 +33,65 @@ from app.api.v1.payments import router as payments_router
 from app.api.v1.users import router as users_router
 from app.api.v1.websocket import router as websocket_router
 from app.core.config import get_settings
+from app.db.session import engine
 
 settings = get_settings()
 
-app = FastAPI(title="CRM PRO API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Pre-warm async database connection pool
+    try:
+        async with engine.begin() as conn:
+            pass
+    except Exception:
+        pass
+    yield
+    # Shutdown: Cleanly dispose connection pools
+    await engine.dispose()
+
+
+SWAGGER_DESCRIPTION = """
+# 🚀 CRM PRO Enterprise API & Interactive Testing Suite
+
+Welcome to the interactive Swagger testing console for **CRM PRO**.
+This API provides full lifecycle management for:
+- ✈️ **Flight Bookings**
+- 🏨 **Hotel Reservations**
+- 🚗 **Car Rentals**
+- 📋 **Leads & Multi-Stage Sales Pipelines**
+- 🛡️ **Role-Based Access Control (RBAC) & Permissions**
+- ⏱️ **Staff Attendance & Time Clocking**
+- 🔐 **Security Audits & PII Access Governance**
+
+---
+
+### 🔑 How to Authenticate for Testing:
+1. Go to the **`auth`** section below and execute `POST /api/v1/auth/login`.
+2. Enter your credentials (`admin@example.com` / `password` or `agent1@example.com` / `password`).
+3. Copy the returned `access_token`.
+4. Click the green **Authorize 🔓** button at the top right of this page.
+5. Paste your token and click **Authorize**.
+6. All protected endpoints can now be tested directly!
+"""
+
+app = FastAPI(
+    title="CRM PRO Enterprise API",
+    description=SWAGGER_DESCRIPTION,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+        "filter": True,
+        "tryItOutEnabled": True,
+        "docExpansion": "list",
+        "defaultModelsExpandDepth": 1,
+    },
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,4 +165,9 @@ app.include_router(websocket_router, prefix="/ws")
 
 @app.get("/")
 async def root() -> dict:
-    return {"service": "travel-crm-api", "docs": "/docs"}
+    return {
+        "service": "CRM PRO Enterprise API",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "openapi": "/openapi.json",
+    }

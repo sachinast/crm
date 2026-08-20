@@ -80,6 +80,7 @@ export default function CreateFutureCreditForm() {
           required
           type="date"
           value={form.validity_date}
+          onClick={(e) => e.currentTarget.showPicker?.()}
           onChange={(e) => setForm({ ...form, validity_date: e.target.value })}
           className="input mt-1.5"
         />

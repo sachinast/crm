@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, Check, X, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -11,6 +11,7 @@ import {
   type EntityType,
   type FieldType,
 } from "@/lib/custom-fields-api";
+import DataTableCard from "@/components/shared/DataTableCard";
 
 const ENTITY_TABS: { value: EntityType; label: string }[] = [
   { value: "lead", label: "Leads" },
@@ -81,148 +82,219 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
   }
 
   return (
-    <div>
-      <div className="mb-4 flex gap-1.5">
-        {ENTITY_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveEntity(tab.value)}
-            className="badge"
-            style={
-              activeEntity === tab.value
-                ? { background: "var(--accent-soft)", color: "var(--accent)" }
-                : { background: "var(--hairline)", color: "var(--ink-muted)" }
-            }
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-          Fields defined here render automatically on the matching form — no deploy required.
-        </p>
-        <button onClick={() => setShowNew(true)} className="btn-secondary btn-sm">
-          <Plus size={14} />
-          New field
-        </button>
-      </div>
-
+    <div className="space-y-4">
+      {/* Create New Field Modal / Drawer Card */}
       {showNew && (
-        <div className="card mb-6 grid grid-cols-2 gap-3" style={{ borderColor: "var(--accent)" }}>
-          <input
-            placeholder="key (e.g. referral_code)"
-            value={newField.key}
-            onChange={(e) => setNewField({ ...newField, key: e.target.value })}
-            className="input font-mono text-xs"
-          />
-          <input
-            placeholder="Label"
-            value={newField.label}
-            onChange={(e) => setNewField({ ...newField, label: e.target.value })}
-            className="input"
-          />
-          <select
-            value={newField.field_type}
-            onChange={(e) => setNewField({ ...newField, field_type: e.target.value as FieldType })}
-            className="input"
-          >
-            {FIELD_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={newField.is_required}
-              onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })}
-              style={{ accentColor: "var(--accent)" }}
-            />
-            Required
-          </label>
-          {newField.field_type === "select" && (
-            <input
-              placeholder="Options, comma separated (e.g. low, medium, high)"
-              value={newField.options}
-              onChange={(e) => setNewField({ ...newField, options: e.target.value })}
-              className="input col-span-2"
-            />
-          )}
+        <div className="rounded-2xl border border-[#d3ab5e] bg-[#131a2b] p-5 shadow-lg space-y-4">
+          <div className="flex items-center justify-between border-b border-[#232e47] pb-3">
+            <h2 className="text-sm font-bold text-white">
+              Add New Custom Field for {ENTITY_TABS.find((t) => t.value === activeEntity)?.label}
+            </h2>
+            <button
+              onClick={() => setShowNew(false)}
+              className="text-slate-400 hover:text-white"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-300">Field Database Key</label>
+              <input
+                placeholder="e.g. referral_source"
+                value={newField.key}
+                onChange={(e) => setNewField({ ...newField, key: e.target.value })}
+                className="input font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-300">Display Label</label>
+              <input
+                placeholder="e.g. Referral Source"
+                value={newField.label}
+                onChange={(e) => setNewField({ ...newField, label: e.target.value })}
+                className="input text-xs font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-300">Data Type</label>
+              <select
+                value={newField.field_type}
+                onChange={(e) => setNewField({ ...newField, field_type: e.target.value as FieldType })}
+                className="input text-xs"
+              >
+                {FIELD_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center pt-5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newField.is_required}
+                  onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })}
+                  className="h-4 w-4 rounded border-[#313f61] bg-[#0d1220]"
+                  style={{ accentColor: "#d3ab5e" }}
+                />
+                <span>Required field on intake</span>
+              </label>
+            </div>
+
+            {newField.field_type === "select" && (
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-semibold text-slate-300">Dropdown Options (comma separated)</label>
+                <input
+                  placeholder="e.g. Direct, Google, Referral, Affiliate"
+                  value={newField.options}
+                  onChange={(e) => setNewField({ ...newField, options: e.target.value })}
+                  className="input text-xs"
+                />
+              </div>
+            )}
+          </div>
+
           {error && (
-            <p className="col-span-2 flex items-center gap-1.5 text-sm" style={{ color: "var(--danger)" }}>
-              <AlertTriangle size={14} />
-              {error}
+            <p className="rounded-lg bg-[#34131c] px-3 py-1.5 text-xs font-medium text-[#ef7b93] border border-[#ef7b93]/30 flex items-center gap-1.5">
+              <AlertTriangle size={13} />
+              <span>{error}</span>
             </p>
           )}
-          <div className="col-span-2 flex gap-2">
+
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handleCreate}
               disabled={saving || !newField.key.trim() || !newField.label.trim()}
-              className="btn-primary"
+              className="btn-primary btn-sm text-xs"
             >
-              Create
+              {saving ? "Creating…" : "Save Custom Field"}
             </button>
-            <button onClick={() => setShowNew(false)} className="btn-ghost">
+            <button onClick={() => setShowNew(false)} className="btn-ghost btn-sm text-xs">
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      <div className="card-flat overflow-x-auto p-0">
-        <table className="table-modern">
+      {/* Main Aligned DataTableCard Grid */}
+      <DataTableCard
+        headerContent={
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+            {/* Category Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+              {ENTITY_TABS.map((tab) => {
+                const isActive = activeEntity === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveEntity(tab.value)}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                      isActive
+                        ? "bg-[#d3ab5e] text-slate-950 font-bold shadow-sm"
+                        : "bg-[#0d1220] text-slate-300 border border-[#232e47] hover:border-[#d3ab5e] hover:text-white"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-400 font-medium">
+                {visibleFields.length} {visibleFields.length === 1 ? "field" : "fields"}
+              </span>
+
+              <button
+                onClick={() => setShowNew(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#d3ab5e] to-[#e0bc78] px-3 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus size={13} strokeWidth={2.5} />
+                <span>New Field</span>
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <table className="table-modern w-full">
           <thead>
-            <tr>
-              <th>Label</th>
-              <th>Key</th>
-              <th>Type</th>
-              <th>Required</th>
-              <th />
+            <tr className="bg-[#182136]/30">
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Display Label
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Database Key
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Field Type
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Required
+              </th>
+              <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {visibleFields.length === 0 && (
+          <tbody className="divide-y divide-[#232e47]">
+            {visibleFields.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center" style={{ color: "var(--ink-faint)" }}>
-                  No custom fields defined for this entity type yet.
+                <td colSpan={5} className="py-12 text-center text-xs text-slate-400">
+                  No custom fields defined for {ENTITY_TABS.find((t) => t.value === activeEntity)?.label} yet.
                 </td>
               </tr>
-            )}
-            {visibleFields.map((f) => (
-              <tr key={f.id}>
-                <td className="font-medium">{f.label}</td>
-                <td className="font-mono text-xs" style={{ color: "var(--ink-faint)" }}>
-                  {f.key}
-                </td>
-                <td style={{ color: "var(--ink-muted)" }}>
-                  {f.field_type}
-                  {f.field_type === "select" && f.options && (
-                    <span className="ml-1 text-xs" style={{ color: "var(--ink-faint)" }}>
-                      ({f.options.join(", ")})
+            ) : (
+              visibleFields.map((f) => (
+                <tr key={f.id} className="transition-colors hover:bg-[#182136]/60">
+                  <td className="px-4 py-3 font-semibold text-white">
+                    {f.label}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#d3ab5e]">
+                    {f.key}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-300">
+                    <span className="inline-flex items-center rounded-md border border-[#2a3652] bg-[#182136] px-2 py-0.5 font-mono text-[11px] uppercase font-semibold text-slate-300">
+                      {f.field_type}
                     </span>
-                  )}
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={f.is_required}
-                    onChange={() => handleToggleRequired(f)}
-                    style={{ accentColor: "var(--accent)" }}
-                  />
-                </td>
-                <td>
-                  <button onClick={() => handleDelete(f)} className="btn-ghost btn-sm px-1.5" title="Delete this field">
-                    <Trash2 size={13} style={{ color: "var(--danger)" }} />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    {f.field_type === "select" && f.options && (
+                      <span className="ml-2 text-[11px] text-slate-400">
+                        ({f.options.join(", ")})
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleToggleRequired(f)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                        f.is_required
+                          ? "bg-[#113028] text-[#3ecf9a] border-[#3ecf9a]/30"
+                          : "bg-[#232e47] text-slate-400 border-[#313f61]"
+                      }`}
+                    >
+                      {f.is_required ? "Required" : "Optional"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(f)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-[#34131c] hover:text-[#ef7b93] transition-colors"
+                      title="Delete field definition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-      </div>
+      </DataTableCard>
     </div>
   );
 }

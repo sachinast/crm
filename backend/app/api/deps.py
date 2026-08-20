@@ -2,7 +2,7 @@
 import uuid
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timezone
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -183,3 +183,9 @@ async def get_visible_lead_or_404(db: AsyncSession, user: User, lead_id: uuid.UU
         # this user — avoids leaking record existence across the RBAC boundary.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
     return lead
+
+
+# --- Modern FastAPI Annotated Dependency Type Aliases ---
+CurrentUser = Annotated[User, Depends(get_current_user)]
+DbSession = Annotated[AsyncSession, Depends(get_db)]
+WhitelistedUser = Annotated[User, Depends(require_ip_whitelisted)]

@@ -1,5 +1,7 @@
 "use client";
 
+import { MapPin, Car } from "lucide-react";
+
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
@@ -12,9 +14,6 @@ export interface CarBookingValue {
   transmission: string;
   fuel_policy: string | null;
   vehicle_type: string;
-  // "YYYY-MM-DDTHH:mm" (datetime-local's own format) — the caller converts
-  // to/from ISO-UTC at load/submit time, same contract CarBookingForm.tsx
-  // (this component's original home) already used.
   pickup_datetime: string;
   pickup_location: string;
   return_datetime: string;
@@ -41,10 +40,6 @@ export const EMPTY_CAR_BOOKING: CarBookingValue = {
   custom_fields: {},
 };
 
-/** Car booking fields only — no form tag, no submit button, no renter name
- * (that's the lead's own "Customer Name" now, see migration 0011). Reused by
- * the standalone edit page (CarBookingForm.tsx) and the single-step lead
- * intake form (leads/new/page.tsx). */
 export default function CarBookingFields({
   value,
   onChange,
@@ -55,56 +50,152 @@ export default function CarBookingFields({
   disabled?: boolean;
 }) {
   return (
-    <fieldset disabled={disabled} className="contents">
-      <Field label="Booking reference">
-        <input required value={value.booking_reference} onChange={(e) => onChange({ ...value, booking_reference: e.target.value })} className="input" />
-      </Field>
-      <Field label="Booking platform">
-        <MasterSelect fieldKey="booking_platform" value={value.booking_platform} onChange={(v) => onChange({ ...value, booking_platform: v })} />
-      </Field>
-      <Field label="Car provider">
-        <MasterSelect fieldKey="car_provider" value={value.car_provider} onChange={(v) => onChange({ ...value, car_provider: v })} />
-      </Field>
-      <Field label="Vehicle type">
-        <MasterSelect fieldKey="vehicle_type" value={value.vehicle_type} onChange={(v) => onChange({ ...value, vehicle_type: v })} />
-      </Field>
-      <Field label="Renter date of birth">
-        <input required type="date" value={value.renter_dob} onChange={(e) => onChange({ ...value, renter_dob: e.target.value })} className="input" />
-      </Field>
-      <Field label="Transmission">
-        <MasterSelect fieldKey="transmission" value={value.transmission} onChange={(v) => onChange({ ...value, transmission: v })} />
-      </Field>
-      <Field label="Fuel policy">
-        <input value={value.fuel_policy ?? ""} onChange={(e) => onChange({ ...value, fuel_policy: e.target.value })} className="input" placeholder="Full to Full" />
-      </Field>
-      <Field label="Pick-up date/time">
-        <input required type="datetime-local" value={value.pickup_datetime} onChange={(e) => onChange({ ...value, pickup_datetime: e.target.value })} className="input" />
-      </Field>
-      <Field label="Pick-up location">
-        <input required value={value.pickup_location} onChange={(e) => onChange({ ...value, pickup_location: e.target.value })} className="input" />
-      </Field>
-      <Field label="Return date/time">
-        <input required type="datetime-local" value={value.return_datetime} onChange={(e) => onChange({ ...value, return_datetime: e.target.value })} className="input" />
-      </Field>
-      <Field label="Return location">
-        <input required value={value.return_location} onChange={(e) => onChange({ ...value, return_location: e.target.value })} className="input" />
-      </Field>
-      <Field label="Prepaid amount">
-        <input required type="number" min={0} step="0.01" value={value.prepaid_amount} onChange={(e) => onChange({ ...value, prepaid_amount: Number(e.target.value) })} className="input" />
-      </Field>
-      <Field label="Pay-at-counter amount">
-        <input required type="number" min={0} step="0.01" value={value.pay_at_counter_amount} onChange={(e) => onChange({ ...value, pay_at_counter_amount: Number(e.target.value) })} className="input" />
-      </Field>
+    <fieldset disabled={disabled} className="col-span-full grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {/* LEFT COLUMN: Vehicle & Rental Specifications (7 columns) */}
+      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5 lg:col-span-7">
+        <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
+          <Car size={14} />
+          <span>Vehicle & Rental Specifications</span>
+        </div>
 
-      <DynamicFieldsBlock
-        entityType="car_booking"
-        value={value.custom_fields}
-        onChange={(next) => onChange({ ...value, custom_fields: next })}
-      />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <Field label="Booking reference">
+            <input
+              required
+              value={value.booking_reference}
+              onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
+              className="input"
+              placeholder="e.g. CR-9021"
+            />
+          </Field>
 
-      <p className="col-span-full text-xs" style={{ color: "var(--ink-muted)" }}>
-        Total amount: {(Number(value.prepaid_amount) + Number(value.pay_at_counter_amount)).toFixed(2)} (computed)
-      </p>
+          <Field label="Booking platform">
+            <MasterSelect
+              fieldKey="booking_platform"
+              value={value.booking_platform}
+              onChange={(v) => onChange({ ...value, booking_platform: v })}
+            />
+          </Field>
+
+          <Field label="Car provider">
+            <MasterSelect
+              fieldKey="car_provider"
+              value={value.car_provider}
+              onChange={(v) => onChange({ ...value, car_provider: v })}
+            />
+          </Field>
+
+          <Field label="Vehicle type">
+            <MasterSelect
+              fieldKey="vehicle_type"
+              value={value.vehicle_type}
+              onChange={(v) => onChange({ ...value, vehicle_type: v })}
+            />
+          </Field>
+
+          <Field label="Transmission">
+            <MasterSelect
+              fieldKey="transmission"
+              value={value.transmission}
+              onChange={(v) => onChange({ ...value, transmission: v })}
+            />
+          </Field>
+
+          <Field label="Fuel policy">
+            <input
+              value={value.fuel_policy ?? ""}
+              onChange={(e) => onChange({ ...value, fuel_policy: e.target.value })}
+              className="input"
+              placeholder="Full to Full"
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Renter date of birth">
+              <input
+                required
+                type="date"
+                value={value.renter_dob}
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                onChange={(e) => onChange({ ...value, renter_dob: e.target.value })}
+                className="input"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="mt-2.5">
+          <DynamicFieldsBlock
+            entityType="car_booking"
+            value={value.custom_fields}
+            onChange={(next) => onChange({ ...value, custom_fields: next })}
+          />
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Schedule & Journey Routing (5 columns) */}
+      <div className="space-y-3 lg:col-span-5">
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3.5">
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
+            <MapPin size={13} className="text-[var(--accent)]" />
+            <span>Schedule & Routing</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Pick-up Block */}
+            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+                Pick-up Details
+              </div>
+              <Field label="Pick-up location">
+                <input
+                  required
+                  value={value.pickup_location}
+                  onChange={(e) => onChange({ ...value, pickup_location: e.target.value })}
+                  className="input"
+                  placeholder="Airport Terminal / City Hub"
+                />
+              </Field>
+              <Field label="Pick-up date / time">
+                <input
+                  required
+                  type="datetime-local"
+                  value={value.pickup_datetime}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onChange={(e) => onChange({ ...value, pickup_datetime: e.target.value })}
+                  className="input"
+                />
+              </Field>
+            </div>
+
+            {/* Drop-off Block */}
+            <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-2.5 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                Drop-off / Return Details
+              </div>
+              <Field label="Return location">
+                <input
+                  required
+                  value={value.return_location}
+                  onChange={(e) => onChange({ ...value, return_location: e.target.value })}
+                  className="input"
+                  placeholder="Drop-off location"
+                />
+              </Field>
+              <Field label="Return date / time">
+                <input
+                  required
+                  type="datetime-local"
+                  value={value.return_datetime}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onChange={(e) => onChange({ ...value, return_datetime: e.target.value })}
+                  className="input"
+                />
+              </Field>
+            </div>
+          </div>
+        </div>
+      </div>
     </fieldset>
   );
 }

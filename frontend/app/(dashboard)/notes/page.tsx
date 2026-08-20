@@ -1,6 +1,7 @@
 import { StickyNote } from "lucide-react";
 
 import NotesManager from "@/components/notes/NotesManager";
+import PageHeader from "@/components/shared/PageHeader";
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 import type { Note } from "@/lib/notes-api";
@@ -18,18 +19,14 @@ export default async function NotesPage() {
   const notes = token ? await fetchNotes(token) : [];
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)" }}>
-          <StickyNote size={18} style={{ color: "var(--accent)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Notes</h1>
-          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Private notes, visible only to you.
-          </p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Personal Notes"
+        subtitle="Encrypted private agent notes and internal checklists."
+        badge={`${notes.length} ${notes.length === 1 ? "note" : "notes"}`}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Notes" }]}
+        icon={<StickyNote size={18} />}
+      />
 
       <NotesManager initialNotes={notes} />
     </div>
