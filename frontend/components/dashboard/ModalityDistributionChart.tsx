@@ -28,14 +28,15 @@ export default function ModalityDistributionChart() {
   const radius = 40;
   const circumference = 2 * Math.PI * radius; // ~251.32
 
-  let accumulatedOffset = 0;
-  const segments = MODALITY_DATA.map((slice) => {
+  const segments = MODALITY_DATA.reduce<
+    Array<(typeof MODALITY_DATA)[number] & { fraction: number; dashLength: number; offset: number }>
+  >((acc, slice) => {
     const fraction = slice.count / totalCount;
     const dashLength = fraction * circumference;
-    const offset = accumulatedOffset;
-    accumulatedOffset += dashLength;
-    return { ...slice, fraction, dashLength, offset };
-  });
+    const offset = acc.reduce((sum, item) => sum + item.dashLength, 0);
+    acc.push({ ...slice, fraction, dashLength, offset });
+    return acc;
+  }, []);
 
   const displayTarget = activeSlice ?? MODALITY_DATA[0];
 
