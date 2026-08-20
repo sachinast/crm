@@ -15,6 +15,13 @@ import {
   type FileRecord,
   type ShareLink,
 } from "@/lib/files-api";
+import {
+  EmptyTableState,
+  SortableHeader,
+  TableSearchBar,
+  useTableSortAndFilter,
+} from "@/components/shared/SortableTable";
+import { formatDate } from "@/lib/formatters";
 
 const KIND_ICON: Record<FileRecord["kind"], typeof FileImage> = {
   image: FileImage,
@@ -31,7 +38,7 @@ function fmtSize(bytes: number): string {
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  return formatDate(iso);
 }
 
 function ShareDialog({ file, onClose }: { file: FileRecord; onClose: () => void }) {
@@ -146,26 +153,38 @@ export default function FileManager({ canViewAll }: { canViewAll: boolean }) {
   const [shareFile, setShareFile] = useState<FileRecord | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const {
+    items: filteredFiles,
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortDirection,
+    toggleSort,
+    filters,
+    setFilter,
+    resetFilters,
+    isFiltered,
+    totalCount,
+    filteredCount,
+  } = useTableSortAndFilter<FileRecord>({
+    data: files,
+    searchFields: ["file_name", "uploader_name", "kind"],
+    initialSortKey: "created_at",
+    initialSortDirection: "desc",
+    filterFn: (file, activeFilters) => {
+      if (activeFilters.kind && activeFilters.kind !== "all" && file.kind !== activeFilters.kind) {
+        return false;
+      }
+      return true;
+    },
+  });
+
   useEffect(() => {
-    let cancelled = false;
-    // Nested one level (rather than setLoading(true) as a bare top-level
-    // statement) to satisfy react-hooks/set-state-in-effect.
-    queueMicrotask(() => {
-      if (!cancelled) setLoading(true);
-    });
+    setLoading(true);
     fetchFiles({ all: showAll })
-      .then((data) => {
-        if (!cancelled) setFiles(data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Could not load files");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then(setFiles)
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load files"))
+      .finally(() => setLoading(false));
   }, [showAll]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -200,8 +219,8 @@ export default function FileManager({ canViewAll }: { canViewAll: boolean }) {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="btn-primary cursor-pointer">
           <Upload size={16} />
           {uploading ? `Uploading… ${progress}%` : "Upload file"}
@@ -209,62 +228,135 @@ export default function FileManager({ canViewAll }: { canViewAll: boolean }) {
         </label>
         {canViewAll && (
           <label className="flex items-center gap-2 text-sm text-ink-muted cursor-pointer">
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="h-4 w-4 rounded accent-amber-500" />
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={(e) => setShowAll(e.target.checked)}
+              className="h-4 w-4 rounded accent-amber-500"
+            />
             Show every user&apos;s files
           </label>
         )}
       </div>
 
-      {error && (
-        <p className="mb-4 alert-danger">
-          {error}
-        </p>
-      )}
+      {error && <p className="alert-danger">{error}</p>}
+
+      {/* Filter and Search Bar */}
+      <TableSearchBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder="Filter files by name, uploader..."
+        totalCount={totalCount}
+        filteredCount={filteredCount}
+        isFiltered={isFiltered}
+        onResetFilters={resetFilters}
+      >
+        <div className="relative">
+          <select
+            value={filters.kind || "all"}
+            onChange={(e) => setFilter("kind", e.target.value)}
+            className="select text-xs py-1.5 pl-3 pr-8 min-w-[120px] font-medium"
+          >
+            <option value="all">All File Types</option>
+            <option value="pdf">PDF Documents</option>
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+            <option value="audio">Audio</option>
+          </select>
+        </div>
+      </TableSearchBar>
 
       <div className="card-flat overflow-x-auto p-0">
         <table className="table-modern w-full">
           <thead>
             <tr>
-              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">File</th>
-              {showAll && <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Uploaded by</th>}
-              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Size</th>
-              <th className="text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Uploaded</th>
-              <th />
+              <SortableHeader
+                label="File"
+                columnKey="file_name"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              {showAll && (
+                <SortableHeader
+                  label="Uploaded by"
+                  columnKey="uploader_name"
+                  currentSortKey={sortKey as string | null}
+                  sortDirection={sortDirection}
+                  onSort={toggleSort}
+                />
+              )}
+              <SortableHeader
+                label="Size"
+                columnKey="size_bytes"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableHeader
+                label="Uploaded"
+                columnKey="created_at"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {!loading && files.length === 0 && (
-              <tr>
-                <td colSpan={showAll ? 5 : 4} className="py-8 text-center text-sm text-ink-faint">
-                  No files yet.
-                </td>
-              </tr>
+            {!loading && filteredFiles.length === 0 ? (
+              <EmptyTableState
+                title={isFiltered ? "No matching files" : "No files yet"}
+                subtitle={
+                  isFiltered
+                    ? "Try clearing your search criteria or filters."
+                    : "Upload documents and media to start organizing files."
+                }
+                onReset={isFiltered ? resetFilters : undefined}
+              />
+            ) : (
+              filteredFiles.map((f) => {
+                const Icon = KIND_ICON[f.kind];
+                return (
+                  <tr key={f.id} className="hover:bg-surface-raised transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5 font-semibold text-ink text-sm">
+                        <Icon size={16} className="text-accent shrink-0" />
+                        <span>{f.file_name}</span>
+                      </div>
+                    </td>
+                    {showAll && (
+                      <td className="px-4 py-3 text-sm text-ink-muted">{f.uploader_name ?? "—"}</td>
+                    )}
+                    <td className="px-4 py-3 text-sm font-mono text-ink-muted">{fmtSize(f.size_bytes)}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-ink-muted">{fmtDate(f.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => handleDownload(f)} className="btn-secondary btn-sm text-xs">
+                          Download
+                        </button>
+                        <button
+                          onClick={() => setShareFile(f)}
+                          className="btn-ghost btn-sm px-2 text-ink-muted"
+                          title="Share"
+                        >
+                          <Link2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(f.id)}
+                          className="btn-ghost btn-sm px-2 text-danger hover:bg-rose-500/10"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
-            {files.map((f) => {
-              const Icon = KIND_ICON[f.kind];
-              return (
-                <tr key={f.id} className="hover:bg-surface-raised transition-colors">
-                  <td className="flex items-center gap-2.5 font-semibold text-ink text-sm">
-                    <Icon size={16} className="text-accent" />
-                    {f.file_name}
-                  </td>
-                  {showAll && <td className="text-sm text-ink-muted">{f.uploader_name ?? "—"}</td>}
-                  <td className="text-sm text-ink-muted">{fmtSize(f.size_bytes)}</td>
-                  <td className="text-sm text-ink-muted">{fmtDate(f.created_at)}</td>
-                  <td className="flex justify-end gap-1.5">
-                    <button onClick={() => handleDownload(f)} className="btn-ghost btn-sm">
-                      Download
-                    </button>
-                    <button onClick={() => setShareFile(f)} className="btn-ghost btn-sm px-2 text-ink-muted" title="Share">
-                      <Link2 size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(f.id)} className="btn-ghost btn-sm px-2 text-danger" title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
           </tbody>
         </table>
       </div>

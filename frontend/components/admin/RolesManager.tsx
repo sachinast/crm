@@ -38,7 +38,30 @@ export default function RolesManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const grouped = useMemo(() => groupByCategory(permissions), [permissions]);
+  const [roleSearch, setRoleSearch] = useState("");
+  const [permSearch, setPermSearch] = useState("");
+
+  const filteredRoles = useMemo(() => {
+    if (!roleSearch.trim()) return roles;
+    return roles.filter((r) => r.name.toLowerCase().includes(roleSearch.trim().toLowerCase()));
+  }, [roles, roleSearch]);
+
+  const filteredGrouped = useMemo(() => {
+    const baseGrouped = groupByCategory(permissions);
+    if (!permSearch.trim()) return baseGrouped;
+    const q = permSearch.trim().toLowerCase();
+    const next = new Map<string, PermissionDef[]>();
+    for (const [cat, list] of baseGrouped.entries()) {
+      const matching = list.filter(
+        (p) => p.code.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
+      );
+      if (matching.length > 0) {
+        next.set(cat, matching);
+      }
+    }
+    return next;
+  }, [permissions, permSearch]);
+
   const selected = roles.find((r) => r.id === selectedId) ?? null;
   const dirty =
     selected !== null &&
@@ -131,8 +154,18 @@ export default function RolesManager({
           </button>
         </div>
 
+        {/* Role search filter input */}
+        <div className="p-2 border-b border-[var(--hairline)]">
+          <input
+            value={roleSearch}
+            onChange={(e) => setRoleSearch(e.target.value)}
+            placeholder="Filter roles..."
+            className="input w-full py-1 text-xs"
+          />
+        </div>
+
         <ul className="flex-1 overflow-y-auto p-2 space-y-1">
-          {roles.map((role) => {
+          {filteredRoles.map((role) => {
             const isSelected = role.id === selectedId;
             return (
               <li key={role.id}>
@@ -241,9 +274,19 @@ export default function RolesManager({
               )}
             </div>
 
+            {/* Permission Search Bar */}
+            <div className="mb-4">
+              <input
+                value={permSearch}
+                onChange={(e) => setPermSearch(e.target.value)}
+                placeholder="Filter permission capabilities (e.g. leads, billing, users)..."
+                className="input w-full text-xs"
+              />
+            </div>
+
             {/* Grouped Permissions Matrix */}
             <div className="space-y-5 flex-1">
-              {Array.from(grouped.entries()).map(([category, perms]) => (
+              {Array.from(filteredGrouped.entries()).map(([category, perms]) => (
                 <div key={category} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-4">
                   <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--accent)]">
                     {category} Permissions

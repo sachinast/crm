@@ -1,12 +1,14 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowUpDown, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
 
 import { createNote, deleteNote, updateNote, type Note } from "@/lib/notes-api";
+import { TableSearchBar, useTableSortAndFilter } from "@/components/shared/SortableTable";
+import { formatDateTime } from "@/lib/formatters";
 
 function fmt(iso: string): string {
-  return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(iso);
 }
 
 export default function NotesManager({ initialNotes }: { initialNotes: Note[] }) {
@@ -17,6 +19,24 @@ export default function NotesManager({ initialNotes }: { initialNotes: Note[] })
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ title: "", body: "" });
+
+  const {
+    items: filteredNotes,
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortDirection,
+    toggleSort,
+    resetFilters,
+    isFiltered,
+    totalCount,
+    filteredCount,
+  } = useTableSortAndFilter<Note>({
+    data: notes,
+    searchFields: ["title", "body"],
+    initialSortKey: "updated_at",
+    initialSortDirection: "desc",
+  });
 
   async function handleCreate() {
     if (!title.trim()) return;
@@ -59,79 +79,118 @@ export default function NotesManager({ initialNotes }: { initialNotes: Note[] })
   }
 
   return (
-    <div>
-      <div className="card mb-6">
+    <div className="space-y-6">
+      {/* Create Note Card */}
+      <div className="card p-5">
+        <h2 className="text-sm font-bold text-ink mb-3">Create Quick Note</h2>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Note title"
-          className="input mb-2 w-full"
+          placeholder="Note title..."
+          className="input mb-2.5 w-full text-sm"
         />
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write a note…"
+          placeholder="Write confidential note details or checklists…"
           rows={3}
-          className="input mb-2 w-full"
+          className="input mb-3 w-full text-sm"
         />
-        <button onClick={handleCreate} disabled={saving || !title.trim()} className="btn-primary">
+        <button onClick={handleCreate} disabled={saving || !title.trim()} className="btn-primary flex items-center gap-1.5">
           <Plus size={14} />
-          Add note
+          <span>Save Note</span>
         </button>
       </div>
 
-      {error && (
-        <p className="mb-4 alert-danger">
-          {error}
-        </p>
-      )}
+      {error && <p className="alert-danger">{error}</p>}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {notes.length === 0 && (
-          <p className="text-sm text-ink-faint">
-            No notes yet.
-          </p>
+      {/* Search & Sort Bar */}
+      <div className="card p-4">
+        <TableSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder="Search note titles and details..."
+          totalCount={totalCount}
+          filteredCount={filteredCount}
+          isFiltered={isFiltered}
+          onResetFilters={resetFilters}
+        >
+          {/* Sorting Buttons */}
+          <div className="flex items-center gap-1.5 border-l border-hairline pl-2.5">
+            <span className="text-xs text-ink-muted">Sort:</span>
+            <button
+              type="button"
+              onClick={() => toggleSort("title")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+                sortKey === "title"
+                  ? "bg-accent text-white border-accent"
+                  : "bg-surface-raised border-hairline text-ink-muted hover:text-ink"
+              }`}
+            >
+              Title {sortKey === "title" && (sortDirection === "asc" ? "↑" : "↓")}
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSort("updated_at")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+                sortKey === "updated_at"
+                  ? "bg-accent text-white border-accent"
+                  : "bg-surface-raised border-hairline text-ink-muted hover:text-ink"
+              }`}
+            >
+              Date {sortKey === "updated_at" && (sortDirection === "asc" ? "↑" : "↓")}
+            </button>
+          </div>
+        </TableSearchBar>
+      </div>
+
+      {/* Notes Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filteredNotes.length === 0 && (
+          <div className="col-span-full card p-8 text-center text-sm text-ink-muted">
+            {isFiltered ? "No matching notes found for your search." : "No personal notes yet. Create your first note above."}
+          </div>
         )}
-        {notes.map((n) => (
-          <div key={n.id} className="card-flat">
+        {filteredNotes.map((n) => (
+          <div key={n.id} className="card-flat p-4 flex flex-col justify-between transition-shadow hover:shadow-md">
             {editingId === n.id ? (
               <div>
                 <input
                   value={editDraft.title}
                   onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
-                  className="input mb-2 w-full"
+                  className="input mb-2 w-full text-sm font-semibold"
                 />
                 <textarea
                   value={editDraft.body}
                   onChange={(e) => setEditDraft({ ...editDraft, body: e.target.value })}
                   rows={3}
-                  className="input mb-2 w-full"
+                  className="input mb-2.5 w-full text-sm"
                 />
                 <div className="flex gap-2">
-                  <button onClick={() => saveEdit(n.id)} className="btn-primary btn-sm">
+                  <button onClick={() => saveEdit(n.id)} className="btn-primary btn-sm text-xs">
                     Save
                   </button>
-                  <button onClick={() => setEditingId(null)} className="btn-ghost btn-sm">
+                  <button onClick={() => setEditingId(null)} className="btn-ghost btn-sm text-xs">
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
               <div>
-                <div className="mb-1.5 flex items-start justify-between gap-2">
+                <div className="mb-2 flex items-start justify-between gap-2">
                   <p className="font-semibold text-ink text-sm">{n.title}</p>
-                  <button onClick={() => handleDelete(n.id)} className="btn-ghost btn-sm shrink-0 px-1.5 text-danger" title="Delete">
+                  <button onClick={() => handleDelete(n.id)} className="btn-ghost btn-sm shrink-0 px-1.5 text-danger hover:bg-rose-500/10" title="Delete">
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <p className="mb-2 whitespace-pre-wrap text-sm text-ink-muted">
+                <p className="mb-3 whitespace-pre-wrap text-sm text-ink-muted">
                   {n.body}
                 </p>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between border-t border-hairline pt-2.5 mt-auto">
                   <p className="text-xs text-ink-faint">
                     {fmt(n.updated_at)}
                   </p>
-                  <button onClick={() => startEdit(n)} className="text-xs font-semibold text-accent hover:opacity-80">
+                  <button onClick={() => startEdit(n)} className="text-xs font-semibold text-accent hover:underline">
                     Edit
                   </button>
                 </div>

@@ -115,6 +115,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           id: "admin",
           title: "Administration",
           icon: "admin",
+          defaultOpen: false,
           items: filteredAdminItems,
         }
       : null;

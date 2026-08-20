@@ -10,6 +10,12 @@ import {
   type MasterOption,
 } from "@/lib/master-options-api";
 import DataTableCard from "@/components/shared/DataTableCard";
+import {
+  EmptyTableState,
+  SortableHeader,
+  TableSearchBar,
+  useTableSortAndFilter,
+} from "@/components/shared/SortableTable";
 
 const FIELDS: { value: MasterFieldKey; label: string }[] = [
   { value: "booking_platform", label: "Booking Platform" },
@@ -30,10 +36,28 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const visible = useMemo(
-    () => options.filter((o) => o.field_key === active).sort((a, b) => a.display_order - b.display_order),
+  const activeCategoryOptions = useMemo(
+    () => options.filter((o) => o.field_key === active),
     [options, active],
   );
+
+  const {
+    items: visibleOptions,
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortDirection,
+    toggleSort,
+    resetFilters,
+    isFiltered,
+    totalCount,
+    filteredCount,
+  } = useTableSortAndFilter<MasterOption>({
+    data: activeCategoryOptions,
+    searchFields: ["value", "field_key"],
+    initialSortKey: "display_order",
+    initialSortDirection: "asc",
+  });
 
   async function handleAdd() {
     if (!newValue.trim()) return;
@@ -64,7 +88,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
       {/* Aligned DataTableCard Grid */}
       <DataTableCard
         headerContent={
-          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+          <div className="flex flex-col gap-3 w-full">
             {/* Category Filter Tabs */}
             <div className="flex flex-wrap items-center gap-1.5 py-0.5">
               {FIELDS.map((f) => {
@@ -72,7 +96,10 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
                 return (
                   <button
                     key={f.value}
-                    onClick={() => setActive(f.value)}
+                    onClick={() => {
+                      setActive(f.value);
+                      resetFilters();
+                    }}
                     className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                       isActive
                         ? "bg-accent text-white font-bold shadow-xs"
@@ -85,9 +112,15 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
               })}
             </div>
 
-            <div className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
-              {visible.length} {visible.length === 1 ? "option" : "options"}
-            </div>
+            <TableSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              placeholder={`Search ${FIELDS.find((f) => f.value === active)?.label} values...`}
+              totalCount={totalCount}
+              filteredCount={filteredCount}
+              isFiltered={isFiltered}
+              onResetFilters={resetFilters}
+            />
           </div>
         }
       >
@@ -122,26 +155,38 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
         <table className="table-modern w-full">
           <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Option Display Value
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Category Master
-              </th>
+              <SortableHeader
+                label="Option Display Value"
+                columnKey="value"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableHeader
+                label="Category Master"
+                columnKey="field_key"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
               <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Action
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {visible.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="py-12 text-center text-sm text-ink-muted">
-                  No dropdown values defined for this category yet.
-                </td>
-              </tr>
+            {visibleOptions.length === 0 ? (
+              <EmptyTableState
+                title={isFiltered ? "No matching options found" : "No dropdown values defined for this category"}
+                subtitle={
+                  isFiltered
+                    ? "Try adjusting your search query."
+                    : "Add new master option values using the input above."
+                }
+                onReset={isFiltered ? resetFilters : undefined}
+              />
             ) : (
-              visible.map((opt) => (
+              visibleOptions.map((opt) => (
                 <tr key={opt.id} className="transition-colors hover:bg-surface-raised">
                   <td className="px-4 py-3 font-semibold text-sm text-ink">
                     {opt.value}

@@ -12,6 +12,12 @@ import {
   type FieldType,
 } from "@/lib/custom-fields-api";
 import DataTableCard from "@/components/shared/DataTableCard";
+import {
+  EmptyTableState,
+  SortableHeader,
+  TableSearchBar,
+  useTableSortAndFilter,
+} from "@/components/shared/SortableTable";
 
 const ENTITY_TABS: { value: EntityType; label: string }[] = [
   { value: "lead", label: "Leads" },
@@ -36,10 +42,28 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const visibleFields = useMemo(
-    () => fields.filter((f) => f.entity_type === activeEntity).sort((a, b) => a.display_order - b.display_order),
+  const entityFilteredFields = useMemo(
+    () => fields.filter((f) => f.entity_type === activeEntity),
     [fields, activeEntity],
   );
+
+  const {
+    items: visibleFields,
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortDirection,
+    toggleSort,
+    resetFilters,
+    isFiltered,
+    totalCount,
+    filteredCount,
+  } = useTableSortAndFilter<CustomFieldDef>({
+    data: entityFilteredFields,
+    searchFields: ["label", "key", "field_type"],
+    initialSortKey: "display_order",
+    initialSortDirection: "asc",
+  });
 
   async function handleCreate() {
     setSaving(true);
@@ -98,33 +122,53 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Field Database Key</label>
-              <input
-                placeholder="e.g. referral_source"
-                value={newField.key}
-                onChange={(e) => setNewField({ ...newField, key: e.target.value })}
-                className="input font-mono text-sm"
-              />
+          {error && (
+            <div className="rounded-xl border border-rose-800/50 bg-rose-950/40 p-3 text-xs text-rose-400">
+              {error}
             </div>
+          )}
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Display Label</label>
+              <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+                Field Label (UI Display)
+              </label>
               <input
-                placeholder="e.g. Referral Source"
                 value={newField.label}
-                onChange={(e) => setNewField({ ...newField, label: e.target.value })}
-                className="input text-sm font-medium"
+                onChange={(e) =>
+                  setNewField((prev) => ({
+                    ...prev,
+                    label: e.target.value,
+                    key: prev.key || e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                  }))
+                }
+                placeholder="e.g. Flight PNR or Hotel Voucher"
+                className="input mt-1 w-full text-sm"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Data Type</label>
+              <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+                Field Key (DB Identifier)
+              </label>
+              <input
+                value={newField.key}
+                onChange={(e) => setNewField((prev) => ({ ...prev, key: e.target.value }))}
+                placeholder="e.g. flight_pnr"
+                className="input mt-1 w-full font-mono text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+                Data Type
+              </label>
               <select
                 value={newField.field_type}
-                onChange={(e) => setNewField({ ...newField, field_type: e.target.value as FieldType })}
-                className="input text-sm"
+                onChange={(e) =>
+                  setNewField((prev) => ({ ...prev, field_type: e.target.value as FieldType }))
+                }
+                className="select mt-1 w-full text-sm"
               >
                 {FIELD_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -134,49 +178,49 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
               </select>
             </div>
 
-            <div className="flex items-center pt-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newField.is_required}
-                  onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })}
-                  className="h-4 w-4 rounded border-[var(--hairline-strong)] bg-surface text-accent focus:ring-accent accent-amber-500"
-                />
-                <span>Required field on intake</span>
-              </label>
-            </div>
-
             {newField.field_type === "select" && (
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold text-[var(--ink-muted)]">Dropdown Options (comma separated)</label>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--ink-muted)]">
+                  Dropdown Options (comma-separated)
+                </label>
                 <input
-                  placeholder="e.g. Direct, Google, Referral, Affiliate"
                   value={newField.options}
-                  onChange={(e) => setNewField({ ...newField, options: e.target.value })}
-                  className="input text-sm"
+                  onChange={(e) => setNewField((prev) => ({ ...prev, options: e.target.value }))}
+                  placeholder="Option 1, Option 2, Option 3"
+                  className="input mt-1 w-full text-sm"
                 />
               </div>
             )}
           </div>
 
-          {error && (
-            <p className="alert-danger">
-              <AlertTriangle size={15} />
-              <span>{error}</span>
-            </p>
-          )}
+          <div className="flex items-center justify-between pt-2">
+            <label className="flex items-center gap-2 text-xs font-medium text-[var(--ink-muted)] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newField.is_required}
+                onChange={(e) =>
+                  setNewField((prev) => ({ ...prev, is_required: e.target.checked }))
+                }
+                className="h-4 w-4 rounded accent-[var(--accent)]"
+              />
+              <span>Mark field as required on intake & updates</span>
+            </label>
 
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={handleCreate}
-              disabled={saving || !newField.key.trim() || !newField.label.trim()}
-              className="btn-primary"
-            >
-              {saving ? "Creating…" : "Save Custom Field"}
-            </button>
-            <button onClick={() => setShowNew(false)} className="btn-ghost">
-              Cancel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowNew(false)}
+                className="btn-ghost"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={saving || !newField.key.trim() || !newField.label.trim()}
+                className="btn-primary"
+              >
+                {saving ? "Saving..." : "Create Field"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -184,85 +228,116 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
       {/* Main Aligned DataTableCard Grid */}
       <DataTableCard
         headerContent={
-          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-            {/* Category Filter Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-              {ENTITY_TABS.map((tab) => {
-                const isActive = activeEntity === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    onClick={() => setActiveEntity(tab.value)}
-                    className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                      isActive
-                        ? "bg-accent text-white font-bold shadow-xs"
-                        : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Category Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                {ENTITY_TABS.map((tab) => {
+                  const isActive = activeEntity === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      onClick={() => {
+                        setActiveEntity(tab.value);
+                        resetFilters();
+                      }}
+                      className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-accent text-white font-bold shadow-xs"
+                          : "bg-surface text-ink-muted border border-hairline hover:bg-surface-raised hover:text-ink"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowNew(true)}
+                  className="btn-primary"
+                >
+                  <Plus size={15} strokeWidth={2.5} />
+                  <span>New Field</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
-                {visibleFields.length} {visibleFields.length === 1 ? "field" : "fields"}
-              </span>
-
-              <button
-                onClick={() => setShowNew(true)}
-                className="btn-primary"
-              >
-                <Plus size={15} strokeWidth={2.5} />
-                <span>New Field</span>
-              </button>
-            </div>
+            <TableSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              placeholder="Search custom fields by label or key..."
+              totalCount={totalCount}
+              filteredCount={filteredCount}
+              isFiltered={isFiltered}
+              onResetFilters={resetFilters}
+            />
           </div>
         }
       >
         <table className="table-modern w-full">
           <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                Display Label
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                Database Key
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                Field Type
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                Required
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)]">
+              <SortableHeader
+                label="Display Label"
+                columnKey="label"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableHeader
+                label="Database Key"
+                columnKey="key"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableHeader
+                label="Field Type"
+                columnKey="field_type"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableHeader
+                label="Required"
+                columnKey="is_required"
+                currentSortKey={sortKey as string | null}
+                sortDirection={sortDirection}
+                onSort={toggleSort}
+              />
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--hairline)]">
+          <tbody className="divide-y divide-hairline">
             {visibleFields.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-sm text-[var(--ink-muted)]">
-                  No custom fields defined for {ENTITY_TABS.find((t) => t.value === activeEntity)?.label} yet.
-                </td>
-              </tr>
+              <EmptyTableState
+                title={isFiltered ? "No matching custom fields" : `No custom fields defined for ${ENTITY_TABS.find((t) => t.value === activeEntity)?.label}`}
+                subtitle={
+                  isFiltered
+                    ? "Try adjusting your search query."
+                    : "Add new custom fields to capture specialized booking requirements."
+                }
+                onReset={isFiltered ? resetFilters : undefined}
+              />
             ) : (
               visibleFields.map((f) => (
-                <tr key={f.id} className="transition-colors hover:bg-[var(--surface-raised)]">
-                  <td className="px-4 py-3.5 font-semibold text-sm text-[var(--ink)]">
+                <tr key={f.id} className="transition-colors hover:bg-surface-raised">
+                  <td className="px-4 py-3.5 font-semibold text-sm text-ink">
                     {f.label}
                   </td>
-                  <td className="px-4 py-3.5 font-mono text-sm text-[var(--accent)] font-semibold">
+                  <td className="px-4 py-3.5 font-mono text-sm text-accent font-semibold">
                     {f.key}
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-[var(--ink-muted)]">
-                    <span className="inline-flex items-center rounded-lg border border-[var(--hairline)] bg-[var(--surface-raised)] px-2.5 py-0.5 font-mono text-xs uppercase font-semibold text-[var(--ink)]">
+                  <td className="px-4 py-3.5 text-sm text-ink-muted">
+                    <span className="inline-flex items-center rounded-lg border border-hairline bg-surface-raised px-2.5 py-0.5 font-mono text-xs uppercase font-semibold text-ink">
                       {f.field_type}
                     </span>
                     {f.field_type === "select" && f.options && (
-                      <span className="ml-2 text-xs text-[var(--ink-faint)]">
+                      <span className="ml-2 text-xs text-ink-faint">
                         ({f.options.join(", ")})
                       </span>
                     )}
@@ -272,8 +347,8 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
                       onClick={() => handleToggleRequired(f)}
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border transition-colors ${
                         f.is_required
-                          ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200"
-                          : "bg-slate-800/50 text-slate-400 border-slate-700/50 [data-theme=light]:bg-slate-100 [data-theme=light]:text-slate-700 [data-theme=light]:border-slate-200"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          : "bg-surface-raised text-ink-muted border-hairline"
                       }`}
                     >
                       {f.is_required ? "Required" : "Optional"}
@@ -282,7 +357,7 @@ export default function CustomFieldsManager({ initialFields }: { initialFields: 
                   <td className="px-4 py-3.5 text-right">
                     <button
                       onClick={() => handleDelete(f)}
-                      className="rounded-xl p-2 text-[var(--ink-muted)] hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                      className="btn-ghost btn-sm px-2 text-danger hover:bg-rose-500/10 transition-colors"
                       title="Delete field definition"
                     >
                       <Trash2 size={15} />

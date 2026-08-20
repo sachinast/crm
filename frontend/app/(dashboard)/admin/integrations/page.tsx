@@ -1,43 +1,18 @@
-import { Code2, Plug, Key } from "lucide-react";
+import { Code2, Plug } from "lucide-react";
 
 import { apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 import PageHeader from "@/components/shared/PageHeader";
-import DataTableCard from "@/components/shared/DataTableCard";
 
 import CreateApiKeyForm from "./CreateApiKeyForm";
 import CreateEmbedWidgetForm from "./CreateEmbedWidgetForm";
-import EmbedSnippetButton from "./EmbedSnippetButton";
-import RevokeButton from "./RevokeButton";
-import ToggleWidgetButton from "./ToggleWidgetButton";
-
-interface ApiKeyRow {
-  id: string;
-  name: string;
-  key_prefix: string;
-  assigned_agent_id: string;
-  is_active: boolean;
-  last_used_at: string | null;
-  created_at: string;
-}
-
-interface EmbedWidgetRow {
-  id: string;
-  name: string;
-  widget_key: string;
-  assigned_agent_id: string;
-  is_active: boolean;
-  submission_count: number;
-  created_at: string;
-}
-
-interface AgentOption {
-  id: string;
-  name: string;
-  email: string;
-}
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import {
+  ApiKeysTableClient,
+  EmbedWidgetsTableClient,
+  type ApiKeyRow,
+  type EmbedWidgetRow,
+  type AgentOption,
+} from "@/components/admin/IntegrationsTablesClient";
 
 async function fetchApiKeys(): Promise<ApiKeyRow[]> {
   const token = await getAccessToken();
@@ -109,61 +84,7 @@ export default async function IntegrationsPage() {
         </div>
 
         <div className="lg:col-span-7">
-          <DataTableCard
-            headerContent={
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-bold uppercase tracking-wider text-ink">
-                  Active Inbound API Keys
-                </span>
-                <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
-                  {keys.length} keys
-                </span>
-              </div>
-            }
-          >
-            <table className="table-modern w-full">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Key Prefix</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Lead Owner</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {keys.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-sm text-ink-muted">No integration keys generated yet.</td>
-                  </tr>
-                ) : (
-                  keys.map((k) => (
-                    <tr key={k.id} className="transition-colors hover:bg-surface-raised">
-                      <td className="px-4 py-3 font-semibold text-sm text-ink">{k.name}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-accent font-semibold">{k.key_prefix}...</td>
-                      <td className="px-4 py-3 text-sm text-ink">
-                        {agentById.get(k.assigned_agent_id)?.name ?? k.assigned_agent_id.slice(0, 8)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${
-                            k.is_active
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                              : "bg-surface-raised text-ink-muted border-hairline"
-                          }`}
-                        >
-                          {k.is_active ? "Active" : "Revoked"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <RevokeButton keyId={k.id} isActive={k.is_active} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </DataTableCard>
+          <ApiKeysTableClient keys={keys} agents={agents} />
         </div>
       </div>
 
@@ -199,66 +120,7 @@ export default async function IntegrationsPage() {
           </div>
 
           <div className="lg:col-span-7">
-            <DataTableCard
-              headerContent={
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold uppercase tracking-wider text-ink">
-                    Active Web Widgets
-                  </span>
-                  <span className="rounded-full bg-surface-raised border border-hairline px-2.5 py-0.5 text-xs font-mono font-bold text-ink-muted">
-                    {widgets.length} widgets
-                  </span>
-                </div>
-              }
-            >
-              <table className="table-modern w-full">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Widget Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Assigned Agent</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Leads Captured</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">Code / Embed</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {widgets.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-sm text-ink-muted">No web widgets created yet.</td>
-                    </tr>
-                  ) : (
-                    widgets.map((w) => (
-                      <tr key={w.id} className="transition-colors hover:bg-surface-raised">
-                        <td className="px-4 py-3 font-semibold text-sm text-ink">{w.name}</td>
-                        <td className="px-4 py-3 text-sm text-ink">
-                          {agentById.get(w.assigned_agent_id)?.name ?? w.assigned_agent_id.slice(0, 8)}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-accent">
-                          {w.submission_count}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${
-                              w.is_active
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                : "bg-surface-raised text-ink-muted border-hairline"
-                            }`}
-                          >
-                            {w.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <EmbedSnippetButton widgetKey={w.widget_key} />
-                            <ToggleWidgetButton widgetId={w.id} isActive={w.is_active} />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </DataTableCard>
+            <EmbedWidgetsTableClient widgets={widgets} agents={agents} />
           </div>
         </div>
       </div>
