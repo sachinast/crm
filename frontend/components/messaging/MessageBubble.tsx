@@ -37,7 +37,6 @@ function AttachmentImage({ attachment }: { attachment: AttachmentRead }) {
 
   return (
     <a href={src} target="_blank" rel="noreferrer">
-      {/* eslint-disable-next-line @next/next/no-img-element -- token-authenticated backend URL, not a static asset Next's optimizer can process */}
       <img
         src={src}
         alt={attachment.file_name}

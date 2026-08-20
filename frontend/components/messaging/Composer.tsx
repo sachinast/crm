@@ -222,7 +222,6 @@ export default function Composer({
           {attachments.map((a) => (
             <div key={a.localId} className="card-flat relative flex items-center gap-2 py-1.5 pl-2 pr-6 text-xs bg-surface-raised">
               {a.previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={a.previewUrl} alt={a.file.name} className="h-8 w-8 rounded object-cover" />
               ) : (
                 <FileText size={16} className="text-accent" />

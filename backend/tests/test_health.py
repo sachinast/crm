@@ -14,4 +14,4 @@ def test_health() -> None:
 def test_root() -> None:
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.json()["service"] == "travel-crm-api"
+    assert resp.json()["service"] == "CRM PRO Enterprise API"
