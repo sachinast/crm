@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   Car,
   TrendingUp,
@@ -42,11 +42,11 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [serviceFilter, setServiceFilter] = useState("all");
 
-  const isWithinDateRange = (dateStr: string) => {
+  const isWithinDateRange = useCallback((dateStr: string) => {
     if (!dateStr) return false;
     const itemDate = dateStr.slice(0, 10);
     return itemDate >= startDate && itemDate <= endDate;
-  };
+  }, [startDate, endDate]);
 
   const pickupsList = useMemo(() => {
     return leads.filter((l) => {
@@ -54,14 +54,14 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
       const dateMatch = isWithinDateRange(l.pickup_datetime || l.created_at);
       return matchService && dateMatch;
     });
-  }, [leads, startDate, endDate, serviceFilter]);
+  }, [leads, serviceFilter, isWithinDateRange]);
 
   const newBookingsList = useMemo(() => {
     return leads.filter((l) => {
       const matchService = serviceFilter === "all" || l.service_type === serviceFilter;
       return matchService && isWithinDateRange(l.created_at);
     });
-  }, [leads, startDate, endDate, serviceFilter]);
+  }, [leads, serviceFilter, isWithinDateRange]);
 
   const cancellationsList = useMemo(() => {
     return leads.filter((l) => {
@@ -74,7 +74,7 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
       const matchService = serviceFilter === "all" || l.service_type === serviceFilter;
       return isCancelled && matchService && isWithinDateRange(l.created_at);
     });
-  }, [leads, startDate, endDate, serviceFilter]);
+  }, [leads, serviceFilter, isWithinDateRange]);
 
   const currentDataset = activeTab === "pickups" ? pickupsList : activeTab === "bookings" ? newBookingsList : cancellationsList;
 

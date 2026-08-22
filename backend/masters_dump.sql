@@ -3,8 +3,8 @@
 BEGIN;
 
 -- Table: mst_booking_platform (2 records)
-INSERT INTO "mst_booking_platform" ("id", "value", "display_order", "is_active", "is_deleted", "created_by", "created_on", "modified_by", "modified_on") VALUES ('0bb4660b-5730-4f85-9a8b-377d15839a5b', 'Agoda', 0, TRUE, FALSE, '87a4b8b0-763c-4633-9f59-623d53ecd5a8', '2026-08-19 20:04:33.184039+00:00', NULL, '2026-08-19 20:04:33.184039+00:00') ON CONFLICT (value) DO NOTHING;
-INSERT INTO "mst_booking_platform" ("id", "value", "display_order", "is_active", "is_deleted", "created_by", "created_on", "modified_by", "modified_on") VALUES ('3172ec92-d8a4-4195-bdfa-532d486479a5', 'MakeMyTrip', 0, TRUE, FALSE, '87a4b8b0-763c-4633-9f59-623d53ecd5a8', '2026-08-19 20:04:39.041074+00:00', NULL, '2026-08-19 20:04:39.041074+00:00') ON CONFLICT (value) DO NOTHING;
+INSERT INTO "mst_booking_platform" ("id", "value", "display_order", "is_active", "is_deleted", "created_by", "created_on", "modified_by", "modified_on") VALUES ('0bb4660b-5730-4f85-9a8b-377d15839a5b', 'Agoda', 0, TRUE, FALSE, NULL, '2026-08-19 20:04:33.184039+00:00', NULL, '2026-08-19 20:04:33.184039+00:00') ON CONFLICT (value) DO NOTHING;
+INSERT INTO "mst_booking_platform" ("id", "value", "display_order", "is_active", "is_deleted", "created_by", "created_on", "modified_by", "modified_on") VALUES ('3172ec92-d8a4-4195-bdfa-532d486479a5', 'MakeMyTrip', 0, TRUE, FALSE, NULL, '2026-08-19 20:04:39.041074+00:00', NULL, '2026-08-19 20:04:39.041074+00:00') ON CONFLICT (value) DO NOTHING;
 
 -- Table: mst_leads_booking_source (2 records)
 INSERT INTO "mst_leads_booking_source" ("id", "value", "display_order", "is_active", "is_deleted", "created_by", "created_on", "modified_by", "modified_on") VALUES ('859d278c-0234-450b-8f0c-ea898f43ef8d', 'Amadeus PNR', 0, TRUE, FALSE, NULL, '2026-08-22 14:43:14.000200+00:00', NULL, '2026-08-22 14:43:14.000200+00:00') ON CONFLICT (value) DO NOTHING;
