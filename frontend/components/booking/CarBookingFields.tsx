@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   Car,
@@ -17,6 +17,7 @@ import {
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -63,7 +64,7 @@ export function generateRandomCRMID(): string {
 
 export const EMPTY_CAR_BOOKING: CarBookingValue = {
   booking_reference: "",
-  booking_platform: "Direct",
+  booking_platform: "",
   booking_source: "ZAD CARS",
   transaction_type: "New",
   transaction_status: "Pending",
@@ -137,6 +138,12 @@ export default function CarBookingFields({
     }
   }
 
+  useEffect(() => {
+    if (!value.booking_reference) {
+      onChange({ ...value, booking_reference: generateRandomCRMID() });
+    }
+  }, []);
+
   function autoGenRef() {
     onChange({ ...value, booking_reference: generateRandomCRMID() });
   }
@@ -169,14 +176,6 @@ export default function CarBookingFields({
             </span>
             <span>1. Booking Info</span>
           </div>
-          <button
-            type="button"
-            onClick={autoGenRef}
-            className="flex items-center gap-1.5 text-xs font-bold text-accent px-3 py-1 rounded-xl bg-accent-soft hover:bg-accent hover:text-white transition-all shadow-xs"
-          >
-            <Sparkles size={13} />
-            <span>Auto-Gen CRMID</span>
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,23 +209,13 @@ export default function CarBookingFields({
           </Field>
 
           <Field label="Booking Reference / CRMID" required>
-            <div className="flex items-center gap-1.5">
-              <input
-                required
-                value={value.booking_reference}
-                onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
-                className="input font-mono font-bold uppercase text-accent flex-1"
-                placeholder="CRM-9021A4"
-              />
-              <button
-                type="button"
-                onClick={autoGenRef}
-                title="Generate Random CRM ID"
-                className="btn-secondary btn-sm px-2.5 shrink-0"
-              >
-                <Sparkles size={13} />
-              </button>
-            </div>
+            <input
+              required
+              value={value.booking_reference}
+              onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
+              className="input font-mono font-bold uppercase text-accent"
+              placeholder="CRM-9021A4"
+            />
           </Field>
 
           <Field label="Booking Confirmation">
@@ -274,13 +263,12 @@ export default function CarBookingFields({
 
         <div className="p-4 sm:p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Renter Date of Birth" required>
-            <input
+            <ModernDateTimePicker
               required
-              type="date"
+              mode="date"
               value={value.renter_dob}
-              onClick={(e) => e.currentTarget.showPicker?.()}
-              onChange={(e) => onChange({ ...value, renter_dob: e.target.value })}
-              className="input font-mono"
+              onChange={(v) => onChange({ ...value, renter_dob: v })}
+              placeholder="Select birth date…"
             />
           </Field>
 
@@ -295,10 +283,15 @@ export default function CarBookingFields({
 
           <Field label="Driver Phone / Mobile">
             <input
+              type="tel"
+              inputMode="tel"
               value={value.driver_phone ?? ""}
-              onChange={(e) => onChange({ ...value, driver_phone: e.target.value })}
+              onChange={(e) => {
+                const sanitized = e.target.value.replace(/[^\d+()-\s]/g, "");
+                onChange({ ...value, driver_phone: sanitized });
+              }}
               className="input font-mono"
-              placeholder="+1 555-0199"
+              placeholder="+1 (555) 019-9283"
             />
           </Field>
 
@@ -393,13 +386,12 @@ export default function CarBookingFields({
                 />
               </Field>
               <Field label="Pick-up Date & Time" required>
-                <input
+                <ModernDateTimePicker
                   required
-                  type="datetime-local"
+                  mode="datetime"
                   value={value.pickup_datetime}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => onChange({ ...value, pickup_datetime: e.target.value })}
-                  className="input font-mono"
+                  onChange={(v) => onChange({ ...value, pickup_datetime: v })}
+                  placeholder="Select pick-up date & time…"
                 />
               </Field>
             </div>
@@ -434,13 +426,12 @@ export default function CarBookingFields({
               </Field>
 
               <Field label="Return Date & Time" required>
-                <input
+                <ModernDateTimePicker
                   required
-                  type="datetime-local"
+                  mode="datetime"
                   value={value.return_datetime}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => onChange({ ...value, return_datetime: e.target.value })}
-                  className="input font-mono"
+                  onChange={(v) => onChange({ ...value, return_datetime: v })}
+                  placeholder="Select return date & time…"
                 />
               </Field>
             </div>

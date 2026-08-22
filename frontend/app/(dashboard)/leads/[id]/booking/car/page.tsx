@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Car, ChevronLeft } from "lucide-react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
-
+import PageHeader from "@/components/shared/PageHeader";
 import CarBookingForm from "./CarBookingForm";
 import type { CarBookingValue } from "@/components/booking/CarBookingFields";
 
@@ -40,11 +41,26 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="max-w-2xl">
-      <Link href={`/leads/${id}`} className="link-muted text-sm">
-        ← {lead.name}
-      </Link>
-      <h1 className="mb-6 mt-2 text-2xl font-semibold tracking-tight">Car rental booking</h1>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Car Rental Booking"
+        subtitle={`Configure vehicle reservation, driver credentials, and rate breakdown for ${lead.name || "Customer"}.`}
+        breadcrumbs={[
+          { label: "Leads", href: "/leads" },
+          { label: lead.name || "Lead Details", href: `/leads/${id}` },
+          { label: "Car Rental Booking" },
+        ]}
+        icon={<Car size={18} />}
+        actions={
+          <Link
+            href={`/leads/${id}`}
+            className="btn-secondary flex items-center gap-1 text-xs py-2 px-3.5"
+          >
+            <ChevronLeft size={14} />
+            <span>Back to Lead</span>
+          </Link>
+        }
+      />
       <CarBookingForm leadId={id} initial={existing} />
     </div>
   );

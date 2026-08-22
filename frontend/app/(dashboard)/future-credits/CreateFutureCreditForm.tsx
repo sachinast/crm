@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
+
 // PRD §7.3 — creation restricted to TL/CS (+ Admin/Super Admin oversight,
 // enforced server-side; this form is just hidden from other roles).
 export default function CreateFutureCreditForm() {
@@ -74,17 +76,16 @@ export default function CreateFutureCreditForm() {
           className="input mt-1.5"
         />
       </label>
-      <label className="col-span-2 font-medium">
-        Validity date
-        <input
+      <div className="col-span-2">
+        <label className="block text-xs font-semibold text-ink mb-1.5">Validity Date</label>
+        <ModernDateTimePicker
           required
-          type="date"
+          mode="date"
           value={form.validity_date}
-          onClick={(e) => e.currentTarget.showPicker?.()}
-          onChange={(e) => setForm({ ...form, validity_date: e.target.value })}
-          className="input mt-1.5"
+          onChange={(v) => setForm({ ...form, validity_date: v })}
+          placeholder="Select validity expiration date…"
         />
-      </label>
+      </div>
       {error && (
         <p className="col-span-2 alert-danger">
           {error}

@@ -262,7 +262,15 @@ export default function AuditQueueClient({ leads }: { leads: AuditLeadRow[] }) {
                 <td className="px-4 py-3.5">
                   <div className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-raised px-2.5 py-1 text-xs font-semibold capitalize text-ink">
                     <ServiceIcon type={lead.service_type} />
-                    <span>{lead.service_type || "General"}</span>
+                    <span>
+                      {lead.service_type === "car"
+                        ? "Car Rental"
+                        : lead.service_type === "hotel"
+                          ? "Hotel"
+                          : lead.service_type === "flight"
+                            ? "Flight"
+                            : "General"}
+                    </span>
                   </div>
                 </td>
 

@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { Hotel, Calendar, FileText, Users, Tag, Sparkles, Info, MapPin, UserCheck, ShieldCheck, Calculator } from "lucide-react";
 
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -49,7 +51,7 @@ export function generateRandomCRMID(): string {
 
 export const EMPTY_HOTEL_BOOKING: HotelBookingValue = {
   booking_reference: "",
-  booking_platform: "Booking.com Desk",
+  booking_platform: "",
   booking_source: "eReserve Desk",
   transaction_type: "New",
   transaction_status: "Pending",
@@ -105,6 +107,12 @@ export default function HotelBookingFields({
   disabled?: boolean;
   submitting?: boolean;
 }) {
+  useEffect(() => {
+    if (!value.booking_reference) {
+      onChange({ ...value, booking_reference: generateRandomCRMID() });
+    }
+  }, []);
+
   function autoGenRef() {
     onChange({ ...value, booking_reference: generateRandomCRMID() });
   }
@@ -137,14 +145,6 @@ export default function HotelBookingFields({
             </span>
             <span>1. Booking Info</span>
           </div>
-          <button
-            type="button"
-            onClick={autoGenRef}
-            className="flex items-center gap-1.5 text-xs font-bold text-accent px-3 py-1 rounded-xl bg-accent-soft hover:bg-accent hover:text-white transition-all shadow-xs"
-          >
-            <Sparkles size={13} />
-            <span>Auto-Gen CRMID</span>
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,23 +178,13 @@ export default function HotelBookingFields({
           </Field>
 
           <Field label="Booking Reference / CRMID" required>
-            <div className="flex items-center gap-1.5">
-              <input
-                required
-                value={value.booking_reference}
-                onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
-                className="input font-mono font-bold uppercase text-accent flex-1"
-                placeholder="CRM-9021A4"
-              />
-              <button
-                type="button"
-                onClick={autoGenRef}
-                title="Generate Random CRM ID"
-                className="btn-secondary btn-sm px-2.5 shrink-0"
-              >
-                <Sparkles size={13} />
-              </button>
-            </div>
+            <input
+              required
+              value={value.booking_reference}
+              onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
+              className="input font-mono font-bold uppercase text-accent"
+              placeholder="CRM-9021A4"
+            />
           </Field>
 
           <Field label="Itinerary Number">
@@ -267,10 +257,14 @@ export default function HotelBookingFields({
               <input
                 required
                 type="tel"
+                inputMode="tel"
                 value={value.guest_phone ?? ""}
-                onChange={(e) => onChange({ ...value, guest_phone: e.target.value })}
+                onChange={(e) => {
+                  const sanitized = e.target.value.replace(/[^\d+()-\s]/g, "");
+                  onChange({ ...value, guest_phone: sanitized });
+                }}
                 className="input font-mono"
-                placeholder="+1 555-0199"
+                placeholder="+1 (555) 019-9283"
               />
             </Field>
           </div>
@@ -374,24 +368,22 @@ export default function HotelBookingFields({
             </Field>
 
             <Field label="Check-in Date" required>
-              <input
+              <ModernDateTimePicker
                 required
-                type="date"
+                mode="date"
                 value={value.check_in_date}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                onChange={(e) => onChange({ ...value, check_in_date: e.target.value })}
-                className="input font-mono"
+                onChange={(v) => onChange({ ...value, check_in_date: v })}
+                placeholder="Select check-in date…"
               />
             </Field>
 
             <Field label="Check-out Date" required>
-              <input
+              <ModernDateTimePicker
                 required
-                type="date"
+                mode="date"
                 value={value.check_out_date}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                onChange={(e) => onChange({ ...value, check_out_date: e.target.value })}
-                className="input font-mono"
+                onChange={(v) => onChange({ ...value, check_out_date: v })}
+                placeholder="Select check-out date…"
               />
             </Field>
           </div>

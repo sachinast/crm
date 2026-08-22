@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Trophy, TrendingUp, Award } from "lucide-react";
+import { Trophy, Award, UserCheck } from "lucide-react";
 
-interface LeaderboardEntry {
+export interface LeaderboardEntry {
   agent_id: string;
   agent_name: string;
   revenue: number;
@@ -13,21 +13,14 @@ interface LeaderboardEntry {
 const MEDALS = ["🥇", "🥈", "🥉", "4th", "5th"];
 
 export default function AgentLeaderboard({
-  leaderboard,
+  leaderboard = [],
+  currentUser,
 }: {
   leaderboard: LeaderboardEntry[] | null;
+  currentUser?: { id: string; name: string };
 }) {
-  const data = leaderboard && leaderboard.length > 0
-    ? leaderboard
-    : [
-        { agent_id: "1", agent_name: "Sachin Sharma", revenue: 48500, bookings_count: 34 },
-        { agent_id: "2", agent_name: "Priya Patel", revenue: 41200, bookings_count: 29 },
-        { agent_id: "3", agent_name: "Rahul Verma", revenue: 36800, bookings_count: 26 },
-        { agent_id: "4", agent_name: "Ananya Iyer", revenue: 29400, bookings_count: 21 },
-        { agent_id: "5", agent_name: "Amit Kumar", revenue: 24100, bookings_count: 18 },
-      ];
-
-  const maxRevenue = Math.max(...data.map((d) => d.revenue));
+  const data = leaderboard && leaderboard.length > 0 ? leaderboard : [];
+  const maxRevenue = Math.max(...data.map((d) => d.revenue), 1);
 
   return (
     <div className="card space-y-4">
@@ -35,58 +28,82 @@ export default function AgentLeaderboard({
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Trophy size={18} className="text-[var(--accent)]" />
-            <h3 className="text-sm font-bold text-[var(--ink)]">Top Sales Performers</h3>
+            <Trophy size={18} className="text-accent" />
+            <h3 className="text-sm font-bold text-ink">Top Sales Performers</h3>
           </div>
-          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-            Leaderboard by closed booking volume and attributed revenue.
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Live leaderboard by realized booking volume and attributed revenue.
           </p>
         </div>
-        <span className="flex items-center gap-1 text-xs font-bold text-[var(--accent)]">
+        <span className="flex items-center gap-1 text-xs font-bold text-accent">
           <Award size={15} />
-          <span>This Month</span>
+          <span>Real Data</span>
         </span>
       </div>
 
-      {/* Leaderboard List */}
-      <div className="space-y-3">
-        {data.map((agent, i) => {
-          const widthPct = Math.max(15, Math.round((agent.revenue / maxRevenue) * 100));
+      {/* Leaderboard List or Empty State */}
+      {data.length === 0 ? (
+        <div className="rounded-xl border border-hairline bg-surface-sunken p-6 text-center space-y-2">
+          <div className="flex h-10 w-10 mx-auto items-center justify-center rounded-xl bg-surface-raised border border-hairline text-ink-muted">
+            <UserCheck size={18} />
+          </div>
+          <p className="text-sm font-semibold text-ink">No closed sales recorded yet</p>
+          <p className="text-xs text-ink-muted max-w-xs mx-auto">
+            Bookings transitioned to Charged status will automatically rank here with real attributed revenue.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.map((agent, i) => {
+            const widthPct = Math.max(15, Math.round((agent.revenue / maxRevenue) * 100));
+            const isCurrentUser = currentUser?.id === agent.agent_id;
 
-          return (
-            <div
-              key={agent.agent_id}
-              className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-sunken)] p-3 transition-colors hover:border-[var(--hairline-strong)] space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-6 w-6 items-center justify-center font-bold text-xs">
-                    {MEDALS[i]}
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold text-[var(--ink)]">{agent.agent_name}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">
-                      {agent.bookings_count} bookings closed
-                    </p>
+            return (
+              <div
+                key={agent.agent_id}
+                className={`rounded-xl border p-3 transition-colors space-y-2 ${
+                  isCurrentUser
+                    ? "border-accent/40 bg-surface-raised shadow-xs"
+                    : "border-hairline bg-surface-sunken hover:border-hairline-strong"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 items-center justify-center font-bold text-xs">
+                      {MEDALS[i] || `${i + 1}th`}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-ink flex items-center gap-1.5">
+                        <span>{agent.agent_name}</span>
+                        {isCurrentUser && (
+                          <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-accent text-white font-bold">
+                            You
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {agent.bookings_count} {agent.bookings_count === 1 ? "booking" : "bookings"} closed
+                      </p>
+                    </div>
                   </div>
+
+                  <span className="font-mono text-sm font-extrabold text-accent">
+                    ${agent.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
 
-                <span className="font-mono text-sm font-extrabold text-[var(--accent)]">
-                  ${agent.revenue.toLocaleString()}
-                </span>
+                {/* Volume Progress Indicator */}
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface border border-hairline">
+                  <div
+                    style={{ width: `${widthPct}%` }}
+                    className="h-full rounded-full bg-gradient-to-r from-accent to-accent-hover transition-all duration-500"
+                  />
+                </div>
               </div>
-
-              {/* Volume Progress Indicator */}
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface)]">
-                <div
-                  style={{ width: `${widthPct}%` }}
-                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)]"
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -118,7 +119,7 @@ export function generateRandomCRMID(): string {
 
 export const EMPTY_FLIGHT_BOOKING: FlightBookingValue = {
   booking_reference: "",
-  booking_platform: "Amadeus GDS",
+  booking_platform: "",
   pnr: "",
   airline: "",
   flight_numbers: [],
@@ -204,6 +205,12 @@ export default function FlightBookingFields({
 
   const passengerList = value.passengers ?? [];
   const specialNotesList = value.special_notes ?? [];
+
+  useEffect(() => {
+    if (!value.booking_reference) {
+      onChange({ ...value, booking_reference: generateRandomCRMID() });
+    }
+  }, []);
 
   function autoGenRef() {
     onChange({ ...value, booking_reference: generateRandomCRMID() });
@@ -292,14 +299,6 @@ export default function FlightBookingFields({
             </span>
             <span>Booking Source Details</span>
           </div>
-          <button
-            type="button"
-            onClick={autoGenRef}
-            className="flex items-center gap-1.5 text-xs font-bold text-accent px-3 py-1 rounded-xl bg-accent-soft hover:bg-accent hover:text-white transition-all shadow-xs"
-          >
-            <Sparkles size={13} />
-            <span>Auto-Gen CRMID</span>
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
@@ -397,23 +396,13 @@ export default function FlightBookingFields({
             </Field>
 
             <Field label="Booking Reference / CRMID" required>
-              <div className="flex items-center gap-1.5">
-                <input
-                  required
-                  value={value.booking_reference}
-                  onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
-                  className="input font-mono font-bold uppercase text-accent flex-1"
-                  placeholder="CRM-9021A4"
-                />
-                <button
-                  type="button"
-                  onClick={autoGenRef}
-                  title="Generate Random CRM ID"
-                  className="btn-secondary btn-sm px-2.5 shrink-0"
-                >
-                  <Sparkles size={13} />
-                </button>
-              </div>
+              <input
+                required
+                value={value.booking_reference}
+                onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
+                className="input font-mono font-bold uppercase text-accent"
+                placeholder="CRM-9021A4"
+              />
             </Field>
 
             <Field label="Booking Platform" required>
@@ -502,12 +491,12 @@ export default function FlightBookingFields({
 
               <div className="sm:col-span-3">
                 <label className="text-xs font-semibold text-ink-muted block mb-1">DOB [MM-DD-YYYY]</label>
-                <input
-                  type="date"
+                <ModernDateTimePicker
+                  mode="date"
                   value={newDob}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => setNewDob(e.target.value)}
-                  className="input text-xs font-mono"
+                  onChange={(v) => setNewDob(v)}
+                  placeholder="Select birth date…"
+                  className="w-full"
                 />
               </div>
 

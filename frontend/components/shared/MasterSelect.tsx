@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { fetchMasterOptions, type MasterFieldKey } from "@/lib/master-options-api";
 
 /** A <select> populated from Super Admin master data (GET /master-options)
  * instead of a hardcoded option list or free text — booking_platform,
  * airline, cabin_class, hotel_name, room_type, car_provider, vehicle_type,
- * transmission all render this way now. Falls back to a plain text input
- * if no options have been defined yet for this field, so a freshly-deployed
- * instance isn't blocked before an admin populates any masters. */
+ * transmission all render this way.
+ * 
+ * If allowOther is true, "+ Other (Type custom value)" is available in the dropdown.
+ * When selected by the user, it reveals a text input to type a custom value.
+ */
 export default function MasterSelect({
   fieldKey,
   optionType,
@@ -30,7 +31,7 @@ export default function MasterSelect({
   className?: string;
 }) {
   const [options, setOptions] = useState<string[] | null>(null);
-  const [isOther, setIsOther] = useState(false);
+  const [isOtherSelected, setIsOtherSelected] = useState(false);
   const safeValue = value ?? "";
 
   useEffect(() => {
@@ -39,15 +40,12 @@ export default function MasterSelect({
       if (!cancelled) {
         const vals = opts.map((o) => o.value);
         setOptions(vals);
-        if (allowOther && safeValue && !vals.includes(safeValue)) {
-          setIsOther(true);
-        }
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [fieldKey, optionType, allowOther]);
+  }, [fieldKey, optionType]);
 
   if (options === null) {
     return (
@@ -59,19 +57,11 @@ export default function MasterSelect({
     );
   }
 
-  if (options.length === 0) {
-    return (
-      <input
-        required={required}
-        value={safeValue}
-        onChange={(e) => onChange(e.target.value)}
-        className={className}
-        placeholder={placeholder ?? "No masters defined — Admin > Masters"}
-      />
-    );
-  }
+  // Real master options only
+  const allDropdownOptions = [...options];
 
-  if (allowOther && isOther) {
+  // If the user explicitly selected "Other", show the text input box with a button to switch back to dropdown
+  if (allowOther && isOtherSelected) {
     return (
       <div className="flex items-center gap-1.5 w-full">
         <input
@@ -79,19 +69,21 @@ export default function MasterSelect({
           value={safeValue}
           onChange={(e) => onChange(e.target.value)}
           className={`${className} flex-1`}
-          placeholder={`Enter custom ${placeholder || "value"}…`}
+          placeholder={`Type custom ${placeholder ? placeholder.toLowerCase() : "value"}…`}
           autoFocus
         />
         <button
           type="button"
           onClick={() => {
-            setIsOther(false);
-            onChange(options[0] ?? "");
+            setIsOtherSelected(false);
+            if (options.length > 0) {
+              onChange(options[0]);
+            }
           }}
-          className="text-xs text-accent font-semibold px-2 py-1.5 rounded-lg border border-hairline bg-surface hover:bg-surface-raised transition-colors shrink-0"
-          title="Back to list"
+          className="text-xs text-accent font-semibold px-2.5 py-1.5 rounded-lg border border-hairline bg-surface hover:bg-surface-raised transition-colors shrink-0"
+          title="Back to dropdown selection"
         >
-          Select from list
+          Choose from list
         </button>
       </div>
     );
@@ -100,13 +92,13 @@ export default function MasterSelect({
   return (
     <select
       required={required}
-      value={options.includes(safeValue) ? safeValue : allowOther && safeValue ? "__other__" : safeValue}
+      value={safeValue}
       onChange={(e) => {
         if (allowOther && e.target.value === "__other__") {
-          setIsOther(true);
+          setIsOtherSelected(true);
           onChange("");
         } else {
-          setIsOther(false);
+          setIsOtherSelected(false);
           onChange(e.target.value);
         }
       }}
@@ -115,7 +107,7 @@ export default function MasterSelect({
       <option value="" disabled={required}>
         {placeholder ?? "Select…"}
       </option>
-      {options.map((opt) => (
+      {allDropdownOptions.map((opt) => (
         <option key={opt} value={opt}>
           {opt}
         </option>

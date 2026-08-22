@@ -1,21 +1,31 @@
-// PRD §6.1 Status Reference Table — shared between the dashboard, lead list,
-// and lead detail pages so the status->color mapping lives in exactly one
-// place (previously duplicated inline on the lead detail page).
+// Status Reference Table — shared between the dashboard, lead list,
+// and lead detail pages so the status->color mapping is consistent.
 export const STATUS_COLOR_HINTS: Record<string, string> = {
-  authorization_pending: "yellow",
+  authorization_pending: "amber",
   client_approved: "blue",
   transferred_to_billing: "purple",
-  card_charged: "green",
-  card_declined: "red",
-  tag_change_dep: "yellow",
+  card_charged: "emerald",
+  card_declined: "rose",
+  tag_change_dep: "indigo",
   tag_cr_booking: "orange",
-  tag_auditor: "purple",
-  qc_done: "green",
-  tag_refund: "red",
-  tag_rdr: "grey",
-  tag_chargeback: "red",
+  tag_auditor: "teal",
+  qc_done: "cyan",
+  tag_refund: "fuchsia",
+  tag_rdr: "slate",
+  tag_chargeback: "dark_red",
+  dropped: "faint_slate",
+  booked_shared_client: "sky",
+  // Common operational fallbacks
+  new: "blue",
+  pending: "amber",
+  confirmed: "emerald",
+  cancelled: "rose",
+  completed: "emerald",
 };
 
 export function formatStatus(status: string): string {
-  return status.replace(/_/g, " ");
+  return status
+    .replace(/^tag_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }

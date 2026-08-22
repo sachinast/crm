@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import { fetchCustomFields, type CustomFieldDef, type EntityType } from "@/lib/custom-fields-api";
 
 /**
@@ -67,13 +68,12 @@ export default function DynamicFieldsBlock({
               />
             )}
             {def.field_type === "date" && (
-              <input
+              <ModernDateTimePicker
                 required={def.is_required}
-                type="date"
+                mode="date"
                 value={(value[def.key] as string) ?? ""}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                onChange={(e) => setField(def.key, e.target.value)}
-                className="input font-mono"
+                onChange={(v) => setField(def.key, v)}
+                placeholder="Select date…"
               />
             )}
             {def.field_type === "select" && (

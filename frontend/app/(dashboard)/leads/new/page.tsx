@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CountryCode } from "libphonenumber-js";
 
-import CarBookingFields, { EMPTY_CAR_BOOKING, type CarBookingValue } from "@/components/booking/CarBookingFields";
+import CarBookingFields, { EMPTY_CAR_BOOKING, generateRandomCRMID, type CarBookingValue } from "@/components/booking/CarBookingFields";
 import HotelBookingFields, { EMPTY_HOTEL_BOOKING, type HotelBookingValue } from "@/components/booking/HotelBookingFields";
 import FlightBookingFields, { EMPTY_FLIGHT_BOOKING, type FlightBookingValue } from "@/components/booking/FlightBookingFields";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
@@ -94,9 +94,18 @@ export default function NewLeadPage() {
   const [overrideReason, setOverrideReason] = useState("");
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [serviceType, setServiceType] = useState<ServiceType | null>("car");
-  const [carForm, setCarForm] = useState<CarBookingValue>(EMPTY_CAR_BOOKING);
-  const [hotelForm, setHotelForm] = useState<HotelBookingValue>(EMPTY_HOTEL_BOOKING);
-  const [flightForm, setFlightForm] = useState<FlightBookingValue>(EMPTY_FLIGHT_BOOKING);
+  const [carForm, setCarForm] = useState<CarBookingValue>(() => ({
+    ...EMPTY_CAR_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
+  const [hotelForm, setHotelForm] = useState<HotelBookingValue>(() => ({
+    ...EMPTY_HOTEL_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
+  const [flightForm, setFlightForm] = useState<FlightBookingValue>(() => ({
+    ...EMPTY_FLIGHT_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -448,7 +457,7 @@ export default function NewLeadPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ravendra Singh"
+                  placeholder="e.g. John Doe"
                   className="input font-medium"
                 />
               </Field>
@@ -494,17 +503,17 @@ export default function NewLeadPage() {
                     <div
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                         active
-                          ? "bg-accent text-accent-ink shadow-sm"
-                          : "bg-surface-raised text-accent border border-hairline"
+                          ? "bg-accent text-white shadow-sm"
+                          : "bg-surface-raised text-accent border border-hairline group-hover:bg-accent-soft"
                       }`}
                     >
-                      <Icon size={19} strokeWidth={2} />
+                      <Icon size={20} strokeWidth={2.2} className={active ? "text-white" : "text-accent"} />
                     </div>
 
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className={`text-sm font-bold ${active ? "text-accent-ink" : "text-ink"}`}>{t.label}</span>
-                        {active && <Check size={15} className="text-accent" />}
+                        <span className={`text-sm font-bold ${active ? "text-accent" : "text-ink"}`}>{t.label}</span>
+                        {active && <Check size={16} className="text-accent" strokeWidth={2.5} />}
                       </div>
                       <p className="text-xs text-ink-muted">{t.sublabel}</p>
                     </div>
