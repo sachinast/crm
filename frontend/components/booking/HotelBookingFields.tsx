@@ -6,6 +6,7 @@ import { Hotel, Calendar, FileText, Users, Tag, Sparkles, Info, MapPin, UserChec
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -367,24 +368,22 @@ export default function HotelBookingFields({
             </Field>
 
             <Field label="Check-in Date" required>
-              <input
+              <ModernDateTimePicker
                 required
-                type="date"
+                mode="date"
                 value={value.check_in_date}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                onChange={(e) => onChange({ ...value, check_in_date: e.target.value })}
-                className="input font-mono"
+                onChange={(v) => onChange({ ...value, check_in_date: v })}
+                placeholder="Select check-in date…"
               />
             </Field>
 
             <Field label="Check-out Date" required>
-              <input
+              <ModernDateTimePicker
                 required
-                type="date"
+                mode="date"
                 value={value.check_out_date}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                onChange={(e) => onChange({ ...value, check_out_date: e.target.value })}
-                className="input font-mono"
+                onChange={(v) => onChange({ ...value, check_out_date: v })}
+                placeholder="Select check-out date…"
               />
             </Field>
           </div>

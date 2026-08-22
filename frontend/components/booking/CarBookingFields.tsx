@@ -17,6 +17,7 @@ import {
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -262,13 +263,12 @@ export default function CarBookingFields({
 
         <div className="p-4 sm:p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Renter Date of Birth" required>
-            <input
+            <ModernDateTimePicker
               required
-              type="date"
+              mode="date"
               value={value.renter_dob}
-              onClick={(e) => e.currentTarget.showPicker?.()}
-              onChange={(e) => onChange({ ...value, renter_dob: e.target.value })}
-              className="input font-mono"
+              onChange={(v) => onChange({ ...value, renter_dob: v })}
+              placeholder="Select birth date…"
             />
           </Field>
 
@@ -386,13 +386,12 @@ export default function CarBookingFields({
                 />
               </Field>
               <Field label="Pick-up Date & Time" required>
-                <input
+                <ModernDateTimePicker
                   required
-                  type="datetime-local"
+                  mode="datetime"
                   value={value.pickup_datetime}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => onChange({ ...value, pickup_datetime: e.target.value })}
-                  className="input font-mono"
+                  onChange={(v) => onChange({ ...value, pickup_datetime: v })}
+                  placeholder="Select pick-up date & time…"
                 />
               </Field>
             </div>
@@ -427,13 +426,12 @@ export default function CarBookingFields({
               </Field>
 
               <Field label="Return Date & Time" required>
-                <input
+                <ModernDateTimePicker
                   required
-                  type="datetime-local"
+                  mode="datetime"
                   value={value.return_datetime}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => onChange({ ...value, return_datetime: e.target.value })}
-                  className="input font-mono"
+                  onChange={(v) => onChange({ ...value, return_datetime: v })}
+                  placeholder="Select return date & time…"
                 />
               </Field>
             </div>

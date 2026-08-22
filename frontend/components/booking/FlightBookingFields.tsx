@@ -21,6 +21,7 @@ import {
 import Field from "@/components/shared/FormField";
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
+import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import PaymentSummarySection, {
   type PaymentSummaryData,
@@ -490,12 +491,12 @@ export default function FlightBookingFields({
 
               <div className="sm:col-span-3">
                 <label className="text-xs font-semibold text-ink-muted block mb-1">DOB [MM-DD-YYYY]</label>
-                <input
-                  type="date"
+                <ModernDateTimePicker
+                  mode="date"
                   value={newDob}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  onChange={(e) => setNewDob(e.target.value)}
-                  className="input text-xs font-mono"
+                  onChange={(v) => setNewDob(v)}
+                  placeholder="Select birth date…"
+                  className="w-full"
                 />
               </div>
 
