@@ -62,7 +62,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       // Smooth direct navigation to dashboard without flashing landing page
       setSubmitting(true);
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       setSubmitting(false);
       setError("Unable to connect to authentication service.");

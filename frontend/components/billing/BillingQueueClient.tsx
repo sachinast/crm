@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { CreditCard, ChevronRight, Car, Hotel, Plane } from "lucide-react";
 
@@ -35,6 +35,11 @@ function ServiceIcon({ type }: { type: string | null }) {
 export default function BillingQueueClient({ leads }: { leads: BillingLeadRow[] }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentTime(Date.now());
+  }, []);
 
   const uniqueStatuses = useMemo(() => {
     const set = new Set<string>();
@@ -281,9 +286,9 @@ export default function BillingQueueClient({ leads }: { leads: BillingLeadRow[] 
 
                 <td className="px-4 py-3.5 space-y-1">
                   <StatusBadge status={lead.status} />
-                  {lead.status === "transferred_to_billing" && (
+                  {lead.status === "transferred_to_billing" && currentTime !== null && (
                     <div className="flex items-center gap-1 font-mono text-[11px] text-amber-500 font-semibold">
-                      <span>⏱ {Math.max(1, Math.floor((Date.now() - new Date(lead.created_at).getTime()) / 60000))} min in Billing</span>
+                      <span>⏱ {Math.max(1, Math.floor((currentTime - new Date(lead.created_at).getTime()) / 60000))} min in Billing</span>
                     </div>
                   )}
                 </td>

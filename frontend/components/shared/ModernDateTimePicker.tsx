@@ -84,7 +84,7 @@ export default function ModernDateTimePicker({
       setSelectedHours(parsed.hours);
       setSelectedMinutes(parsed.minutes);
     }
-  }, [value]);
+  }, [value, parsed]);
 
   // Outside click handler
   useEffect(() => {

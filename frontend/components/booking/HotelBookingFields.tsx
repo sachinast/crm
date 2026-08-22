@@ -111,6 +111,7 @@ export default function HotelBookingFields({
     if (!value.booking_reference) {
       onChange({ ...value, booking_reference: generateRandomCRMID() });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function autoGenRef() {
