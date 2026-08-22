@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Code2, ExternalLink, Flame } from "lucide-react";
+import { Code2, ExternalLink, Plus } from "lucide-react";
 
 import FloatingChatWidget from "@/components/messaging/FloatingChatWidget";
 import HeaderClocks from "@/components/layout/HeaderClocks";
 import LogoutButton from "@/components/ui/LogoutButton";
 import NotificationBell from "@/components/ui/NotificationBell";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import SessionRefresher from "@/components/auth/SessionRefresher";
 import SidebarNav, { type NavCategory, type NavItem } from "@/components/ui/SidebarNav";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -22,14 +23,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  // 1. Overview Category
+  // 1. Overview Category (Floating Chat handles in-app messaging)
   const overviewCategory: NavCategory = {
     id: "overview",
     title: "Overview",
     icon: "overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
-      { href: "/messages", label: "Messages", icon: "messages" },
     ],
   };
 
@@ -42,7 +42,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       { href: "/leads", label: "Leads Queue", icon: "leads" },
       { href: "/billing", label: "Billing & Accounts", icon: "billing" },
       { href: "/audit", label: "Audit / QC", icon: "audit" },
-      { href: "/future-credits", label: "Future Credits", icon: "credits" },
     ],
   };
 
@@ -133,6 +132,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(adminCategory ? [adminCategory] : []),
   ];
 
+  const roleNormalized = (user.role || "").toLowerCase();
+  const isSuperAdmin = roleNormalized === "super_admin" || roleNormalized === "superadmin";
+
   const apiDocsUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     ? process.env.NEXT_PUBLIC_API_BASE_URL.replace("/api/v1", "/docs")
     : "http://localhost:8000/docs";
@@ -164,19 +166,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         {/* Fixed Bottom Section (NEVER Hidden on Screen) */}
         <div className="shrink-0 border-t border-sidebar-hairline bg-sidebar-sunken p-3 space-y-2.5 z-20">
-          {/* Direct link to Interactive Swagger Docs */}
-          <a
-            href={apiDocsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between rounded-xl border border-sidebar-hairline bg-sidebar-surface px-3 py-2 text-xs font-semibold text-accent transition-all hover:bg-sidebar-surface-raised"
-          >
-            <div className="flex items-center gap-2">
-              <Code2 size={14} />
-              <span>Swagger API Docs</span>
-            </div>
-            <ExternalLink size={12} />
-          </a>
+          {/* Direct link to Interactive Swagger Docs — Gated for Super Admin */}
+          {isSuperAdmin && (
+            <a
+              href={apiDocsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-xl border border-sidebar-hairline bg-sidebar-surface px-3 py-2 text-xs font-semibold text-accent transition-all hover:bg-sidebar-surface-raised"
+            >
+              <div className="flex items-center gap-2">
+                <Code2 size={14} />
+                <span>Swagger API Docs</span>
+              </div>
+              <ExternalLink size={12} />
+            </a>
+          )}
 
           {/* User Profile & Sign Out Bar */}
           <div className="flex items-center justify-between rounded-xl border border-sidebar-hairline bg-sidebar-surface p-2.5">
@@ -207,8 +211,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
               href="/leads/new"
               className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-accent-hover active:scale-95 transition-all"
             >
-              <Flame size={14} className="text-amber-300 fill-amber-400/30 animate-pulse" />
-              <span>+ New Lead</span>
+              <Plus size={14} className="text-white" />
+              <span>New Lead</span>
             </Link>
           </div>
 
@@ -223,6 +227,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       <FloatingChatWidget currentUserId={user.id} />
+      <SessionRefresher />
     </div>
   );
 }

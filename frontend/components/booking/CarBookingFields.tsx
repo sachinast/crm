@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   Car,
@@ -63,7 +63,7 @@ export function generateRandomCRMID(): string {
 
 export const EMPTY_CAR_BOOKING: CarBookingValue = {
   booking_reference: "",
-  booking_platform: "Direct",
+  booking_platform: "",
   booking_source: "ZAD CARS",
   transaction_type: "New",
   transaction_status: "Pending",
@@ -137,6 +137,12 @@ export default function CarBookingFields({
     }
   }
 
+  useEffect(() => {
+    if (!value.booking_reference) {
+      onChange({ ...value, booking_reference: generateRandomCRMID() });
+    }
+  }, []);
+
   function autoGenRef() {
     onChange({ ...value, booking_reference: generateRandomCRMID() });
   }
@@ -169,14 +175,6 @@ export default function CarBookingFields({
             </span>
             <span>1. Booking Info</span>
           </div>
-          <button
-            type="button"
-            onClick={autoGenRef}
-            className="flex items-center gap-1.5 text-xs font-bold text-accent px-3 py-1 rounded-xl bg-accent-soft hover:bg-accent hover:text-white transition-all shadow-xs"
-          >
-            <Sparkles size={13} />
-            <span>Auto-Gen CRMID</span>
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,23 +208,13 @@ export default function CarBookingFields({
           </Field>
 
           <Field label="Booking Reference / CRMID" required>
-            <div className="flex items-center gap-1.5">
-              <input
-                required
-                value={value.booking_reference}
-                onChange={(e) => onChange({ ...value, booking_reference: e.target.value })}
-                className="input font-mono font-bold uppercase text-accent flex-1"
-                placeholder="CRM-9021A4"
-              />
-              <button
-                type="button"
-                onClick={autoGenRef}
-                title="Generate Random CRM ID"
-                className="btn-secondary btn-sm px-2.5 shrink-0"
-              >
-                <Sparkles size={13} />
-              </button>
-            </div>
+            <input
+              required
+              value={value.booking_reference}
+              onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
+              className="input font-mono font-bold uppercase text-accent"
+              placeholder="CRM-9021A4"
+            />
           </Field>
 
           <Field label="Booking Confirmation">
@@ -295,10 +283,15 @@ export default function CarBookingFields({
 
           <Field label="Driver Phone / Mobile">
             <input
+              type="tel"
+              inputMode="tel"
               value={value.driver_phone ?? ""}
-              onChange={(e) => onChange({ ...value, driver_phone: e.target.value })}
+              onChange={(e) => {
+                const sanitized = e.target.value.replace(/[^\d+()-\s]/g, "");
+                onChange({ ...value, driver_phone: sanitized });
+              }}
               className="input font-mono"
-              placeholder="+1 555-0199"
+              placeholder="+1 (555) 019-9283"
             />
           </Field>
 

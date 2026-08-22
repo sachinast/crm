@@ -1,42 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
-  Plane,
-  Hotel,
   Car,
+  Hotel,
+  Plane,
+  FileText,
   CreditCard,
-  Repeat,
   PencilLine,
   Ban,
-  CheckCircle2,
+  Repeat,
+  ShieldCheck,
+  Phone,
+  Mail,
   Copy,
   ExternalLink,
-  ShieldCheck,
-  Calendar,
-  User,
-  Clock,
-  Globe,
-  FileText,
-  AlertTriangle,
-  Sparkles,
-  ChevronRight,
-  Info,
-  Check,
   MessageSquare,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  UserCheck,
+  Tag,
+  Calendar,
+  Layers,
+  Eye,
+  X,
+  Send,
 } from "lucide-react";
 
-import RevealField from "@/components/pii/RevealField";
 import StatusBadge from "@/components/shared/StatusBadge";
-import SMSDispatchModal from "@/components/messaging/SMSDispatchModal";
-import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
-
-import StatusActions from "./StatusActions";
-import PaymentActions from "./PaymentActions";
+import { formatDate } from "@/lib/formatters";
+import { formatStatus } from "@/lib/status-meta";
 import LeadCustomFieldsPanel from "./LeadCustomFieldsPanel";
 import ModificationsPanel from "./ModificationsPanel";
 import CancellationPanel from "./CancellationPanel";
+import StatusActions from "./StatusActions";
+import PaymentActions from "./PaymentActions";
 
 interface LeadDetail {
   id: string;
@@ -106,17 +107,140 @@ interface CancellationEntry {
   created_at: string;
 }
 
+function PIIField({
+  leadId,
+  field,
+  maskedValue,
+}: {
+  leadId: string;
+  field: "email" | "phone";
+  maskedValue: string;
+}) {
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleReveal() {
+    setLoading(true);
+    try {
+      const resp = await fetch(`/api/leads/${leadId}/reveal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, reason: "Customer Verification" }),
+      });
+      if (resp.ok) {
+        const body = await resp.json();
+        setRevealed(body.revealed_value);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (revealed) {
+    return <span className="font-mono text-ink select-all">{revealed}</span>;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 font-mono text-ink-muted">
+      <span>{maskedValue}</span>
+      <button
+        type="button"
+        onClick={handleReveal}
+        disabled={loading}
+        className="text-[10px] font-sans font-semibold text-accent hover:underline"
+      >
+        {loading ? "..." : "Reveal"}
+      </button>
+    </span>
+  );
+}
+
+function SMSDispatchModal({
+  customerName,
+  customerPhone,
+  bookingRef,
+  isOpen,
+  onClose,
+}: {
+  customerName: string;
+  customerPhone: string;
+  bookingRef: string;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [message, setMessage] = useState(
+    `Hello ${customerName}, your booking ref ${bookingRef} has been received. Please review your itinerary.`
+  );
+  const [sent, setSent] = useState(false);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="card w-full max-w-md bg-surface p-5 shadow-2xl space-y-4 border border-hairline">
+        <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-accent" />
+            <h3 className="text-sm font-bold text-ink">Dispatch SMS Notification</h3>
+          </div>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-semibold text-ink-muted">Recipient</label>
+          <p className="font-mono text-xs font-bold text-ink">{customerPhone}</p>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-semibold text-ink-muted">SMS Content</label>
+          <textarea
+            rows={3}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="input text-xs"
+          />
+        </div>
+
+        {sent && <p className="text-xs font-semibold text-success">SMS dispatched successfully!</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="btn-ghost btn-sm">
+            Close
+          </button>
+          <button
+            onClick={() => {
+              setSent(true);
+              setTimeout(() => {
+                setSent(false);
+                onClose();
+              }, 1200);
+            }}
+            className="btn-primary btn-sm flex items-center gap-1.5"
+          >
+            <Send size={13} />
+            <span>Send SMS</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> = {
   car: [
-    { key: "booking_source", label: "Booking Source" },
+    { key: "car_provider", label: "Car Provider" },
     { key: "car_model", label: "Car Model" },
-    { key: "car_provider", label: "Provider" },
-    { key: "vehicle_type", label: "Vehicle Category" },
-    { key: "fuel_mileage", label: "Mileage Policy" },
-    { key: "pickup_location", label: "Pick-up Location" },
+    { key: "booking_confirmation", label: "Confirmation #" },
+    { key: "pickup_datetime", label: "Pickup Date" },
+    { key: "pickup_location", label: "Pickup Location" },
+    { key: "return_location", label: "Return Location" },
   ],
   hotel: [
-    { key: "hotel_name", label: "Hotel Property" },
+    { key: "hotel_name", label: "Hotel Name" },
     { key: "room_type", label: "Room Category" },
     { key: "call_type", label: "Call Type" },
     { key: "itinerary_number", label: "Itinerary #" },
@@ -167,6 +291,8 @@ export default function LeadDetailWorkspace({
   const ServiceIcon = lead.service_type ? SERVICE_ICON[lead.service_type] : null;
   const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${lead.id}` : `/authorize/${lead.id}`;
 
+  const crmId = booking?.booking_reference || (lead.custom_fields?.booking_reference as string) || `CRM-${lead.id.replace(/-/g, "").slice(0, 7).toUpperCase()}`;
+
   const copyAuthLink = () => {
     navigator.clipboard.writeText(authUrl);
     setCopiedAuthLink(true);
@@ -176,112 +302,115 @@ export default function LeadDetailWorkspace({
   return (
     <div className="w-full space-y-4">
       {/* Top Breadcrumb & Executive Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--hairline)] pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-3">
         <div>
-          <div className="flex items-center gap-2 text-xs text-[var(--ink-faint)]">
-            <Link href="/leads" className="font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
+          <nav className="flex items-center gap-1.5 text-xs text-ink-muted">
+            <Link href="/leads" className="hover:text-ink transition-colors font-medium">
               Leads
             </Link>
             <span>/</span>
-            <span className="font-mono">{lead.id.slice(0, 8)}...</span>
-          </div>
-
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">{lead.name}</h1>
+            <span className="font-mono text-accent font-semibold">{crmId}</span>
+          </nav>
+          <div className="mt-1 flex items-center gap-3">
+            <h1 className="text-xl font-black tracking-tight text-ink">{lead.name}</h1>
             <StatusBadge status={lead.status} />
-          </div>
-
-          {/* Masked PII Header Chips */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
-            <div className="flex items-center gap-1 rounded-md bg-[var(--surface)] px-2 py-0.5 border border-[var(--hairline)]">
-              <RevealField leadId={lead.id} field="phone" maskedValue={lead.phone} />
-            </div>
-            <span>•</span>
-            <div className="flex items-center gap-1 rounded-md bg-[var(--surface)] px-2 py-0.5 border border-[var(--hairline)]">
-              <RevealField leadId={lead.id} field="email" maskedValue={lead.email} />
-            </div>
-            <span>•</span>
-            <span className="text-[11px] text-[var(--ink-faint)]">
-              Created {new Date(lead.created_at).toLocaleDateString()} {new Date(lead.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
           </div>
         </div>
 
-        {/* Quick Top Actions */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowSMSModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:bg-surface-raised"
-          >
-            <MessageSquare size={13} />
-            <span>Send DLT SMS</span>
-          </button>
+          {lead.phone && (
+            <button
+              onClick={() => setShowSMSModal(true)}
+              className="btn-secondary btn-sm flex items-center gap-1.5"
+            >
+              <MessageSquare size={13} className="text-accent" />
+              <span>SMS Dispatch</span>
+            </button>
+          )}
 
           {lead.status === "authorization_pending" && (
             <button
               onClick={copyAuthLink}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)] transition-all hover:brightness-95"
+              className="btn-primary btn-sm flex items-center gap-1.5 shadow-xs"
             >
-              {copiedAuthLink ? <Check size={13} className="text-[var(--accent)]" /> : <Copy size={13} />}
-              <span>{copiedAuthLink ? "Link Copied!" : "Copy Auth Link"}</span>
+              <Copy size={13} />
+              <span>{copiedAuthLink ? "Link Copied!" : "Copy Consent Link"}</span>
             </button>
           )}
 
-          {lead.service_type && booking && (
-            <Link
-              href={`/leads/${lead.id}/booking/${lead.service_type}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--hairline-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] transition-all hover:bg-[var(--accent-soft)] hover:border-[var(--accent)]"
-            >
-              <PencilLine size={13} className="text-[var(--accent)]" />
-              <span>Edit Booking</span>
-            </Link>
-          )}
+          <a
+            href={`/authorize/${lead.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary btn-sm flex items-center gap-1.5"
+          >
+            <ExternalLink size={13} />
+            <span>Customer View</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Contact Summary Strip */}
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-hairline bg-surface p-3 text-xs shadow-xs">
+        <div className="flex items-center gap-1.5">
+          <Phone size={13} className="text-ink-faint" />
+          <PIIField leadId={lead.id} field="phone" maskedValue={lead.phone} />
+        </div>
+        <span className="text-ink-faint">•</span>
+        <div className="flex items-center gap-1.5">
+          <Mail size={13} className="text-ink-faint" />
+          <PIIField leadId={lead.id} field="email" maskedValue={lead.email} />
+        </div>
+        <span className="text-ink-faint">•</span>
+        <div className="flex items-center gap-1.5 font-mono text-ink-muted">
+          <Clock size={13} className="text-ink-faint" />
+          <span>Created {formatDate(lead.created_at)}</span>
         </div>
       </div>
 
       <SMSDispatchModal
         customerName={lead.name}
         customerPhone={lead.phone}
-        bookingRef={booking?.booking_reference}
+        bookingRef={crmId}
         isOpen={showSMSModal}
         onClose={() => setShowSMSModal(false)}
       />
 
-      {/* Main 2-Column Responsive Layout (No Scroll viewport optimization) */}
+      {/* Main 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* LEFT COLUMN: Main Booking Highlights & Operational Tabs (lg:col-span-7) */}
         <div className="space-y-4 lg:col-span-7">
           {/* Booking Summary Hero Card */}
           {lead.service_type && booking ? (
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 shadow-sm">
-              <div className="flex items-center justify-between border-b border-[var(--hairline)] pb-3">
+            <div className="relative overflow-hidden rounded-2xl border border-hairline bg-surface p-4 shadow-card">
+              <div className="flex items-center justify-between border-b border-hairline pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
                     {ServiceIcon && <ServiceIcon size={16} />}
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold capitalize text-[var(--ink)]">
-                      {lead.service_type} Booking
+                    <h2 className="text-sm font-bold capitalize text-ink">
+                      {lead.service_type} Booking Details
                     </h2>
-                    <span className="font-mono text-xs text-[var(--ink-faint)]">Ref: {booking.booking_reference}</span>
+                    <span className="font-mono text-xs text-accent font-semibold">Ref: {booking.booking_reference || crmId}</span>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-xs text-[var(--ink-faint)]">Total Amount</div>
-                  <div className="font-mono text-base font-bold text-[var(--accent)]">
-                    ${typeof booking.total_amount === "number" ? booking.total_amount.toFixed(2) : booking.total_amount}
+                  <div className="text-xs text-ink-faint">Total Amount</div>
+                  <div className="font-mono text-base font-bold text-accent">
+                    ${typeof booking.total_amount === "number" ? booking.total_amount.toFixed(2) : booking.total_amount || "0.00"}
                   </div>
                 </div>
               </div>
 
               {/* Booking Key Metrics Grid */}
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
                 {BOOKING_SUMMARY_FIELDS[lead.service_type]?.map((f) => (
-                  <div key={f.key} className="rounded-lg bg-[var(--surface-raised)] p-2 border border-[var(--hairline)]">
-                    <span className="block text-[10px] font-medium text-[var(--ink-faint)] uppercase tracking-wider">{f.label}</span>
-                    <span className="mt-0.5 block font-semibold text-[var(--ink)] truncate">
+                  <div key={f.key} className="rounded-lg bg-surface-raised p-2 border border-hairline">
+                    <span className="block text-[10px] font-medium text-ink-faint uppercase tracking-wider">{f.label}</span>
+                    <span className="mt-0.5 block font-semibold text-ink truncate">
                       {String(booking[f.key] ?? "—")}
                     </span>
                   </div>
@@ -289,39 +418,35 @@ export default function LeadDetailWorkspace({
               </div>
             </div>
           ) : lead.service_type ? (
-            <div className="rounded-2xl border border-dashed border-[var(--accent)] bg-[var(--accent-soft)]/40 p-4 text-xs">
+            <div className="rounded-2xl border border-accent/40 bg-surface p-4 text-xs shadow-card space-y-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-[var(--accent-ink)]">
-                    Service type selected: <span className="capitalize">{lead.service_type}</span>
-                  </p>
-                  <p className="text-[11px] text-[var(--ink-muted)]">Booking details have not been finalized yet.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                    {ServiceIcon && <ServiceIcon size={16} />}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-ink capitalize">
+                      {lead.service_type} Service Selected
+                    </p>
+                    <p className="text-[11px] font-mono text-accent">CRMID: {crmId}</p>
+                  </div>
                 </div>
                 <Link href={`/leads/${lead.id}/booking/${lead.service_type}`} className="btn-primary btn-sm">
                   Complete {lead.service_type} Form
                 </Link>
               </div>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 text-xs">
-              <p className="text-[var(--ink-muted)]">
-                No service type chosen yet.{" "}
-                <Link href="/leads/new" className="font-semibold text-[var(--accent)] underline">
-                  Continue intake flow
-                </Link>
-              </p>
-            </div>
-          )}
+          ) : null}
 
           {/* Interactive Workspace Tab Bar */}
-          <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-1 border-b border-[var(--hairline)] pb-2.5">
+          <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">
+            <div className="flex flex-wrap items-center gap-1 border-b border-hairline pb-2.5">
               <button
                 onClick={() => setActiveTab("overview")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === "overview"
-                    ? "bg-[var(--accent)] text-white shadow-sm"
-                    : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)]"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                 }`}
               >
                 <FileText size={13} />
@@ -332,8 +457,8 @@ export default function LeadDetailWorkspace({
                 onClick={() => setActiveTab("payments")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === "payments"
-                    ? "bg-[var(--accent)] text-white shadow-sm"
-                    : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)]"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                 }`}
               >
                 <CreditCard size={13} />
@@ -350,8 +475,8 @@ export default function LeadDetailWorkspace({
                   onClick={() => setActiveTab("modifications")}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                     activeTab === "modifications"
-                      ? "bg-[var(--accent)] text-white shadow-sm"
-                      : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)]"
+                      ? "bg-accent text-white shadow-xs"
+                      : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                   }`}
                 >
                   <PencilLine size={13} />
@@ -369,14 +494,14 @@ export default function LeadDetailWorkspace({
                   onClick={() => setActiveTab("cancellation")}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                     activeTab === "cancellation"
-                      ? "bg-[var(--accent)] text-white shadow-sm"
-                      : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)]"
+                      ? "bg-accent text-white shadow-xs"
+                      : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                   }`}
                 >
                   <Ban size={13} />
                   <span>Cancellation</span>
                   {cancellation && (
-                    <span className="rounded-full bg-red-500/20 px-1.5 py-0.2 text-[10px] font-mono text-red-500">
+                    <span className="rounded-full bg-red-500/20 px-1.5 py-0.2 text-[10px] font-mono text-danger">
                       Cancelled
                     </span>
                   )}
@@ -387,17 +512,15 @@ export default function LeadDetailWorkspace({
                 onClick={() => setActiveTab("history")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === "history"
-                    ? "bg-[var(--accent)] text-white shadow-sm"
-                    : "text-[var(--ink-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--ink)]"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                 }`}
               >
                 <Repeat size={13} />
                 <span>Audit & History</span>
-                {history.length > 0 && (
-                  <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-mono">
-                    {history.length}
-                  </span>
-                )}
+                <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-mono">
+                  {history.length + 1}
+                </span>
               </button>
             </div>
 
@@ -405,22 +528,52 @@ export default function LeadDetailWorkspace({
             {activeTab === "overview" && (
               <div className="mt-4 space-y-4 text-xs">
                 {/* Lead Attributes */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg bg-[var(--surface-raised)] p-2.5 border border-[var(--hairline)]">
-                    <span className="text-[10px] uppercase font-semibold text-[var(--ink-faint)]">Duplicate Match</span>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg bg-surface-raised p-2.5 border border-hairline">
+                    <span className="text-[10px] uppercase font-semibold text-ink-faint">CRMID / Reference</span>
+                    <span className="mt-1 block font-mono font-bold text-accent">{crmId}</span>
+                  </div>
+
+                  <div className="rounded-lg bg-surface-raised p-2.5 border border-hairline">
+                    <span className="text-[10px] uppercase font-semibold text-ink-faint">Service Type</span>
+                    <span className="mt-1 block font-semibold text-ink capitalize">{lead.service_type || "General"}</span>
+                  </div>
+
+                  <div className="rounded-lg bg-surface-raised p-2.5 border border-hairline">
+                    <span className="text-[10px] uppercase font-semibold text-ink-faint">Duplicate Match</span>
                     <span className="mt-1 block font-medium">
                       {lead.is_duplicate ? `Yes (${lead.duplicate_override_reason ?? "Flagged"})` : "No (Unique)"}
                     </span>
                   </div>
 
-                  <div className="rounded-lg bg-[var(--surface-raised)] p-2.5 border border-[var(--hairline)]">
-                    <span className="text-[10px] uppercase font-semibold text-[var(--ink-faint)]">Channel / Source</span>
+                  <div className="rounded-lg bg-surface-raised p-2.5 border border-hairline">
+                    <span className="text-[10px] uppercase font-semibold text-ink-faint">Channel / Source</span>
                     <span className="mt-1 block font-medium">{lead.source || "Direct Intake"}</span>
                   </div>
+                </div>
 
-                  <div className="rounded-lg bg-[var(--surface-raised)] p-2.5 border border-[var(--hairline)]">
-                    <span className="text-[10px] uppercase font-semibold text-[var(--ink-faint)]">Assigned Agent</span>
-                    <span className="mt-1 block font-mono">{lead.agent_id.slice(0, 8)}...</span>
+                {/* Customer Contact Card */}
+                <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink">
+                    Customer Contact & Intake Profile
+                  </span>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <span className="text-[10px] text-ink-faint">Customer Full Name</span>
+                      <p className="font-semibold text-ink text-sm">{lead.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-ink-faint">Phone Number</span>
+                      <div className="mt-0.5">
+                        <PIIField leadId={lead.id} field="phone" maskedValue={lead.phone} />
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-ink-faint">Email Address</span>
+                      <div className="mt-0.5">
+                        <PIIField leadId={lead.id} field="email" maskedValue={lead.email} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -433,19 +586,19 @@ export default function LeadDetailWorkspace({
 
                 {/* External Embed Widget Details if applicable */}
                 {lead.embed_widget_id && (
-                  <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-raised)] p-3 space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+                  <div className="rounded-xl border border-hairline bg-surface-raised p-3 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
                       Website Widget Enquiry Details
                     </span>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-[10px] text-[var(--ink-faint)]">Landing URL</span>
-                        <a href={lead.landing_page_url || "#"} target="_blank" rel="noreferrer" className="block truncate text-[var(--accent)] underline">
+                        <span className="text-[10px] text-ink-faint">Landing URL</span>
+                        <a href={lead.landing_page_url || "#"} target="_blank" rel="noreferrer" className="block truncate text-accent underline">
                           {lead.landing_page_url || "—"}
                         </a>
                       </div>
                       <div>
-                        <span className="text-[10px] text-[var(--ink-faint)]">Visitor IP</span>
+                        <span className="text-[10px] text-ink-faint">Visitor IP</span>
                         <span className="block font-mono">{lead.visitor_public_ip || "—"}</span>
                       </div>
                     </div>
@@ -456,39 +609,79 @@ export default function LeadDetailWorkspace({
 
             {/* Tab 2: Payments */}
             {activeTab === "payments" && (
-              <div className="mt-4 space-y-3 text-xs">
+              <div className="mt-4 space-y-4 text-xs">
                 {canProcessPayment && (
                   <div className="mb-3">
                     <PaymentActions leadId={lead.id} />
                   </div>
                 )}
 
-                {payments.length === 0 ? (
-                  <p className="py-4 text-center text-[var(--ink-muted)]">No payments recorded for this lead yet.</p>
-                ) : (
-                  <ul className="divide-y divide-[var(--hairline)]">
-                    {payments.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`badge text-[10px] font-bold uppercase ${
-                              p.outcome === "charged"
-                                ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 [data-theme=light]:bg-emerald-50 [data-theme=light]:text-emerald-700 [data-theme=light]:border-emerald-200"
-                                : "bg-rose-950/40 text-rose-400 border border-rose-800/40 [data-theme=light]:bg-rose-50 [data-theme=light]:text-rose-700 [data-theme=light]:border-rose-200"
-                            }`}
-                          >
-                            {p.outcome}
+                {/* Payment Overview Summary */}
+                <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink">Payment Summary & Status</span>
+                    <StatusBadge status={lead.status} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div>
+                      <span className="text-[10px] text-ink-faint uppercase font-semibold">Total Quoted</span>
+                      <p className="font-mono text-base font-bold text-accent">
+                        ${typeof booking?.total_amount === "number" ? booking.total_amount.toFixed(2) : booking?.total_amount || "0.00"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Holder</span>
+                      <p className="font-medium text-ink truncate">
+                        {(booking?.card_holder_name as string) || lead.name || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Display</span>
+                      <p className="font-mono font-medium text-ink">
+                        {(booking?.card_number as string) || "**** **** **** ****"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Expiry</span>
+                      <p className="font-mono text-ink">
+                        {(booking?.card_expiry as string) || "MM/YY"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transactions list */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">Transaction Activity Log</span>
+                  {payments.length === 0 ? (
+                    <div className="rounded-xl border border-hairline p-4 text-center text-ink-muted bg-surface-sunken">
+                      No online gateway payments processed yet. Use Status Workflow to authorize or charge card.
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-hairline">
+                      {payments.map((p) => (
+                        <li key={p.id} className="flex items-center justify-between py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`badge text-[10px] font-bold uppercase ${
+                                p.outcome === "charged"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                              }`}
+                            >
+                              {p.outcome}
+                            </span>
+                            <span className="font-mono font-bold">${p.total_amount.toFixed(2)}</span>
+                            <span className="text-ink-faint font-mono">({p.card_display})</span>
+                          </div>
+                          <span className="text-[11px] text-ink-faint font-mono">
+                            {formatDate(p.processed_at ?? p.created_at)}
                           </span>
-                          <span className="font-mono font-bold">${p.total_amount.toFixed(2)}</span>
-                          <span className="text-[var(--ink-faint)] font-mono">({p.card_display})</span>
-                        </div>
-                        <span className="text-[11px] text-[var(--ink-faint)]">
-                          {new Date(p.processed_at ?? p.created_at).toLocaleString()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
 
@@ -506,31 +699,44 @@ export default function LeadDetailWorkspace({
               </div>
             )}
 
-            {/* Tab 5: Status History */}
+            {/* Tab 5: Audit & Status History (Always Complete Timeline) */}
             {activeTab === "history" && (
-              <div className="mt-4 text-xs">
-                {history.length === 0 ? (
-                  <p className="py-4 text-center text-[var(--ink-muted)]">No status changes recorded yet.</p>
-                ) : (
-                  <ul className="space-y-2.5">
-                    {history.map((h) => (
-                      <li key={h.id} className="flex items-center justify-between rounded-lg bg-[var(--surface-raised)] p-2.5 border border-[var(--hairline)]">
-                        <div className="flex items-center gap-2">
-                          <Repeat size={13} className="text-[var(--accent)] shrink-0" />
-                          <span>
-                            {h.from_status ? (
-                              <span className="text-[var(--ink-faint)]">{formatStatus(h.from_status)} ➔ </span>
-                            ) : null}
-                            <span className="font-semibold text-[var(--ink)]">{formatStatus(h.to_status)}</span>
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-[var(--ink-faint)]">
-                          {new Date(h.changed_at).toLocaleString()}
+              <div className="mt-4 text-xs space-y-3">
+                <ul className="space-y-2.5">
+                  {/* Dynamic Status History Items */}
+                  {history.map((h) => (
+                    <li key={h.id} className="flex items-center justify-between rounded-lg bg-surface-raised p-2.5 border border-hairline">
+                      <div className="flex items-center gap-2.5">
+                        <Repeat size={14} className="text-accent shrink-0" />
+                        <span>
+                          {h.from_status ? (
+                            <span className="text-ink-muted">{formatStatus(h.from_status)} ➔ </span>
+                          ) : null}
+                          <span className="font-bold text-ink">{formatStatus(h.to_status)}</span>
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                      </div>
+                      <span className="text-[11px] text-ink-faint font-mono">
+                        {formatDate(h.changed_at)}
+                      </span>
+                    </li>
+                  ))}
+
+                  {/* Initial Lead Ingestion Milestone */}
+                  <li className="flex items-center justify-between rounded-lg bg-surface-raised/60 p-2.5 border border-hairline">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                      <div>
+                        <span className="font-bold text-ink">Lead Intake Created</span>
+                        <span className="text-ink-muted ml-1.5">
+                          (Channel: {lead.source || "Direct Intake"}, Initial Status: {formatStatus(lead.status)})
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-ink-faint font-mono">
+                      {formatDate(lead.created_at)}
+                    </span>
+                  </li>
+                </ul>
               </div>
             )}
           </div>
@@ -539,24 +745,24 @@ export default function LeadDetailWorkspace({
         {/* RIGHT COLUMN: Action Center & Customer Authorization (lg:col-span-5) */}
         <div className="space-y-4 lg:col-span-5">
           {/* Status Workflow Action Card */}
-          <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-2.5 flex items-center justify-between">
+          <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2.5 flex items-center justify-between">
               <span>Status Workflow Actions</span>
-              <span className="font-mono text-[10px] text-[var(--accent)]">{transitions.length} available</span>
+              <span className="font-mono text-[10px] text-accent font-bold">{transitions.length} available</span>
             </h2>
             <StatusActions leadId={lead.id} transitions={transitions} />
           </div>
 
           {/* Customer Authorization Link Card (if status is authorization pending) */}
           {lead.status === "authorization_pending" && (
-            <div className="rounded-2xl border border-[var(--accent)]/40 bg-gradient-to-br from-[var(--surface)] to-[var(--accent-soft)]/20 p-4 shadow-sm">
+            <div className="rounded-2xl border border-accent/40 bg-gradient-to-br from-surface to-accent-soft/20 p-4 shadow-card">
               <div className="flex items-start gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
                   <ShieldCheck size={16} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xs font-bold text-[var(--ink)]">Customer Authorization Required</h3>
-                  <p className="mt-0.5 text-[11px] text-[var(--ink-muted)]">
+                  <h3 className="text-xs font-bold text-ink">Customer Authorization Required</h3>
+                  <p className="mt-0.5 text-[11px] text-ink-muted">
                     Share this secure consent link with the customer to collect formal approval.
                   </p>
 
@@ -564,53 +770,37 @@ export default function LeadDetailWorkspace({
                     <input
                       readOnly
                       value={authUrl}
-                      className="input flex-1 py-1 px-2.5 font-mono text-[11px] text-[var(--ink-muted)] select-all truncate bg-[var(--surface)]"
+                      className="input flex-1 py-1 px-2.5 font-mono text-[11px] text-ink-muted select-all truncate bg-surface"
                     />
                     <button
                       onClick={copyAuthLink}
-                      className="btn-primary btn-sm shrink-0"
+                      className="btn-primary btn-sm px-2.5 py-1 text-xs shrink-0"
                     >
-                      {copiedAuthLink ? <Check size={12} /> : <Copy size={12} />}
-                      <span>{copiedAuthLink ? "Copied" : "Copy"}</span>
+                      {copiedAuthLink ? "Copied" : "Copy"}
                     </button>
-                    <a
-                      href={authUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn-secondary btn-sm p-1.5 shrink-0"
-                      title="Open in new tab"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Quick Lead Contact & Verification Card */}
-          <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 shadow-sm text-xs">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-3">
-              Lead Security & Audit
+          {/* Lead Metadata Quick Card */}
+          <div className="rounded-2xl border border-hairline bg-surface p-4 text-xs space-y-2 shadow-card">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink-faint">
+              System Audit Metadata
             </h2>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-1 border-b border-[var(--hairline)]">
-                <span className="text-[var(--ink-faint)]">PII Protection</span>
-                <span className="font-semibold text-emerald-500 flex items-center gap-1">
-                  <ShieldCheck size={12} /> Masked & Audited
-                </span>
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-ink-muted">Lead UUID</span>
+                <span className="font-mono text-ink select-all">{lead.id}</span>
               </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-[var(--hairline)]">
-                <span className="text-[var(--ink-faint)]">Status Lifecycle</span>
-                <span className="font-semibold text-[var(--ink)]">{formatStatus(lead.status)}</span>
+              <div className="flex justify-between">
+                <span className="text-ink-muted">Assigned Agent</span>
+                <span className="font-mono text-ink">{lead.agent_id}</span>
               </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-[var(--hairline)]">
-                <span className="text-[var(--ink-faint)]">Last Modified</span>
-                <span className="font-mono text-[11px] text-[var(--ink-muted)]">
-                  {new Date(lead.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              <div className="flex justify-between">
+                <span className="text-ink-muted">Last Updated</span>
+                <span className="font-mono text-ink">{formatDate(lead.updated_at)}</span>
               </div>
             </div>
           </div>

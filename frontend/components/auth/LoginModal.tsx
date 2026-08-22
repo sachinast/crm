@@ -55,6 +55,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         return;
       }
 
+      const data = await resp.json().catch(() => ({}));
+      if (data.access_token && typeof window !== "undefined") {
+        localStorage.setItem("crm_access_token", data.access_token);
+      }
+
       // Smooth direct navigation to dashboard without flashing landing page
       setSubmitting(true);
       window.location.href = "/dashboard";
@@ -126,8 +131,18 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </label>
 
           {error && (
-            <div className="alert-danger text-xs animate-fadeIn">
-              {error}
+            <div
+              className={`p-3 rounded-xl text-xs space-y-1 animate-fadeIn border ${
+                error.toLowerCase().includes("ip")
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                  : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 font-bold">
+                <Lock size={13} className="shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{error.toLowerCase().includes("ip") ? "IP Security Policy Restriction" : "Authentication Failed"}</span>
+              </div>
+              <p className="leading-relaxed font-medium">{error}</p>
             </div>
           )}
 

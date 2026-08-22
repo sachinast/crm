@@ -168,8 +168,7 @@ body {
    ------------------------------------------------------------------- */
 @layer components {
   .input {
-    @apply w-full rounded-xl border px-3.5 py-2 text-sm transition-all outline-none;
-    background: var(--surface-sunken);
+    @apply w-full rounded-xl border px-3.5 py-2 text-sm transition-all outline-none bg-white dark:bg-slate-900;
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
@@ -183,12 +182,12 @@ body {
   .input:disabled {
     opacity: 0.65;
     cursor: not-allowed;
+    background-color: var(--surface-sunken);
   }
 
   select,
   .select {
-    @apply w-full min-w-0 max-w-full rounded-xl border px-3 py-2 text-sm transition-all outline-none cursor-pointer;
-    background-color: var(--surface-sunken);
+    @apply w-full min-w-0 max-w-full rounded-xl border px-3 py-2 text-sm transition-all outline-none cursor-pointer bg-white dark:bg-slate-900;
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
@@ -259,14 +258,23 @@ body {
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50;
-    background: var(--surface);
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--surface-raised);
     border-color: var(--hairline-strong);
     color: var(--ink);
   }
   .btn-secondary:hover:not(:disabled) {
-    background: var(--surface-raised);
+    background: var(--surface);
     border-color: var(--accent);
+    color: var(--ink);
+  }
+  .btn-secondary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-accent-soft {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--accent-soft);
     color: var(--accent);
   }
 
@@ -350,15 +358,14 @@ body {
 
   /* In-app messaging — chat bubbles */
   .chat-bubble-own {
-    @apply max-w-md rounded-2xl rounded-br-md px-4 py-2.5 text-sm;
+    @apply max-w-md rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium text-white shadow-xs;
     background: var(--accent);
-    color: #000;
   }
 
   .chat-bubble-other {
-    @apply max-w-md rounded-2xl rounded-bl-md px-4 py-2.5 text-sm;
-    background: var(--surface);
-    border: 1px solid var(--hairline);
+    @apply max-w-md rounded-2xl rounded-bl-md px-4 py-2.5 text-sm border shadow-xs;
+    background: var(--surface-raised);
+    border-color: var(--hairline-strong);
     color: var(--ink);
   }
 

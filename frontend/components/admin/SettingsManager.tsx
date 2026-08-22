@@ -160,6 +160,64 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
 
   const grouped = useMemo(() => groupByCategory(settings), [settings]);
 
+  // Quick Access IP Whitelist Settings
+  const ipWhitelistEnabledSetting = settings.find((s) => s.key === "security.ip_whitelist_enabled");
+  const ipWhitelistSetting = settings.find((s) => s.key === "security.allowed_ips");
+
+  const [ipEnabled, setIpEnabled] = useState<boolean>(Boolean(ipWhitelistEnabledSetting?.value ?? false));
+  const [allowedIps, setAllowedIps] = useState<string>(
+    Array.isArray(ipWhitelistSetting?.value)
+      ? (ipWhitelistSetting.value as string[]).join(", ")
+      : typeof ipWhitelistSetting?.value === "string"
+        ? ipWhitelistSetting.value
+        : ""
+  );
+  const [savingIp, setSavingIp] = useState(false);
+  const [ipMsg, setIpMsg] = useState<string | null>(null);
+
+  async function handleSaveIpSecurity() {
+    setSavingIp(true);
+    setIpMsg(null);
+    try {
+      // 1. Save or create security.ip_whitelist_enabled
+      const updatedEnabled = await updateSettingValue("security.ip_whitelist_enabled", ipEnabled).catch(() =>
+        createSetting({
+          key: "security.ip_whitelist_enabled",
+          label: "Enable IP Whitelisting",
+          category: "Security",
+          value_type: "boolean",
+          value: ipEnabled,
+          description: "Restrict system access exclusively to whitelisted IP addresses",
+        })
+      );
+      handleChanged(updatedEnabled);
+
+      // 2. Save or create security.allowed_ips
+      const ipList = allowedIps
+        .split(",")
+        .map((ip) => ip.trim())
+        .filter(Boolean);
+      const updatedIps = await updateSettingValue("security.allowed_ips", ipList).catch(() =>
+        createSetting({
+          key: "security.allowed_ips",
+          label: "Allowed IP Addresses",
+          category: "Security",
+          value_type: "json",
+          value: ipList,
+          description: "List of authorized IP addresses / CIDR ranges",
+        })
+      );
+      handleChanged(updatedIps);
+
+      setIpMsg("Security & IP Whitelist settings saved successfully!");
+      setTimeout(() => setIpMsg(null), 3000);
+    } catch (e) {
+      setIpMsg(e instanceof Error ? e.message : "Failed to save IP settings");
+    } finally {
+      setSavingIp(false);
+    }
+  }
+
   function handleChanged(updated: AppSettingDef) {
     if (updated.value === null) {
       setSettings((prev) => prev.filter((s) => s.key !== updated.key));
@@ -186,6 +244,74 @@ export default function SettingsManager({ initialSettings }: { initialSettings: 
 
   return (
     <div className="space-y-6">
+      {/* Superadmin IP Whitelisting & Network Security Card */}
+      <div className="rounded-2xl border border-accent/30 bg-surface shadow-card overflow-hidden">
+        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3.5 border-b border-hairline">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1 rounded-lg bg-accent-soft text-accent">
+              <Sliders size={16} />
+            </span>
+            <div>
+              <h3 className="text-sm font-bold text-ink">Superadmin IP Whitelisting & Access Control</h3>
+              <p className="text-xs text-ink-muted">Restrict application access by authorized IP ranges.</p>
+            </div>
+          </div>
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono border ${
+            ipEnabled
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+              : "bg-slate-500/10 text-slate-500 border-slate-500/30"
+          }`}>
+            {ipEnabled ? "ENABLED" : "DISABLED"}
+          </span>
+        </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+                Enforce IP Whitelist
+              </label>
+              <select
+                value={ipEnabled ? "true" : "false"}
+                onChange={(e) => setIpEnabled(e.target.value === "true")}
+                className="select font-semibold"
+              >
+                <option value="false">Disabled (Open to all networks)</option>
+                <option value="true">Enabled (Strict IP filtering)</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+                Authorized IP Addresses / CIDR (comma-separated)
+              </label>
+              <input
+                value={allowedIps}
+                onChange={(e) => setAllowedIps(e.target.value)}
+                className="input font-mono text-xs"
+                placeholder="e.g. 192.168.1.1, 10.0.0.0/24, 203.0.113.5"
+              />
+            </div>
+          </div>
+
+          {ipMsg && (
+            <p className={`text-xs font-semibold ${ipMsg.includes("success") ? "text-success" : "text-danger"}`}>
+              {ipMsg}
+            </p>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={handleSaveIpSecurity}
+              disabled={savingIp}
+              className="btn-primary"
+            >
+              {savingIp ? "Updating Policy…" : "Save Security Policy"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Top Action Bar */}
       <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface p-4 shadow-xs">
         <div>

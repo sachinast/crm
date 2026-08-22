@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Hotel, ChevronLeft } from "lucide-react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
-
+import PageHeader from "@/components/shared/PageHeader";
 import HotelBookingForm from "./HotelBookingForm";
 import type { HotelBookingValue } from "@/components/booking/HotelBookingFields";
 
@@ -40,11 +41,26 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="max-w-2xl">
-      <Link href={`/leads/${id}`} className="link-muted text-sm">
-        ← {lead.name}
-      </Link>
-      <h1 className="mb-6 mt-2 text-2xl font-semibold tracking-tight">Hotel booking</h1>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Hotel Reservation Booking"
+        subtitle={`Configure property stay, room preferences, and guest details for ${lead.name || "Customer"}.`}
+        breadcrumbs={[
+          { label: "Leads", href: "/leads" },
+          { label: lead.name || "Lead Details", href: `/leads/${id}` },
+          { label: "Hotel Booking" },
+        ]}
+        icon={<Hotel size={18} />}
+        actions={
+          <Link
+            href={`/leads/${id}`}
+            className="btn-secondary flex items-center gap-1 text-xs py-2 px-3.5"
+          >
+            <ChevronLeft size={14} />
+            <span>Back to Lead</span>
+          </Link>
+        }
+      />
       <HotelBookingForm leadId={id} initial={existing} />
     </div>
   );
