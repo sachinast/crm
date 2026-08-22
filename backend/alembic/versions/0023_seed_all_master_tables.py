@@ -8,6 +8,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from pathlib import Path
+import re
 
 revision: str = "0023"
 down_revision: Union[str, None] = "0022"
@@ -23,6 +24,9 @@ def upgrade() -> None:
 
     with open(dump_path, "r", encoding="utf-8") as f:
         sql_content = f.read()
+
+    # Sanitize user UUIDs in created_by/modified_by to NULL to prevent FK violations on fresh/CI DBs
+    sql_content = re.sub(r"'87a4b8b0-763c-4633-9f59-623d53ecd5a8'", "NULL", sql_content)
 
     conn = op.get_bind()
     # Execute each SQL statement from the dump
