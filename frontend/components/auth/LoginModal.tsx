@@ -48,17 +48,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         body: JSON.stringify({ email, password }),
       });
 
-      setSubmitting(false);
-
       if (!resp.ok) {
+        setSubmitting(false);
         const body = await resp.json().catch(() => ({}));
         setError(body.error ?? "Invalid email or password");
         return;
       }
 
-      onClose();
-      router.push("/dashboard");
-      router.refresh();
+      // Smooth direct navigation to dashboard without flashing landing page
+      setSubmitting(true);
+      window.location.href = "/dashboard";
     } catch {
       setSubmitting(false);
       setError("Unable to connect to authentication service.");
