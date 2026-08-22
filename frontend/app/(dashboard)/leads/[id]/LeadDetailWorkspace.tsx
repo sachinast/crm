@@ -24,10 +24,12 @@ import {
   ChevronRight,
   Info,
   Check,
+  MessageSquare,
 } from "lucide-react";
 
 import RevealField from "@/components/pii/RevealField";
 import StatusBadge from "@/components/shared/StatusBadge";
+import SMSDispatchModal from "@/components/messaging/SMSDispatchModal";
 import { formatStatus, STATUS_COLOR_HINTS } from "@/lib/status-meta";
 
 import StatusActions from "./StatusActions";
@@ -106,22 +108,28 @@ interface CancellationEntry {
 
 const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> = {
   car: [
+    { key: "booking_source", label: "Booking Source" },
+    { key: "car_model", label: "Car Model" },
     { key: "car_provider", label: "Provider" },
     { key: "vehicle_type", label: "Vehicle Category" },
+    { key: "fuel_mileage", label: "Mileage Policy" },
     { key: "pickup_location", label: "Pick-up Location" },
-    { key: "return_location", label: "Return Location" },
   ],
   hotel: [
     { key: "hotel_name", label: "Hotel Property" },
     { key: "room_type", label: "Room Category" },
-    { key: "check_in_date", label: "Check-in Date" },
-    { key: "check_out_date", label: "Check-out Date" },
+    { key: "call_type", label: "Call Type" },
+    { key: "itinerary_number", label: "Itinerary #" },
+    { key: "check_in_date", label: "Check-in" },
+    { key: "check_out_date", label: "Check-out" },
   ],
   flight: [
     { key: "airline", label: "Airline Carrier" },
     { key: "pnr", label: "PNR Code" },
-    { key: "origin", label: "Origin Airport" },
-    { key: "destination", label: "Destination Airport" },
+    { key: "trip_type", label: "Trip Type" },
+    { key: "class_of_service", label: "Cabin Class" },
+    { key: "origin", label: "Origin" },
+    { key: "destination", label: "Destination" },
   ],
 };
 
@@ -154,6 +162,7 @@ export default function LeadDetailWorkspace({
 }: WorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "history">("overview");
   const [copiedAuthLink, setCopiedAuthLink] = useState(false);
+  const [showSMSModal, setShowSMSModal] = useState(false);
 
   const ServiceIcon = lead.service_type ? SERVICE_ICON[lead.service_type] : null;
   const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${lead.id}` : `/authorize/${lead.id}`;
@@ -200,13 +209,22 @@ export default function LeadDetailWorkspace({
 
         {/* Quick Top Actions */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSMSModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:bg-surface-raised"
+          >
+            <MessageSquare size={13} />
+            <span>Send DLT SMS</span>
+          </button>
+
           {lead.status === "authorization_pending" && (
             <button
               onClick={copyAuthLink}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)] transition-all hover:brightness-95"
             >
               {copiedAuthLink ? <Check size={13} className="text-[var(--accent)]" /> : <Copy size={13} />}
-              <span>{copiedAuthLink ? "Link Copied!" : "Copy Customer Auth Link"}</span>
+              <span>{copiedAuthLink ? "Link Copied!" : "Copy Auth Link"}</span>
             </button>
           )}
 
@@ -221,6 +239,14 @@ export default function LeadDetailWorkspace({
           )}
         </div>
       </div>
+
+      <SMSDispatchModal
+        customerName={lead.name}
+        customerPhone={lead.phone}
+        bookingRef={booking?.booking_reference}
+        isOpen={showSMSModal}
+        onClose={() => setShowSMSModal(false)}
+      />
 
       {/* Main 2-Column Responsive Layout (No Scroll viewport optimization) */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">

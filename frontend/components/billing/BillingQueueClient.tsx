@@ -271,8 +271,13 @@ export default function BillingQueueClient({ leads }: { leads: BillingLeadRow[] 
                   {lead.email && <div className="text-[11px] text-ink-faint">{lead.email}</div>}
                 </td>
 
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 space-y-1">
                   <StatusBadge status={lead.status} />
+                  {lead.status === "transferred_to_billing" && (
+                    <div className="flex items-center gap-1 font-mono text-[11px] text-amber-500 font-semibold">
+                      <span>⏱ {Math.max(1, Math.floor((Date.now() - new Date(lead.created_at).getTime()) / 60000))} min in Billing</span>
+                    </div>
+                  )}
                 </td>
 
                 <td className="px-4 py-3.5 font-mono text-xs text-ink-muted" suppressHydrationWarning>

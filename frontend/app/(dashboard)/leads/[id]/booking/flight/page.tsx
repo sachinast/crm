@@ -5,6 +5,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
 import FlightBookingForm from "./FlightBookingForm";
+import type { FlightBookingValue } from "@/components/booking/FlightBookingFields";
 
 interface Lead {
   id: string;
@@ -12,20 +13,7 @@ interface Lead {
   service_type: string | null;
 }
 
-interface FlightBooking {
-  booking_reference: string;
-  booking_platform: string;
-  pnr: string;
-  airline: string;
-  flight_numbers: string[];
-  origin: string;
-  destination: string;
-  cabin_class: string;
-  prepaid_amount: number;
-  pay_at_counter_amount: number;
-  total_amount: number;
-  custom_fields: Record<string, unknown>;
-}
+type FlightBooking = FlightBookingValue & { total_amount: number };
 
 export default async function FlightBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

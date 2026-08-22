@@ -20,12 +20,12 @@ from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.models.mixins import TimestampMixin, UUIDPKMixin
+from app.models.mixins import AuditFieldsMixin, TimestampMixin, UUIDPKMixin
 
 MONEY = Numeric(12, 2)
 
 
-class CarBooking(UUIDPKMixin, TimestampMixin, Base):
+class CarBooking(UUIDPKMixin, AuditFieldsMixin, Base):
     __tablename__ = "car_bookings"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
@@ -34,11 +34,7 @@ class CarBooking(UUIDPKMixin, TimestampMixin, Base):
     booking_reference: Mapped[str] = mapped_column(Text, nullable=False)
     booking_platform: Mapped[str] = mapped_column(Text, nullable=False)
     car_provider: Mapped[str] = mapped_column(Text, nullable=False)
-    # No renter_name — redundant with leads.name ("Customer Name" at intake);
-    # dropped in migration 0011.
     renter_dob: Mapped[date] = mapped_column(Date, nullable=False)
-    # transmission/vehicle_type: plain TEXT since migration 0012 — values are
-    # admin-managed (master_field_options), not a fixed Postgres enum anymore.
     transmission: Mapped[str] = mapped_column(Text, nullable=False)
     fuel_policy: Mapped[str | None] = mapped_column(Text)
     vehicle_type: Mapped[str] = mapped_column(Text, nullable=False)
@@ -51,12 +47,32 @@ class CarBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
-    # Admin-defined extra fields (migration 0010) — see app/models/lead.py's
-    # custom_fields for the full explanation; same shape here.
+    fuel_mileage: Mapped[str | None] = mapped_column(Text)
+    booking_confirmation: Mapped[str | None] = mapped_column(Text)
+    car_model: Mapped[str | None] = mapped_column(Text)
+    driver_name: Mapped[str | None] = mapped_column(Text)
+    driver_phone: Mapped[str | None] = mapped_column(Text)
+    driver_license: Mapped[str | None] = mapped_column(Text)
+    other_details: Mapped[str | None] = mapped_column(Text)
+    remarks: Mapped[str | None] = mapped_column(Text)
+    booking_source: Mapped[str | None] = mapped_column(Text)
+    transaction_type: Mapped[str | None] = mapped_column(Text)
+    transaction_status: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str | None] = mapped_column(Text)
+    card_holder_name: Mapped[str | None] = mapped_column(Text)
+    card_number: Mapped[str | None] = mapped_column(Text)
+    card_type: Mapped[str | None] = mapped_column(Text)
+    billing_address: Mapped[str | None] = mapped_column(Text)
+    cvv: Mapped[str | None] = mapped_column(Text)
+    card_expiry: Mapped[str | None] = mapped_column(Text)
+    charge_name: Mapped[str | None] = mapped_column(Text)
+    company_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    platform_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    remarks_history: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, default=list)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 
-class HotelBooking(UUIDPKMixin, TimestampMixin, Base):
+class HotelBooking(UUIDPKMixin, AuditFieldsMixin, Base):
     __tablename__ = "hotel_bookings"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
@@ -74,12 +90,37 @@ class HotelBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
+    call_type: Mapped[str | None] = mapped_column(Text)
+    itinerary_number: Mapped[str | None] = mapped_column(Text)
+    num_guests: Mapped[int | None] = mapped_column(Integer, default=1)
+    num_rooms: Mapped[int | None] = mapped_column(Integer, default=1)
+    bed_type: Mapped[str | None] = mapped_column(Text)
+    primary_guest_name: Mapped[str | None] = mapped_column(Text)
+    guest_email: Mapped[str | None] = mapped_column(Text)
+    guest_phone: Mapped[str | None] = mapped_column(Text)
+    attachment_url: Mapped[str | None] = mapped_column(Text)
+    other_details: Mapped[str | None] = mapped_column(Text)
+    remarks: Mapped[str | None] = mapped_column(Text)
+    booking_source: Mapped[str | None] = mapped_column(Text)
+    transaction_type: Mapped[str | None] = mapped_column(Text)
+    transaction_status: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str | None] = mapped_column(Text)
+    card_holder_name: Mapped[str | None] = mapped_column(Text)
+    card_number: Mapped[str | None] = mapped_column(Text)
+    card_type: Mapped[str | None] = mapped_column(Text)
+    billing_address: Mapped[str | None] = mapped_column(Text)
+    cvv: Mapped[str | None] = mapped_column(Text)
+    card_expiry: Mapped[str | None] = mapped_column(Text)
+    charge_name: Mapped[str | None] = mapped_column(Text)
+    company_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    platform_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    remarks_history: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, default=list)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     __table_args__ = (CheckConstraint("check_out_date > check_in_date", name="ck_hotel_dates"),)
 
 
-class FlightBooking(UUIDPKMixin, TimestampMixin, Base):
+class FlightBooking(UUIDPKMixin, AuditFieldsMixin, Base):
     __tablename__ = "flight_bookings"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
@@ -98,6 +139,48 @@ class FlightBooking(UUIDPKMixin, TimestampMixin, Base):
     total_amount: Mapped[float] = mapped_column(
         MONEY, Computed("prepaid_amount + pay_at_counter_amount", persisted=True)
     )
+    main_category: Mapped[str | None] = mapped_column(Text)
+    sub_category: Mapped[str | None] = mapped_column(Text)
+    account_name: Mapped[str | None] = mapped_column(Text)
+    booking_source_email: Mapped[str | None] = mapped_column(Text)
+    source_text: Mapped[str | None] = mapped_column(Text)
+    priority: Mapped[str | None] = mapped_column(Text)
+    trip_type: Mapped[str | None] = mapped_column(Text, default="One Way")
+    hk_gk: Mapped[str | None] = mapped_column(Text)
+    currency: Mapped[str | None] = mapped_column(Text, default="$")
+    ticket_cost: Mapped[float | None] = mapped_column(MONEY, default=0)
+    mco_charge: Mapped[float | None] = mapped_column(MONEY, default=0)
+    merchant_fee: Mapped[float] = mapped_column(MONEY, nullable=False, default=15)
+    cvv_fee: Mapped[float] = mapped_column(MONEY, nullable=False, default=0)
+    total_auth_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    margin: Mapped[float | None] = mapped_column(MONEY, default=0)
+    attachment_url: Mapped[str | None] = mapped_column(Text)
+    important: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    other_details: Mapped[str | None] = mapped_column(Text)
+    remarks: Mapped[str | None] = mapped_column(Text)
+    contact_email: Mapped[str | None] = mapped_column(Text)
+    contact_phone: Mapped[str | None] = mapped_column(Text)
+    passengers: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, default=list)
+    special_notes: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, default=list)
+    booking_source: Mapped[str | None] = mapped_column(Text)
+    transaction_type: Mapped[str | None] = mapped_column(Text)
+    transaction_status: Mapped[str | None] = mapped_column(Text)
+    lead_tag: Mapped[str | None] = mapped_column(Text)
+    leads_booking_source: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    class_of_service: Mapped[str | None] = mapped_column(Text)
+    add_on_services: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str | None] = mapped_column(Text)
+    card_holder_name: Mapped[str | None] = mapped_column(Text)
+    card_number: Mapped[str | None] = mapped_column(Text)
+    card_type: Mapped[str | None] = mapped_column(Text)
+    billing_address: Mapped[str | None] = mapped_column(Text)
+    cvv: Mapped[str | None] = mapped_column(Text)
+    card_expiry: Mapped[str | None] = mapped_column(Text)
+    charge_name: Mapped[str | None] = mapped_column(Text)
+    company_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    platform_amount: Mapped[float | None] = mapped_column(MONEY, default=0)
+    remarks_history: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, default=list)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 

@@ -1,13 +1,38 @@
 "use client";
 
 export type MasterFieldKey =
-  | "booking_platform" | "airline" | "cabin_class" | "hotel_name" | "room_type"
-  | "car_provider" | "vehicle_type" | "transmission" | "fuel_policy";
+  | "booking_platform"
+  | "booking_source"
+  | "transaction_type"
+  | "booking_status"
+  | "call_type"
+  | "main_category"
+  | "room_type"
+  | "lead_tag"
+  | "leads_booking_source"
+  | "priority"
+  | "title"
+  | "class_of_service"
+  | "airline"
+  | "cabin_class"
+  | "hotel_name"
+  | "car_provider"
+  | "vehicle_type"
+  | "transmission"
+  | "fuel_policy"
+  | "add_on_services"
+  | "hk_gk"
+  | "currency"
+  | "mco_charges"
+  | "insurance_coverage"
+  | "flight_ancillaries"
+  | string;
 
 export interface MasterOption {
   id: string;
   field_key: string;
   value: string;
+  option_type: "master" | "addon";
   display_order: number;
   created_at: string;
 }
@@ -20,17 +45,27 @@ async function json<T>(resp: Response): Promise<T> {
   return resp.json() as Promise<T>;
 }
 
-export async function fetchMasterOptions(fieldKey?: MasterFieldKey): Promise<MasterOption[]> {
-  const query = fieldKey ? `?field_key=${fieldKey}` : "";
+export async function fetchMasterOptions(
+  fieldKey?: string,
+  optionType?: "master" | "addon",
+): Promise<MasterOption[]> {
+  const params = new URLSearchParams();
+  if (fieldKey) params.set("field_key", fieldKey);
+  if (optionType) params.set("option_type", optionType);
+  const query = params.toString() ? `?${params.toString()}` : "";
   return json(await fetch(`/api/master-options${query}`));
 }
 
-export async function createMasterOption(fieldKey: MasterFieldKey, value: string): Promise<MasterOption> {
+export async function createMasterOption(
+  fieldKey: string,
+  value: string,
+  optionType: "master" | "addon" = "master",
+): Promise<MasterOption> {
   return json(
     await fetch("/api/admin/master-options", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field_key: fieldKey, value }),
+      body: JSON.stringify({ field_key: fieldKey, value, option_type: optionType }),
     }),
   );
 }

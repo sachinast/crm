@@ -115,3 +115,41 @@ async def test_super_admin_can_create_and_delete_option(api_client, super_admin,
 
     deleted = await api_client.delete(f"/admin/master-options/{option_id}", headers=_auth(admin_token))
     assert deleted.status_code == 204
+
+
+async def test_option_type_filtering_and_addon_support(api_client, super_admin, agent):
+    admin_token = await _login(api_client, super_admin["email"], super_admin["password"])
+    agent_token = await _login(api_client, agent["email"], agent["password"])
+
+    # Verify seeded core masters
+    masters = await api_client.get("/master-options", params={"option_type": "master"}, headers=_auth(agent_token))
+    assert masters.status_code == 200
+    master_keys = {o["field_key"] for o in masters.json()}
+    assert {"booking_source", "transaction_type", "booking_status", "call_type", "room_type"} <= master_keys
+
+    # Verify seeded addons
+    addons = await api_client.get("/master-options", params={"option_type": "addon"}, headers=_auth(agent_token))
+    assert addons.status_code == 200
+    addon_keys = {o["field_key"] for o in addons.json()}
+    assert {"add_on_services", "hk_gk", "currency"} <= addon_keys
+
+    # Create new add-on option
+    val = f"ExtraLegroom-{uuid.uuid4().hex[:6]}"
+    created = await api_client.post(
+        "/admin/master-options",
+        json={"field_key": "add_on_services", "value": val, "option_type": "addon"},
+        headers=_auth(admin_token),
+    )
+    assert created.status_code == 201
+    assert created.json()["option_type"] == "addon"
+    addon_id = created.json()["id"]
+
+    # Read back filtered by option_type=addon
+    addon_list = await api_client.get(
+        "/master-options", params={"field_key": "add_on_services", "option_type": "addon"}, headers=_auth(agent_token)
+    )
+    assert any(o["id"] == addon_id and o["value"] == val for o in addon_list.json())
+
+    # Cleanup
+    del_resp = await api_client.delete(f"/admin/master-options/{addon_id}", headers=_auth(admin_token))
+    assert del_resp.status_code == 204

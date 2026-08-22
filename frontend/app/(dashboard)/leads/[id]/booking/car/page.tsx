@@ -5,6 +5,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
 import CarBookingForm from "./CarBookingForm";
+import type { CarBookingValue } from "@/components/booking/CarBookingFields";
 
 interface Lead {
   id: string;
@@ -12,23 +13,7 @@ interface Lead {
   service_type: string | null;
 }
 
-interface CarBooking {
-  booking_reference: string;
-  booking_platform: string;
-  car_provider: string;
-  renter_dob: string;
-  transmission: string;
-  fuel_policy: string | null;
-  vehicle_type: string;
-  pickup_datetime: string;
-  pickup_location: string;
-  return_datetime: string;
-  return_location: string;
-  prepaid_amount: number;
-  pay_at_counter_amount: number;
-  total_amount: number;
-  custom_fields: Record<string, unknown>;
-}
+type CarBooking = CarBookingValue & { total_amount: number };
 
 export default async function CarBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

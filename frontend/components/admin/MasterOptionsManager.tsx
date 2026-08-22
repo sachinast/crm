@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, Database, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -17,21 +17,51 @@ import {
   useTableSortAndFilter,
 } from "@/components/shared/SortableTable";
 
-const FIELDS: { value: MasterFieldKey; label: string }[] = [
-  { value: "booking_platform", label: "Booking Platform" },
+export const CORE_MASTER_FIELDS: { value: MasterFieldKey; label: string }[] = [
+  { value: "booking_source", label: "Booking Source" },
+  { value: "transaction_type", label: "Transaction Type" },
+  { value: "booking_status", label: "Booking Status" },
+  { value: "call_type", label: "Call Type" },
+  { value: "main_category", label: "Main Category" },
+  { value: "room_type", label: "Room Type" },
+  { value: "lead_tag", label: "Lead Tag" },
+  { value: "leads_booking_source", label: "Leads Booking Source" },
+  { value: "priority", label: "Priority" },
+  { value: "title", label: "Title" },
+  { value: "class_of_service", label: "Class of Service" },
   { value: "airline", label: "Airline" },
   { value: "cabin_class", label: "Cabin Class" },
-  { value: "hotel_name", label: "Hotel Name" },
-  { value: "room_type", label: "Room Type" },
-  { value: "car_provider", label: "Car Provider" },
   { value: "vehicle_type", label: "Vehicle Type" },
   { value: "transmission", label: "Transmission" },
+  { value: "car_provider", label: "Car Provider" },
+  { value: "hotel_name", label: "Hotel Name" },
   { value: "fuel_policy", label: "Fuel Policy" },
+  { value: "booking_platform", label: "Booking Platform" },
 ];
 
-export default function MasterOptionsManager({ initialOptions }: { initialOptions: MasterOption[] }) {
+export const ADDON_FIELDS: { value: MasterFieldKey; label: string }[] = [
+  { value: "add_on_services", label: "Add-on Services" },
+  { value: "hk_gk", label: "HK / GK" },
+  { value: "currency", label: "Currency" },
+  { value: "mco_charges", label: "MCO Charges" },
+  { value: "insurance_coverage", label: "Insurance / Coverage" },
+  { value: "flight_ancillaries", label: "Flight Ancillaries" },
+];
+
+export interface MasterOptionsManagerProps {
+  initialOptions: MasterOption[];
+  optionType?: "master" | "addon";
+  fields?: { value: MasterFieldKey; label: string }[];
+}
+
+export default function MasterOptionsManager({
+  initialOptions,
+  optionType = "master",
+  fields,
+}: MasterOptionsManagerProps) {
+  const activeFields = fields ?? (optionType === "addon" ? ADDON_FIELDS : CORE_MASTER_FIELDS);
   const [options, setOptions] = useState(initialOptions);
-  const [active, setActive] = useState<MasterFieldKey>("booking_platform");
+  const [active, setActive] = useState<MasterFieldKey>(activeFields[0]?.value ?? "booking_source");
   const [newValue, setNewValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,7 +94,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
     setSaving(true);
     setError(null);
     try {
-      const created = await createMasterOption(active, newValue.trim());
+      const created = await createMasterOption(active, newValue.trim(), optionType);
       setOptions((prev) => [...prev, created]);
       setNewValue("");
     } catch (err) {
@@ -83,6 +113,8 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
     }
   }
 
+  const currentFieldLabel = activeFields.find((f) => f.value === active)?.label ?? active;
+
   return (
     <div className="space-y-4">
       {/* Aligned DataTableCard Grid */}
@@ -91,7 +123,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
           <div className="flex flex-col gap-3 w-full">
             {/* Category Filter Tabs */}
             <div className="flex flex-wrap items-center gap-1.5 py-0.5">
-              {FIELDS.map((f) => {
+              {activeFields.map((f) => {
                 const isActive = active === f.value;
                 return (
                   <button
@@ -115,7 +147,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
             <TableSearchBar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              placeholder={`Search ${FIELDS.find((f) => f.value === active)?.label} values...`}
+              placeholder={`Search ${currentFieldLabel} values...`}
               totalCount={totalCount}
               filteredCount={filteredCount}
               isFiltered={isFiltered}
@@ -131,7 +163,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              placeholder={`Add new ${FIELDS.find((f) => f.value === active)?.label} value...`}
+              placeholder={`Add new ${currentFieldLabel} value...`}
               className="input text-xs"
             />
             <button
@@ -163,7 +195,7 @@ export default function MasterOptionsManager({ initialOptions }: { initialOption
                 onSort={toggleSort}
               />
               <SortableHeader
-                label="Category Master"
+                label="Category Key"
                 columnKey="field_key"
                 currentSortKey={sortKey as string | null}
                 sortDirection={sortDirection}

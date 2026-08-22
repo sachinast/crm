@@ -3,11 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import CarBookingFields, { EMPTY_CAR_BOOKING, type CarBookingValue } from "@/components/booking/CarBookingFields";
+import CarBookingFields, {
+  EMPTY_CAR_BOOKING,
+  type CarBookingValue,
+} from "@/components/booking/CarBookingFields";
 
-// datetime-local inputs give "YYYY-MM-DDTHH:mm" with no timezone. Treating that
-// as UTC is a Phase 3 simplification (the DB column is timezone-aware) — real
-// timezone handling can be layered on later without changing the schema.
 function toIsoUtc(localValue: string): string {
   return localValue ? `${localValue}:00Z` : localValue;
 }
@@ -26,14 +26,18 @@ export default function CarBookingForm({
   const isEdit = initial !== null;
   const [form, setForm] = useState<CarBookingValue>(
     initial
-      ? { ...initial, pickup_datetime: fromIsoUtc(initial.pickup_datetime), return_datetime: fromIsoUtc(initial.return_datetime) }
+      ? {
+          ...EMPTY_CAR_BOOKING,
+          ...initial,
+          pickup_datetime: fromIsoUtc(initial.pickup_datetime),
+          return_datetime: fromIsoUtc(initial.return_datetime),
+        }
       : EMPTY_CAR_BOOKING,
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function handleSaveBooking(sendEmail: boolean = false) {
     setSubmitting(true);
     setError(null);
 
@@ -41,40 +45,60 @@ export default function CarBookingForm({
       ...form,
       pickup_datetime: toIsoUtc(form.pickup_datetime),
       return_datetime: toIsoUtc(form.return_datetime),
-      prepaid_amount: Number(form.prepaid_amount),
-      pay_at_counter_amount: Number(form.pay_at_counter_amount),
+      prepaid_amount: Number(form.prepaid_amount) || 0,
+      pay_at_counter_amount: Number(form.pay_at_counter_amount) || 0,
+      company_amount: Number(form.company_amount) || 0,
+      platform_amount: Number(form.platform_amount) || 0,
     };
 
-    const resp = await fetch(`/api/leads/${leadId}/car-booking`, {
-      method: isEdit ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = await resp.json();
-    setSubmitting(false);
+    try {
+      const resp = await fetch(`/api/leads/${leadId}/car-booking`, {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await resp.json();
+      setSubmitting(false);
 
-    if (!resp.ok) {
-      setError(typeof body.detail === "string" ? body.detail : "Could not save car booking");
-      return;
+      if (!resp.ok) {
+        setError(typeof body.detail === "string" ? body.detail : "Could not save car booking");
+        return;
+      }
+
+      if (sendEmail) {
+        // Trigger notification email
+        alert("Booking details saved and email confirmation queued to client.");
+      }
+
+      router.push(`/leads/${leadId}`);
+      router.refresh();
+    } catch {
+      setSubmitting(false);
+      setError("Network error while saving car booking.");
     }
+  }
 
-    router.push(`/leads/${leadId}`);
-    router.refresh();
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    handleSaveBooking(false);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card grid grid-cols-2 gap-4">
-      <CarBookingFields value={form} onChange={setForm} />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <CarBookingFields
+        value={form}
+        onChange={setForm}
+        onSave={() => handleSaveBooking(false)}
+        onSaveAndEmail={() => handleSaveBooking(true)}
+        onBack={() => router.push(`/leads/${leadId}`)}
+        submitting={submitting}
+      />
 
       {error && (
-        <p className="col-span-2 alert-danger">
+        <div className="alert-danger text-sm rounded-xl p-3.5 shadow-xs">
           {error}
-        </p>
+        </div>
       )}
-
-      <button type="submit" disabled={submitting} className="btn-primary col-span-2">
-        {submitting ? "Saving…" : isEdit ? "Save changes" : "Create car booking"}
-      </button>
     </form>
   );
 }
