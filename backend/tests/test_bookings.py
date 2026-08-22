@@ -30,10 +30,20 @@ async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
         return user.id
 
 
+from app.models.audit import BookingProcessLog
+
+
 async def _delete_user(user_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as db:
         user = await db.get(User, user_id)
         if user is not None:
+            # Clean up process logs attributed to this test user
+            await db.execute(
+                select(BookingProcessLog).where(BookingProcessLog.actor_id == user_id)
+            )
+            logs = (await db.execute(select(BookingProcessLog).where(BookingProcessLog.actor_id == user_id))).scalars().all()
+            for l in logs:
+                await db.delete(l)
             await db.delete(user)
             await db.commit()
 
@@ -51,7 +61,7 @@ def _unique_email(prefix: str) -> str:
 
 
 def _unique_phone() -> str:
-    return f"+1555{uuid.uuid4().int % 10_000_000:07d}"
+    return f"+1202{uuid.uuid4().int % 10_000_000:07d}"
 
 
 @pytest.fixture
@@ -81,15 +91,26 @@ def _auth(token: str) -> dict:
 
 
 async def _create_lead(client: AsyncClient, token: str, service_type: str | None = None) -> str:
+    name = f"Cust_{uuid.uuid4().hex[:12]}"
     resp = await client.post(
         "/leads",
-        json={"name": "Booking Target", "phone": _unique_phone(), "email": _unique_email("booking")},
+        json={"name": name, "phone": _unique_phone(), "email": _unique_email("booking")},
         headers=_auth(token),
     )
     assert resp.status_code == 201, resp.text
     lead_id = resp.json()["id"]
+    if resp.json().get("is_duplicate"):
+        await client.post(
+            f"/leads/{lead_id}/confirm",
+            json={"reason": "Test duplicate override"},
+            headers=_auth(token),
+        )
     if service_type:
-        st = await client.patch(f"/leads/{lead_id}/service-type", json={"service_type": service_type}, headers=_auth(token))
+        st = await client.patch(
+            f"/leads/{lead_id}/service-type",
+            json={"service_type": service_type},
+            headers=_auth(token),
+        )
         assert st.status_code == 200, st.text
     return lead_id
 
@@ -108,6 +129,12 @@ CAR_PAYLOAD = {
     "return_location": "LAX Airport",
     "prepaid_amount": 150.00,
     "pay_at_counter_amount": 50.00,
+    "car_model": "Ford Explorer",
+    "fuel_mileage": "Unlimited",
+    "booking_confirmation": "CONF-9876",
+    "other_details": "GPS included",
+    "booking_source": "ZAD CARS",
+    "transaction_type": "New",
 }
 
 HOTEL_PAYLOAD = {
@@ -120,6 +147,13 @@ HOTEL_PAYLOAD = {
     "check_out_date": "2026-10-05",
     "prepaid_amount": 400.00,
     "pay_at_counter_amount": 0,
+    "call_type": "Booking Modification",
+    "itinerary_number": "ITIN-12345",
+    "num_guests": 2,
+    "num_rooms": 1,
+    "bed_type": "King",
+    "attachment_url": "https://example.com/voucher.pdf",
+    "other_details": "Late check-in requested",
 }
 
 FLIGHT_PAYLOAD = {
@@ -133,6 +167,23 @@ FLIGHT_PAYLOAD = {
     "cabin_class": "Economy",
     "prepaid_amount": 320.50,
     "pay_at_counter_amount": 0,
+    "main_category": "New",
+    "sub_category": "International",
+    "account_name": "Acme Corp",
+    "booking_source_email": "desk@example.com",
+    "source_text": "Amadeus PNR",
+    "priority": "High",
+    "trip_type": "Round Trip",
+    "hk_gk": "HK",
+    "currency": "$",
+    "ticket_cost": 280.00,
+    "mco_charge": 25.00,
+    "merchant_fee": 15.00,
+    "cvv_fee": 0,
+    "total_auth_amount": 320.50,
+    "margin": 40.50,
+    "important": True,
+    "other_details": "Window seat preferred",
 }
 
 
@@ -146,18 +197,24 @@ async def test_car_booking_full_lifecycle(api_client, agent):
     assert body["lead_id"] == lead_id
     assert body["car_provider"] == "Hertz"
     assert body["vehicle_type"] == "standard_suv"
+    assert body["car_model"] == "Ford Explorer"
+    assert body["fuel_mileage"] == "Unlimited"
+    assert body["booking_confirmation"] == "CONF-9876"
+    assert body["booking_source"] == "ZAD CARS"
     # total_amount is DB-computed, not client-supplied.
     assert body["total_amount"] == pytest.approx(200.00)
 
     fetched = await api_client.get(f"/leads/{lead_id}/car-booking", headers=_auth(token))
     assert fetched.status_code == 200
     assert fetched.json()["booking_reference"] == "CR-1001"
+    assert fetched.json()["car_model"] == "Ford Explorer"
 
     updated = await api_client.patch(
-        f"/leads/{lead_id}/car-booking", json={"pay_at_counter_amount": 75.00}, headers=_auth(token)
+        f"/leads/{lead_id}/car-booking", json={"pay_at_counter_amount": 75.00, "car_model": "Chevy Tahoe"}, headers=_auth(token)
     )
     assert updated.status_code == 200
     assert updated.json()["total_amount"] == pytest.approx(225.00)
+    assert updated.json()["car_model"] == "Chevy Tahoe"
 
     await _delete_lead(uuid.UUID(lead_id))
 
@@ -168,8 +225,12 @@ async def test_hotel_booking_full_lifecycle(api_client, agent):
 
     created = await api_client.post(f"/leads/{lead_id}/hotel-booking", json=HOTEL_PAYLOAD, headers=_auth(token))
     assert created.status_code == 201, created.text
-    assert created.json()["hotel_name"] == "Grand Plaza"
-    assert created.json()["total_amount"] == pytest.approx(400.00)
+    body = created.json()
+    assert body["hotel_name"] == "Grand Plaza"
+    assert body["call_type"] == "Booking Modification"
+    assert body["itinerary_number"] == "ITIN-12345"
+    assert body["num_guests"] == 2
+    assert body["total_amount"] == pytest.approx(400.00)
 
     await _delete_lead(uuid.UUID(lead_id))
 
@@ -194,6 +255,10 @@ async def test_flight_booking_full_lifecycle(api_client, agent):
     body = created.json()
     assert body["pnr"] == "ABC123"
     assert body["flight_numbers"] == ["DL123", "DL456"]
+    assert body["trip_type"] == "Round Trip"
+    assert body["hk_gk"] == "HK"
+    assert body["merchant_fee"] == 15.00
+    assert body["important"] is True
     assert body["total_amount"] == pytest.approx(320.50)
 
     await _delete_lead(uuid.UUID(lead_id))

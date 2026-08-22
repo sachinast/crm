@@ -57,6 +57,9 @@ def _ensure_service_type(lead: Lead, expected: ServiceType, path: str) -> None:
         )
 
 
+from app.domain.process_log import log_process_event
+
+
 def _register_booking_routes(
     *,
     path: str,
@@ -84,8 +87,18 @@ def _register_booking_routes(
 
         data = payload.model_dump()
         data["custom_fields"] = await validate_custom_fields(db, entity_type, data["custom_fields"])
+        data["created_by"] = current_user.id
+        data["modified_by"] = current_user.id
         booking = model(lead_id=lead_id, **data)
         db.add(booking)
+        log_process_event(
+            db,
+            lead_id=lead_id,
+            actor_id=current_user.id,
+            action="booking_created",
+            field_changed="booking",
+            new_value=service_type.value,
+        )
         await db.commit()
         await db.refresh(booking)
         return booking
@@ -109,8 +122,17 @@ def _register_booking_routes(
         updates = payload.model_dump(exclude_unset=True)
         if "custom_fields" in updates and updates["custom_fields"] is not None:
             updates["custom_fields"] = await validate_custom_fields(db, entity_type, updates["custom_fields"])
+        updates["modified_by"] = current_user.id
         for field, value in updates.items():
             setattr(booking, field, value)
+        log_process_event(
+            db,
+            lead_id=lead_id,
+            actor_id=current_user.id,
+            action="booking_updated",
+            field_changed="booking",
+            new_value=",".join(updates.keys()),
+        )
         await db.commit()
         await db.refresh(booking)
         return booking

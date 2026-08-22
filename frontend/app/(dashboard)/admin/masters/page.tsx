@@ -8,7 +8,7 @@ import type { MasterOption } from "@/lib/master-options-api";
 
 async function fetchOptions(token: string): Promise<MasterOption[]> {
   try {
-    return await apiFetch<MasterOption[]>("/master-options", { token });
+    return await apiFetch<MasterOption[]>("/master-options?option_type=master", { token });
   } catch {
     return [];
   }
@@ -21,18 +21,18 @@ export default async function AdminMastersPage() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <PageHeader
-        title="Master Data"
-        subtitle="Manage dynamic dropdown master records for platforms, airlines, hotel rooms, and vehicle fleets."
-        badge={`${options.length} options`}
+        title="Core Master Data"
+        subtitle="Manage core system dropdown options for booking sources, transaction types, statuses, call types, room types, vehicle types, and airline carriers."
+        badge={`${options.length} core options`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Admin", href: "/admin/users" },
-          { label: "Master Data" },
+          { label: "Core Master Data" },
         ]}
         icon={<Database size={18} />}
       />
 
-      <MasterOptionsManager initialOptions={options} />
+      <MasterOptionsManager initialOptions={options} optionType="master" />
     </div>
   );
 }

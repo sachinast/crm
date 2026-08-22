@@ -181,10 +181,39 @@ export default function NewLeadPage() {
     const bookingPath = serviceType === "car" ? "car-booking" : serviceType === "hotel" ? "hotel-booking" : "flight-booking";
     const bookingPayload =
       serviceType === "car"
-        ? { ...carForm, pickup_datetime: toIsoUtc(carForm.pickup_datetime), return_datetime: toIsoUtc(carForm.return_datetime), prepaid_amount: Number(carForm.prepaid_amount), pay_at_counter_amount: Number(carForm.pay_at_counter_amount) }
+        ? {
+            ...carForm,
+            driver_name: carForm.driver_name || name,
+            driver_phone: carForm.driver_phone || phone,
+            pickup_datetime: toIsoUtc(carForm.pickup_datetime),
+            return_datetime: toIsoUtc(carForm.return_datetime),
+            prepaid_amount: Number(carForm.prepaid_amount),
+            pay_at_counter_amount: Number(carForm.pay_at_counter_amount),
+          }
         : serviceType === "hotel"
-          ? { ...hotelForm, prepaid_amount: Number(hotelForm.prepaid_amount), pay_at_counter_amount: Number(hotelForm.pay_at_counter_amount) }
-          : { ...flightForm, prepaid_amount: Number(flightForm.prepaid_amount), pay_at_counter_amount: Number(flightForm.pay_at_counter_amount) };
+          ? {
+              ...hotelForm,
+              primary_guest_name: hotelForm.primary_guest_name || name,
+              guest_email: hotelForm.guest_email || email,
+              guest_phone: hotelForm.guest_phone || phone,
+              prepaid_amount: Number(hotelForm.prepaid_amount),
+              pay_at_counter_amount: Number(hotelForm.pay_at_counter_amount),
+              num_guests: Number(hotelForm.num_guests) || 1,
+              num_rooms: Number(hotelForm.num_rooms) || 1,
+            }
+          : {
+              ...flightForm,
+              contact_email: flightForm.contact_email || email,
+              contact_phone: flightForm.contact_phone || phone,
+              prepaid_amount: Number(flightForm.prepaid_amount),
+              pay_at_counter_amount: Number(flightForm.pay_at_counter_amount),
+              ticket_cost: Number(flightForm.ticket_cost) || 0,
+              mco_charge: Number(flightForm.mco_charge) || 0,
+              merchant_fee: Number(flightForm.merchant_fee) || 15,
+              cvv_fee: Number(flightForm.cvv_fee) || 0,
+              total_auth_amount: Number(flightForm.total_auth_amount) || 0,
+              margin: Number(flightForm.margin) || 0,
+            };
 
     const bookingResp = await fetch(`/api/leads/${leadId}/${bookingPath}`, {
       method: "POST",
@@ -329,14 +358,26 @@ export default function NewLeadPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* STEP 1: Client Information Card */}
+          {/* STEP 1: Dynamic Client / Guest / Renter Information Card */}
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-                Client Information
+                {serviceType === "car"
+                  ? "Renter Details"
+                  : serviceType === "hotel"
+                    ? "Guest Details"
+                    : serviceType === "flight"
+                      ? "Passenger Details"
+                      : "Client Information"}
               </span>
               <span className="text-xs font-medium text-ink-faint">
-                Verified against duplicates
+                {serviceType === "car"
+                  ? "Primary renter / driver contact"
+                  : serviceType === "hotel"
+                    ? "Primary hotel guest contact"
+                    : serviceType === "flight"
+                      ? "Ticketing & PNR contact"
+                      : "Verified against duplicates"}
               </span>
             </div>
 
@@ -391,10 +432,20 @@ export default function NewLeadPage() {
                 )}
               </Field>
 
-              <Field label="Customer Name">
+              <Field
+                label={
+                  serviceType === "car"
+                    ? "Renter Full Name"
+                    : serviceType === "hotel"
+                      ? "Primary Guest Name"
+                      : serviceType === "flight"
+                        ? "Primary Passenger Name"
+                        : "Customer Name"
+                }
+                required
+              >
                 <input
                   required
-                  disabled={!unlocked}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Ravendra Singh"
@@ -423,60 +474,72 @@ export default function NewLeadPage() {
             </div>
           </div>
 
-          {/* Gated Booking Section */}
+          {/* STEP 2: Service Selection Card - Always Switchable & Enabled */}
+          <div className="card">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+              {SERVICE_TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = serviceType === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setServiceType(t.value)}
+                    className={`group flex items-center gap-3.5 rounded-2xl border p-3.5 text-left transition-all cursor-pointer ${
+                      active
+                        ? "border-accent bg-accent-soft shadow-md ring-1 ring-accent"
+                        : "border-hairline bg-surface hover:border-hairline-strong hover:bg-surface-raised"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                        active
+                          ? "bg-accent text-accent-ink shadow-sm"
+                          : "bg-surface-raised text-accent border border-hairline"
+                      }`}
+                    >
+                      <Icon size={19} strokeWidth={2} />
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-bold ${active ? "text-accent-ink" : "text-ink"}`}>{t.label}</span>
+                        {active && <Check size={15} className="text-accent" />}
+                      </div>
+                      <p className="text-xs text-ink-muted">{t.sublabel}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gated Booking Specification Banner */}
           {!unlocked && (
             <div className="alert-info">
               <span>Enter and verify valid client email & phone number above to configure booking details.</span>
             </div>
           )}
 
-          <fieldset disabled={!unlocked} className={`space-y-4 transition-opacity duration-200 ${!unlocked ? "opacity-60 pointer-events-none select-none" : "opacity-100"}`}>
-            {/* STEP 2: Service Selection Card */}
-            <div className="card">
-              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-                {SERVICE_TYPES.map((t) => {
-                  const Icon = t.icon;
-                  const active = serviceType === t.value;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setServiceType(t.value)}
-                      className={`group flex items-center gap-3.5 rounded-2xl border p-3.5 text-left transition-all ${
-                        active
-                          ? "border-accent bg-accent-soft shadow-md ring-1 ring-accent"
-                          : "border-hairline bg-surface hover:border-hairline-strong hover:bg-surface-raised"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                          active
-                            ? "bg-accent text-accent-ink shadow-sm"
-                            : "bg-surface-raised text-accent border border-hairline"
-                        }`}
-                      >
-                        <Icon size={19} strokeWidth={2} />
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-sm font-bold ${active ? "text-accent-ink" : "text-ink"}`}>{t.label}</span>
-                          {active && <Check size={15} className="text-accent" />}
-                        </div>
-                        <p className="text-xs text-ink-muted">{t.sublabel}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
+          {/* STEP 3 & 4: Booking Details & Financial Toolbar (Enabled once validated) */}
+          <fieldset
+            disabled={!unlocked}
+            className={`space-y-4 transition-opacity duration-200 ${
+              !unlocked ? "opacity-60 pointer-events-none select-none" : "opacity-100"
+            }`}
+          >
             {/* STEP 3: Booking Specifications Card */}
             {serviceType && (
               <div className="card">
                 <div className="grid grid-cols-1 gap-4">
                   {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
-                  {serviceType === "hotel" && <HotelBookingFields value={hotelForm} onChange={setHotelForm} />}
+                  {serviceType === "hotel" && (
+                    <HotelBookingFields
+                      value={hotelForm}
+                      onChange={setHotelForm}
+                      hideGuestDetails={true}
+                    />
+                  )}
                   {serviceType === "flight" && <FlightBookingFields value={flightForm} onChange={setFlightForm} />}
                 </div>
               </div>

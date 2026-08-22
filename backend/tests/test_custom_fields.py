@@ -282,10 +282,16 @@ async def test_custom_fields_validated_on_car_booking_too(api_client, super_admi
 
     lead_resp = await api_client.post(
         "/leads",
-        json={"name": "Car CF Target", "phone": _unique_phone(), "email": _unique_email("carcf")},
+        json={"name": f"Car_CF_{uuid.uuid4().hex[:8]}", "phone": _unique_phone(), "email": _unique_email("carcf")},
         headers=_auth(agent_token),
     )
     lead_id = lead_resp.json()["id"]
+    if lead_resp.json().get("is_duplicate"):
+        await api_client.post(
+            f"/leads/{lead_id}/confirm",
+            json={"reason": "Test duplicate override"},
+            headers=_auth(agent_token),
+        )
     await api_client.patch(f"/leads/{lead_id}/service-type", json={"service_type": "car"}, headers=_auth(agent_token))
 
     bad_type = await api_client.post(

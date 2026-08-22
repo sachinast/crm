@@ -27,8 +27,28 @@ class CarBookingCreate(BaseModel):
     return_location: str = Field(min_length=1)
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
-    # Admin-defined extra fields (migration 0010) — validated against
-    # custom_field_definitions by app/domain/custom_fields.py.
+    fuel_mileage: str | None = None
+    booking_confirmation: str | None = None
+    car_model: str | None = None
+    driver_name: str | None = None
+    driver_phone: str | None = None
+    driver_license: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -52,6 +72,28 @@ class CarBookingUpdate(BaseModel):
     return_location: str | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    fuel_mileage: str | None = None
+    booking_confirmation: str | None = None
+    car_model: str | None = None
+    driver_name: str | None = None
+    driver_phone: str | None = None
+    driver_license: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = None
+    platform_amount: float | None = None
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
 
 
@@ -74,6 +116,28 @@ class CarBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    fuel_mileage: str | None = None
+    booking_confirmation: str | None = None
+    car_model: str | None = None
+    driver_name: str | None = None
+    driver_phone: str | None = None
+    driver_license: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -92,12 +156,35 @@ class HotelBookingCreate(BaseModel):
     check_out_date: date
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
+    call_type: str | None = None
+    itinerary_number: str | None = None
+    num_guests: int | None = 1
+    num_rooms: int | None = 1
+    bed_type: str | None = None
+    primary_guest_name: str | None = None
+    guest_email: str | None = None
+    guest_phone: str | None = None
+    attachment_url: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _checkout_after_checkin(self) -> "HotelBookingCreate":
-        # Also enforced at the DB layer (ck_hotel_dates) — checked here too so
-        # the client gets a clean 422 instead of a raw IntegrityError.
         if self.check_out_date <= self.check_in_date:
             raise ValueError("check_out_date must be after check_in_date")
         return self
@@ -113,6 +200,31 @@ class HotelBookingUpdate(BaseModel):
     check_out_date: date | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    call_type: str | None = None
+    itinerary_number: str | None = None
+    num_guests: int | None = None
+    num_rooms: int | None = None
+    bed_type: str | None = None
+    primary_guest_name: str | None = None
+    guest_email: str | None = None
+    guest_phone: str | None = None
+    attachment_url: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = None
+    platform_amount: float | None = None
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
 
 
@@ -131,6 +243,31 @@ class HotelBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    call_type: str | None = None
+    itinerary_number: str | None = None
+    num_guests: int | None = 1
+    num_rooms: int | None = 1
+    bed_type: str | None = None
+    primary_guest_name: str | None = None
+    guest_email: str | None = None
+    guest_phone: str | None = None
+    attachment_url: str | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -150,6 +287,48 @@ class FlightBookingCreate(BaseModel):
     cabin_class: str = Field(min_length=1)
     prepaid_amount: float = Field(default=0, ge=0)
     pay_at_counter_amount: float = Field(default=0, ge=0)
+    main_category: str | None = None
+    sub_category: str | None = None
+    account_name: str | None = None
+    booking_source_email: str | None = None
+    source_text: str | None = None
+    priority: str | None = None
+    trip_type: str | None = "One Way"
+    hk_gk: str | None = None
+    currency: str | None = "$"
+    ticket_cost: float | None = 0
+    mco_charge: float | None = 0
+    merchant_fee: float = Field(default=15, ge=0)
+    cvv_fee: float = Field(default=0, ge=0)
+    total_auth_amount: float | None = 0
+    margin: float | None = 0
+    attachment_url: str | None = None
+    important: bool = False
+    other_details: str | None = None
+    remarks: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    passengers: list[dict[str, Any]] | None = Field(default_factory=list)
+    special_notes: list[dict[str, Any]] | None = Field(default_factory=list)
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    lead_tag: str | None = None
+    leads_booking_source: str | None = None
+    title: str | None = None
+    class_of_service: str | None = None
+    add_on_services: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -164,6 +343,48 @@ class FlightBookingUpdate(BaseModel):
     cabin_class: str | None = None
     prepaid_amount: float | None = Field(default=None, ge=0)
     pay_at_counter_amount: float | None = Field(default=None, ge=0)
+    main_category: str | None = None
+    sub_category: str | None = None
+    account_name: str | None = None
+    booking_source_email: str | None = None
+    source_text: str | None = None
+    priority: str | None = None
+    trip_type: str | None = None
+    hk_gk: str | None = None
+    currency: str | None = None
+    ticket_cost: float | None = None
+    mco_charge: float | None = None
+    merchant_fee: float | None = Field(default=None, ge=0)
+    cvv_fee: float | None = Field(default=None, ge=0)
+    total_auth_amount: float | None = None
+    margin: float | None = None
+    attachment_url: str | None = None
+    important: bool | None = None
+    other_details: str | None = None
+    remarks: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    passengers: list[dict[str, Any]] | None = None
+    special_notes: list[dict[str, Any]] | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    lead_tag: str | None = None
+    leads_booking_source: str | None = None
+    title: str | None = None
+    class_of_service: str | None = None
+    add_on_services: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = None
+    platform_amount: float | None = None
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
 
 
@@ -183,6 +404,48 @@ class FlightBookingRead(BaseModel):
     prepaid_amount: float
     pay_at_counter_amount: float
     total_amount: float
+    main_category: str | None = None
+    sub_category: str | None = None
+    account_name: str | None = None
+    booking_source_email: str | None = None
+    source_text: str | None = None
+    priority: str | None = None
+    trip_type: str | None = "One Way"
+    hk_gk: str | None = None
+    currency: str | None = "$"
+    ticket_cost: float | None = 0
+    mco_charge: float | None = 0
+    merchant_fee: float = 15
+    cvv_fee: float = 0
+    total_auth_amount: float | None = 0
+    margin: float | None = 0
+    attachment_url: str | None = None
+    important: bool = False
+    other_details: str | None = None
+    remarks: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    passengers: list[dict[str, Any]] | None = None
+    special_notes: list[dict[str, Any]] | None = None
+    booking_source: str | None = None
+    transaction_type: str | None = None
+    transaction_status: str | None = None
+    lead_tag: str | None = None
+    leads_booking_source: str | None = None
+    title: str | None = None
+    class_of_service: str | None = None
+    add_on_services: str | None = None
+    status: str | None = None
+    card_holder_name: str | None = None
+    card_number: str | None = None
+    card_type: str | None = None
+    billing_address: str | None = None
+    cvv: str | None = None
+    card_expiry: str | None = None
+    charge_name: str | None = None
+    company_amount: float | None = 0
+    platform_amount: float | None = 0
+    remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any]
     created_at: datetime
     updated_at: datetime

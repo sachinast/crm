@@ -134,7 +134,7 @@ def _auth(token: str) -> dict:
 
 async def test_user_search_excludes_self_and_is_open_to_any_role(api_client, alice, bob):
     token = await _login(api_client, alice["email"], alice["password"])
-    resp = await api_client.get("/messaging/users", headers=_auth(token))
+    resp = await api_client.get("/messaging/users", params={"query": bob["email"]}, headers=_auth(token))
     assert resp.status_code == 200
     ids = [u["id"] for u in resp.json()]
     assert str(alice["id"]) not in ids

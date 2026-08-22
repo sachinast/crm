@@ -5,6 +5,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 
 import HotelBookingForm from "./HotelBookingForm";
+import type { HotelBookingValue } from "@/components/booking/HotelBookingFields";
 
 interface Lead {
   id: string;
@@ -12,19 +13,7 @@ interface Lead {
   service_type: string | null;
 }
 
-interface HotelBooking {
-  booking_reference: string;
-  booking_platform: string;
-  hotel_name: string;
-  room_type: string;
-  location: string;
-  check_in_date: string;
-  check_out_date: string;
-  prepaid_amount: number;
-  pay_at_counter_amount: number;
-  total_amount: number;
-  custom_fields: Record<string, unknown>;
-}
+type HotelBooking = HotelBookingValue & { total_amount: number };
 
 export default async function HotelBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

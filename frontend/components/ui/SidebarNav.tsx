@@ -28,6 +28,7 @@ import {
   Compass,
   ShieldAlert,
   Flame,
+  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,6 +59,8 @@ export const ICONS = {
   settings: Sliders,
   customFields: ListPlus,
   masters: Database,
+  addons: Sparkles,
+  reports: FileSpreadsheet,
   attendance: Clock,
   files: FolderOpen,
   notes: StickyNote,

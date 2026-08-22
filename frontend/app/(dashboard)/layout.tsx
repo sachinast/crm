@@ -53,6 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     icon: "operations",
     items: [
       { href: "/attendance", label: "Attendance", icon: "attendance" },
+      { href: "/reports", label: "Operations Reports", icon: "reports" },
       { href: "/files", label: "Files Manager", icon: "files" },
       { href: "/notes", label: "Personal Notes", icon: "notes" },
     ],
@@ -104,6 +105,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       href: "/admin/masters",
       label: "Master Data",
       icon: "masters",
+    },
+    hasPermission(user, "admin.manage_custom_fields") && {
+      href: "/admin/addons",
+      label: "Add-on Services",
+      icon: "addons",
     },
   ];
 
