@@ -66,8 +66,11 @@ export default function CarBookingForm({
       }
 
       if (sendEmail) {
-        // Trigger notification email
-        alert("Booking details saved and email confirmation queued to client.");
+        try {
+          await fetch(`/api/leads/${leadId}/send-auth-email`, { method: "POST" });
+        } catch (e) {
+          console.error("Failed to trigger auth email:", e);
+        }
       }
 
       router.push(`/leads/${leadId}`);

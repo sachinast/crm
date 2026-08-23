@@ -50,7 +50,11 @@ export default function FlightBookingForm({
       }
 
       if (sendEmail) {
-        alert("Flight booking details saved and e-ticket/invoice emailed to client.");
+        try {
+          await fetch(`/api/leads/${leadId}/send-auth-email`, { method: "POST" });
+        } catch (e) {
+          console.error("Failed to trigger auth email:", e);
+        }
       }
 
       router.push(`/leads/${leadId}`);

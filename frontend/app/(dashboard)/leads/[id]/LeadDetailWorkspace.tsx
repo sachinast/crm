@@ -287,6 +287,8 @@ export default function LeadDetailWorkspace({
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "history">("overview");
   const [copiedAuthLink, setCopiedAuthLink] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
   const ServiceIcon = lead.service_type ? SERVICE_ICON[lead.service_type] : null;
   const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${lead.id}` : `/authorize/${lead.id}`;
@@ -297,6 +299,29 @@ export default function LeadDetailWorkspace({
     navigator.clipboard.writeText(authUrl);
     setCopiedAuthLink(true);
     setTimeout(() => setCopiedAuthLink(false), 2000);
+  };
+
+  const handleSendAuthEmail = async () => {
+    if (!lead.email) {
+      alert("This lead does not have a customer email address configured.");
+      return;
+    }
+    setSendingEmail(true);
+    setEmailStatus(null);
+    try {
+      const resp = await fetch(`/api/leads/${lead.id}/send-auth-email`, { method: "POST" });
+      const data = await resp.json();
+      if (resp.ok) {
+        setEmailStatus(`Auth email sent to ${lead.email}`);
+        setTimeout(() => setEmailStatus(null), 4000);
+      } else {
+        alert(data.detail || "Failed to send authorization email.");
+      }
+    } catch {
+      alert("Network error while sending authorization email.");
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   return (
@@ -318,7 +343,18 @@ export default function LeadDetailWorkspace({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {lead.email && (
+            <button
+              onClick={handleSendAuthEmail}
+              disabled={sendingEmail}
+              className="btn-secondary btn-sm flex items-center gap-1.5 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 font-semibold"
+            >
+              <Mail size={13} />
+              <span>{sendingEmail ? "Sending…" : emailStatus || "Send Auth Email"}</span>
+            </button>
+          )}
+
           {lead.phone && (
             <button
               onClick={() => setShowSMSModal(true)}
