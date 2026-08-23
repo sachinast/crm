@@ -75,6 +75,20 @@ def require_permission(*required_perms: str) -> Callable[[User], Coroutine[Any, 
     return _dependency
 
 
+def require_any_permission(*perms: str) -> Callable[[User], Coroutine[Any, Any, User]]:
+    """Requires at least one of the listed permissions."""
+
+    async def _dependency(user: User = Depends(get_current_user)) -> User:
+        if not any(user.role.has_permission(p) for p in perms):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing one of required permission(s): {', '.join(perms)}",
+            )
+        return user
+
+    return _dependency
+
+
 def require_role(*role_names: str) -> Callable[[User], Coroutine[Any, Any, User]]:
     """Enforces specific role membership. `require_permission` should be preferred
     for almost everything per TECHNICAL_SPEC.md §4.2.
@@ -130,53 +144,23 @@ async def require_ip_whitelisted(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """IP whitelist enforcement — TECHNICAL_SPEC.md §8 & System Security Policy.
-    Superadmin accounts always bypass IP restrictions to prevent lockout.
+    """IP whitelist enforcement — TECHNICAL_SPEC.md §8.
+    If the user has ip_whitelist_enabled=True, client IP must match a row in
+    user_whitelisted_ips for this user. If False (default), any IP allowed.
+    Superadmin accounts always bypass IP restrictions.
     """
-    # 1. Superadmin bypass
     role_name = (user.role.name if user.role else "").lower()
     if role_name in ("super_admin", "superadmin", "super admin"):
         return user
 
-    # 2. Check global system setting
-    global_setting_res = await db.execute(
-        select(AppSetting).where(AppSetting.key == "security.ip_whitelist_enabled")
-    )
-    global_setting = global_setting_res.scalar_one_or_none()
-    global_enabled = bool(global_setting.value) if global_setting else False
-
-    # 3. Check if enforcement applies to this user
-    if not global_enabled and not user.ip_whitelist_enabled:
+    if not user.ip_whitelist_enabled:
         return user
 
-    client_ip_str = get_client_ip(request)
-    allowed_ips: list[str] = []
-
-    # Fetch global allowed IPs
-    if global_enabled:
-        ips_setting_res = await db.execute(
-            select(AppSetting).where(AppSetting.key == "security.allowed_ips")
-        )
-        ips_setting = ips_setting_res.scalar_one_or_none()
-        if ips_setting:
-            if isinstance(ips_setting.value, list):
-                allowed_ips.extend([str(ip).strip() for ip in ips_setting.value if ip])
-            elif isinstance(ips_setting.value, str):
-                allowed_ips.extend([ip.strip() for ip in ips_setting.value.split(",") if ip.strip()])
-
-    # Fetch per-user allowed IPs
-    user_ips_res = await db.execute(
-        select(UserWhitelistedIP).where(UserWhitelistedIP.user_id == user.id)
-    )
-    allowed_ips.extend([str(row.ip_address).split("/")[0] for row in user_ips_res.scalars().all()])
-
-    # Verify authorization
-    if not is_ip_in_whitelist(client_ip_str, allowed_ips):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Request IP is not whitelisted for this account",
-        )
-
+    client_ip = get_client_ip(request)
+    result = await db.execute(select(UserWhitelistedIP).where(UserWhitelistedIP.user_id == user.id))
+    allowed_ips = {str(row.ip_address).split("/")[0] for row in result.scalars().all()}
+    if client_ip not in allowed_ips:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Request IP is not whitelisted for this account")
     return user
 
 
