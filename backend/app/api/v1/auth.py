@@ -84,46 +84,46 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     role_name = (user.role.name if user.role else "").lower()
     is_superadmin = role_name in ("super_admin", "superadmin", "super admin")
 
-    # IP Whitelist Enforcement check at login
-    global_setting_res = await db.execute(
-        select(AppSetting).where(AppSetting.key == "security.ip_whitelist_enabled")
-    )
-    global_setting = global_setting_res.scalar_one_or_none()
-    global_enabled = bool(global_setting.value) if global_setting else False
+    # Global System IP Whitelist Check (System Settings)
+    if not is_superadmin:
+        global_setting_res = await db.execute(
+            select(AppSetting).where(AppSetting.key == "security.ip_whitelist_enabled")
+        )
+        global_setting = global_setting_res.scalar_one_or_none()
+        global_enabled = False
+        if global_setting and global_setting.value is not None:
+            if isinstance(global_setting.value, bool):
+                global_enabled = global_setting.value
+            elif isinstance(global_setting.value, str):
+                global_enabled = global_setting.value.lower() in ("true", "1", "yes")
 
-    if not is_superadmin and (global_enabled or user.ip_whitelist_enabled):
-        allowed_ips: list[str] = []
         if global_enabled:
             ips_setting_res = await db.execute(
                 select(AppSetting).where(AppSetting.key == "security.allowed_ips")
             )
             ips_setting = ips_setting_res.scalar_one_or_none()
-            if ips_setting:
+            allowed_ips: list[str] = []
+            if ips_setting and ips_setting.value:
                 if isinstance(ips_setting.value, list):
                     allowed_ips.extend([str(ip).strip() for ip in ips_setting.value if ip])
                 elif isinstance(ips_setting.value, str):
                     allowed_ips.extend([ip.strip() for ip in ips_setting.value.split(",") if ip.strip()])
 
-        user_ips_res = await db.execute(
-            select(UserWhitelistedIP).where(UserWhitelistedIP.user_id == user.id)
-        )
-        allowed_ips.extend([str(row.ip_address).split("/")[0] for row in user_ips_res.scalars().all()])
-
-        if not _is_ip_in_whitelist(ip_address, allowed_ips):
-            log_activity(
-                db,
-                actor_id=user.id,
-                action="login_blocked_ip",
-                category="auth",
-                metadata={"email": payload.email, "ip": ip_address, "reason": "ip_not_whitelisted"},
-                ip_address=ip_address,
-                user_agent=user_agent,
-            )
-            await db.commit()
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                f"Access Denied: Your IP address ({ip_address}) is not authorized by the security policy. Please contact your system administrator.",
-            )
+            if not _is_ip_in_whitelist(ip_address, allowed_ips):
+                log_activity(
+                    db,
+                    actor_id=user.id,
+                    action="login_blocked_ip",
+                    category="auth",
+                    metadata={"email": payload.email, "ip": ip_address, "reason": "ip_not_whitelisted"},
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+                await db.commit()
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    f"Access Denied: Your IP address ({ip_address}) is not authorized by the security policy. Please contact your system administrator.",
+                )
 
     log_activity(
         db, actor_id=user.id, action="login_success", category="auth", ip_address=ip_address, user_agent=user_agent

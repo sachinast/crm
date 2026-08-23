@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import require_permission
+from app.api.deps import require_any_permission, require_permission
 from app.db.session import get_db
 from app.domain.activity_log import log_activity
 from app.domain.permissions import PERMISSION_CODES
@@ -55,7 +55,7 @@ def _validate_codes(codes: list[str]) -> None:
 @router.get("/permissions", response_model=list[PermissionRead])
 async def list_permissions(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_permission(*READ_PERMISSIONS)),
+    _: User = Depends(require_any_permission(*READ_PERMISSIONS)),
 ) -> list[Permission]:
     result = await db.execute(select(Permission).order_by(Permission.category, Permission.code))
     return list(result.scalars().all())
@@ -64,7 +64,7 @@ async def list_permissions(
 @router.get("/roles", response_model=list[RoleRead])
 async def list_roles(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_permission(*READ_PERMISSIONS)),
+    _: User = Depends(require_any_permission(*READ_PERMISSIONS)),
 ) -> list[Role]:
     result = await db.execute(
         select(Role).options(selectinload(Role.permissions)).order_by(Role.is_system_role.desc(), Role.name)
