@@ -168,7 +168,7 @@ export default function NewLeadPage() {
 
   const { prepaid, counter, total } = currentFinancials();
 
-  async function finishServiceTypeAndBooking(leadId: string) {
+  async function finishServiceTypeAndBooking(leadId: string, sendAuthEmail: boolean = false) {
     if (!serviceType) {
       setError("Choose a service type");
       setSubmitting(false);
@@ -291,7 +291,7 @@ export default function NewLeadPage() {
       }
     }
 
-    await finishServiceTypeAndBooking(body.id);
+    await finishServiceTypeAndBooking(body.id, sendAuthEmail);
   }
 
   async function handlePendingConfirm() {
