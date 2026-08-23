@@ -433,10 +433,19 @@ export default function LeadDetailWorkspace({
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="text-xs text-ink-faint">Total Amount</div>
-                  <div className="font-mono text-base font-bold text-accent">
-                    ${typeof booking.total_amount === "number" ? booking.total_amount.toFixed(2) : booking.total_amount || "0.00"}
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/leads/${lead.id}/booking/${lead.service_type}`}
+                    className="btn-secondary btn-sm flex items-center gap-1 text-xs py-1 px-2.5"
+                  >
+                    <PencilLine size={12} />
+                    <span>Edit Booking</span>
+                  </Link>
+                  <div className="text-right">
+                    <div className="text-[10px] text-ink-faint uppercase font-bold">Total Amount</div>
+                    <div className="font-mono text-base font-bold text-accent">
+                      ${typeof booking.total_amount === "number" ? booking.total_amount.toFixed(2) : booking.total_amount || "0.00"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -472,7 +481,30 @@ export default function LeadDetailWorkspace({
                 </Link>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-2xl border border-hairline bg-surface p-4 text-xs shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-sm text-ink">Choose Booking Modality</p>
+                  <p className="text-ink-muted text-xs">Attach reservation specifics to this lead to generate and send custom authorization contracts.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/leads/${lead.id}/booking/car`} className="btn-secondary btn-sm flex items-center gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-semibold">
+                    <Car size={13} />
+                    <span>Car Rental</span>
+                  </Link>
+                  <Link href={`/leads/${lead.id}/booking/hotel`} className="btn-secondary btn-sm flex items-center gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-semibold">
+                    <Hotel size={13} />
+                    <span>Hotel Booking</span>
+                  </Link>
+                  <Link href={`/leads/${lead.id}/booking/flight`} className="btn-secondary btn-sm flex items-center gap-1.5 border-sky-500/40 text-sky-400 hover:bg-sky-500/10 font-semibold">
+                    <Plane size={13} />
+                    <span>Flight Ticket</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Interactive Workspace Tab Bar */}
           <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">

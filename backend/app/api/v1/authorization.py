@@ -18,7 +18,7 @@ from app.domain.status_machine import can_transition
 from app.domain.status_permissions import roles_to_notify
 from app.models.audit import Notification, StatusHistory
 from app.models.booking import AuthorizationRecord
-from app.models.enums import BookingStatus
+from app.models.enums import BookingStatus, ServiceType
 from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.authorization import (
@@ -42,10 +42,6 @@ async def _load_lead_and_booking(db: AsyncSession, lead_id: uuid.UUID) -> tuple[
     if lead is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
     booking = await get_booking_for_lead(db, lead)
-    if booking is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Booking details must be completed before requesting authorization"
-        )
     return lead, booking
 
 
@@ -62,17 +58,17 @@ async def send_lead_auth_email(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Lead does not have an email address configured.")
 
     # Extract booking fields safely
-    booking_ref = getattr(booking, "booking_reference", "") or f"EC{str(lead.id)[:6].upper()}"
-    car_provider = getattr(booking, "car_provider", "Car Rental") or "Car Rental"
-    booking_platform = getattr(booking, "booking_platform", "Direct") or "Direct"
-    agency_ref = getattr(booking, "agency_reference", "done") or "done"
-    prepaid = float(getattr(booking, "prepaid_amount", 0.0) or 0.0)
-    pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) or 0.0)
-    total = float(getattr(booking, "total_amount", 0.0) or 0.0)
-    card_type = getattr(booking, "card_type", "Credit Card") or "Credit Card"
-    card_num = getattr(booking, "card_number", "") or ""
-    card_holder = getattr(booking, "card_holder_name", "") or lead.name
-    customer_dob = getattr(booking, "customer_dob", "") or ""
+    booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
+    car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
+    booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
+    agency_ref = (getattr(booking, "agency_reference", "done") if booking else "done") or "done"
+    prepaid = float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
+    pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
+    total = float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
+    card_type = (getattr(booking, "card_type", "Credit Card") if booking else "Credit Card") or "Credit Card"
+    card_num = (getattr(booking, "card_number", "") if booking else "") or ""
+    card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
+    customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
 
     agent_name = current_user.full_name or "E-Booking Desk Specialist"
 
@@ -93,7 +89,7 @@ async def send_lead_auth_email(
         prepaid_amount=prepaid,
         pay_at_counter_amount=pay_at_counter,
         total_amount=total,
-        service_type=lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type),
+        service_type=lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car"),
         agent_name=agent_name,
         template_type=template_type,
     )
@@ -106,10 +102,18 @@ async def send_lead_auth_email(
 
     sent = await send_customer_email(lead.email, subject, html_content)
 
-    # If lead status was intake, move to authorization_pending
-    if lead.status == BookingStatus.intake:
+    # Ensure lead status reflects authorization_pending
+    if lead.status != BookingStatus.authorization_pending and lead.status != BookingStatus.client_approved:
+        previous_status = lead.status
         lead.status = BookingStatus.authorization_pending
-        db.add(StatusHistory(lead_id=lead.id, from_status=BookingStatus.intake, to_status=BookingStatus.authorization_pending, changed_by=current_user.id))
+        db.add(
+            StatusHistory(
+                lead_id=lead.id,
+                from_status=previous_status,
+                to_status=BookingStatus.authorization_pending,
+                changed_by=current_user.id,
+            )
+        )
 
     log_process_event(
         db,
@@ -133,16 +137,36 @@ async def send_lead_auth_email(
 
 @router.get("/authorization-summary", response_model=AuthorizationSummary)
 async def get_authorization_summary(lead_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> AuthorizationSummary:
-    lead, booking = await _load_lead_and_booking(db, lead_id)
-    booking_dict = {
-        c.name: float(v) if isinstance((v := getattr(booking, c.name)), Decimal) else v
-        for c in booking.__table__.columns
-        if c.name not in ("id", "lead_id")
-    }
+    lead = await db.get(Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
+    booking = await get_booking_for_lead(db, lead)
+    if booking is None:
+        booking_dict = {
+            "booking_reference": f"EC{str(lead.id)[:6].upper()}",
+            "car_provider": "Car Rental",
+            "booking_platform": "Direct",
+            "agency_reference": "done",
+            "prepaid_amount": 0.0,
+            "pay_at_counter_amount": 0.0,
+            "total_amount": 0.0,
+            "card_type": "Credit Card",
+            "card_number": "",
+            "card_holder_name": lead.name,
+            "customer_dob": "",
+        }
+    else:
+        booking_dict = {
+            c.name: float(v) if isinstance((v := getattr(booking, c.name)), Decimal) else v
+            for c in booking.__table__.columns
+            if c.name not in ("id", "lead_id")
+        }
     return AuthorizationSummary(
         lead_id=lead.id,
         customer_name=lead.name,
-        service_type=lead.service_type,
+        customer_email=lead.email or "",
+        customer_phone=lead.phone or "",
+        service_type=lead.service_type or ServiceType.car,
         status=lead.status,
         booking=booking_dict,
     )
@@ -183,6 +207,11 @@ async def submit_authorization(
     )
     db.add(record)
 
+    actor_user_id = lead.agent_id
+    if not actor_user_id:
+        system_user = (await db.execute(select(User).limit(1))).scalar_one_or_none()
+        actor_user_id = system_user.id if system_user else lead.id
+
     previous_status = lead.status
     lead.status = BookingStatus.client_approved
     db.add(
@@ -190,13 +219,13 @@ async def submit_authorization(
             lead_id=lead.id,
             from_status=previous_status,
             to_status=BookingStatus.client_approved,
-            changed_by=lead.agent_id,
+            changed_by=actor_user_id,
         )
     )
     log_process_event(
         db,
         lead_id=lead.id,
-        actor_id=lead.agent_id,
+        actor_id=actor_user_id,
         action="status_change",
         field_changed="status",
         old_value=previous_status.value,
@@ -214,12 +243,12 @@ async def submit_authorization(
 
     # Send confirmation email to customer
     if lead.email:
-        booking_ref = getattr(booking, "booking_reference", "") or f"EC{str(lead.id)[:6].upper()}"
-        car_provider = getattr(booking, "car_provider", "Car Rental") or "Car Rental"
-        booking_platform = getattr(booking, "booking_platform", "Direct") or "Direct"
-        prepaid = float(getattr(booking, "prepaid_amount", 0.0) or 0.0)
-        pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) or 0.0)
-        total = float(getattr(booking, "total_amount", 0.0) or 0.0)
+        booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
+        car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
+        booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
+        prepaid = float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
+        pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
+        total = float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
 
         conf_html = generate_confirmation_email_html(
             lead_id=str(lead.id),

@@ -160,10 +160,14 @@ async def test_authorization_summary_requires_booking(api_client, agent):
     )
     lead_id = resp.json()["id"]
 
-    summary = await api_client.get(f"/leads/{lead_id}/authorization-summary")
-    assert summary.status_code == 409  # no service_type/booking yet
-
-    await _delete_lead(uuid.UUID(lead_id))
+    try:
+        summary = await api_client.get(f"/leads/{lead_id}/authorization-summary")
+        assert summary.status_code == 200  # Gracefully falls back to default booking details
+        body = summary.json()
+        assert body["customer_name"] == "No Booking Yet"
+        assert body["booking"]["prepaid_amount"] == 0.0
+    finally:
+        await _delete_lead(uuid.UUID(lead_id))
 
 
 async def test_authorization_summary_shows_booking_and_payment_breakdown(api_client, agent):
