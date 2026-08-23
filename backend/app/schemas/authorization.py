@@ -21,6 +21,8 @@ class AuthorizationSummary(BaseModel):
 
     lead_id: uuid.UUID
     customer_name: str
+    customer_email: str = ""
+    customer_phone: str = ""
     service_type: ServiceType
     status: BookingStatus
     booking: dict[str, Any]
