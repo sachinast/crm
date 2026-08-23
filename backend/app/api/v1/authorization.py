@@ -28,6 +28,12 @@ from app.schemas.authorization import (
     AuthorizationSummary,
 )
 
+from app.services.email_service import (
+    generate_authorization_email_html,
+    generate_confirmation_email_html,
+    send_customer_email,
+)
+
 router = APIRouter(prefix="/leads/{lead_id}", tags=["authorization"])
 
 
@@ -43,14 +49,91 @@ async def _load_lead_and_booking(db: AsyncSession, lead_id: uuid.UUID) -> tuple[
     return lead, booking
 
 
+@router.post("/send-auth-email")
+async def send_lead_auth_email(
+    lead_id: uuid.UUID,
+    template_type: str = "new_booking",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> dict:
+    """Dispatches the customer authorization email based on attached templates."""
+    lead, booking = await _load_lead_and_booking(db, lead_id)
+    if not lead.email:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Lead does not have an email address configured.")
+
+    # Extract booking fields safely
+    booking_ref = getattr(booking, "booking_reference", "") or f"EC{str(lead.id)[:6].upper()}"
+    car_provider = getattr(booking, "car_provider", "Car Rental") or "Car Rental"
+    booking_platform = getattr(booking, "booking_platform", "Direct") or "Direct"
+    agency_ref = getattr(booking, "agency_reference", "done") or "done"
+    prepaid = float(getattr(booking, "prepaid_amount", 0.0) or 0.0)
+    pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) or 0.0)
+    total = float(getattr(booking, "total_amount", 0.0) or 0.0)
+    card_type = getattr(booking, "card_type", "Credit Card") or "Credit Card"
+    card_num = getattr(booking, "card_number", "") or ""
+    card_holder = getattr(booking, "card_holder_name", "") or lead.name
+    customer_dob = getattr(booking, "customer_dob", "") or ""
+
+    agent_name = current_user.full_name or "E-Booking Desk Specialist"
+
+    # Generate HTML content
+    html_content = generate_authorization_email_html(
+        lead_id=str(lead.id),
+        customer_name=lead.name,
+        customer_email=lead.email,
+        customer_phone=lead.phone or "",
+        customer_dob=customer_dob,
+        booking_reference=booking_ref,
+        agency_reference=agency_ref,
+        booking_platform=booking_platform,
+        car_provider=car_provider,
+        card_type=card_type,
+        card_number=card_num,
+        card_holder_name=card_holder,
+        prepaid_amount=prepaid,
+        pay_at_counter_amount=pay_at_counter,
+        total_amount=total,
+        service_type=lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type),
+        agent_name=agent_name,
+        template_type=template_type,
+    )
+
+    subject = f"Car Booking Authorisation: {booking_ref}"
+    if template_type == "modification":
+        subject = f"Car Rental Modification Payment Authorization: {booking_ref}"
+    elif template_type == "cancellation":
+        subject = f"Car Rental Cancellation Authorization: {booking_ref}"
+
+    sent = await send_customer_email(lead.email, subject, html_content)
+
+    # If lead status was intake, move to authorization_pending
+    if lead.status == BookingStatus.intake:
+        lead.status = BookingStatus.authorization_pending
+        db.add(StatusHistory(lead_id=lead.id, from_status=BookingStatus.intake, to_status=BookingStatus.authorization_pending, changed_by=current_user.id))
+
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=current_user.id,
+        action="auth_email_sent",
+        field_changed="authorization_email",
+        old_value="",
+        new_value=lead.email,
+    )
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"Authorization email successfully dispatched to {lead.email}",
+        "auth_url": f"/authorize/{lead.id}",
+        "customer_email": lead.email,
+        "email_sent": sent,
+    }
+
+
 @router.get("/authorization-summary", response_model=AuthorizationSummary)
 async def get_authorization_summary(lead_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> AuthorizationSummary:
     lead, booking = await _load_lead_and_booking(db, lead_id)
-    # NUMERIC columns (prepaid/pay_at_counter/total) come back from asyncpg as
-    # Decimal; FastAPI's encoder stringifies those inside a plain dict[str, Any]
-    # to avoid silent precision loss, which is inconsistent with every typed
-    # *Read schema in this codebase (CarBookingRead etc.) declaring amounts as
-    # float. Coerce here so the API represents money the same way everywhere.
     booking_dict = {
         c.name: float(v) if isinstance((v := getattr(booking, c.name)), Decimal) else v
         for c in booking.__table__.columns
@@ -72,7 +155,7 @@ async def submit_authorization(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> AuthorizationResult:
-    lead, _booking = await _load_lead_and_booking(db, lead_id)
+    lead, booking = await _load_lead_and_booking(db, lead_id)
 
     if not can_transition(lead.status, BookingStatus.client_approved):
         raise HTTPException(
@@ -100,13 +183,6 @@ async def submit_authorization(
     )
     db.add(record)
 
-    # Inline transition rather than app/services/status_transitions.py — that
-    # helper is built around an authenticated staff User (role checks, RBAC
-    # visibility). There's no such actor here, and status_machine.TRANSITIONS
-    # already restricts client_approved to the CUSTOMER pseudo-actor, so this
-    # is the one legitimate caller. status_history.changed_by has no concept
-    # of an unauthenticated customer, so the transition is recorded against
-    # the lead's own agent — the person actually accountable for this lead.
     previous_status = lead.status
     lead.status = BookingStatus.client_approved
     db.add(
@@ -136,8 +212,31 @@ async def submit_authorization(
     await db.refresh(lead)
     await db.refresh(record)
 
-    # Import locally to avoid a hard import-time dependency on the WS module
-    # for what is otherwise a fully standalone, unauthenticated router.
+    # Send confirmation email to customer
+    if lead.email:
+        booking_ref = getattr(booking, "booking_reference", "") or f"EC{str(lead.id)[:6].upper()}"
+        car_provider = getattr(booking, "car_provider", "Car Rental") or "Car Rental"
+        booking_platform = getattr(booking, "booking_platform", "Direct") or "Direct"
+        prepaid = float(getattr(booking, "prepaid_amount", 0.0) or 0.0)
+        pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) or 0.0)
+        total = float(getattr(booking, "total_amount", 0.0) or 0.0)
+
+        conf_html = generate_confirmation_email_html(
+            lead_id=str(lead.id),
+            customer_name=lead.name,
+            customer_email=lead.email,
+            booking_reference=booking_ref,
+            car_provider=car_provider,
+            booking_platform=booking_platform,
+            prepaid_amount=prepaid,
+            pay_at_counter_amount=pay_at_counter,
+            total_amount=total,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        await send_customer_email(lead.email, f"Car Rental Payment Authorization Confirmed: {booking_ref}", conf_html)
+
+    # Import locally to avoid a hard import-time dependency on WS
     from app.api.v1.websocket import connection_manager
 
     payload_out = {
@@ -158,10 +257,6 @@ async def get_authorization_record(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_ip_whitelisted),
 ) -> AuthorizationRecord:
-    """Staff-facing view of the captured consent — the evidence trail PRD §8
-    exists to build against chargebacks/disputes. Same visibility rules as
-    every other lead sub-resource (unlike the two endpoints above, which are
-    the public customer-facing side of this same flow)."""
     await get_visible_lead_or_404(db, current_user, lead_id)
     result = await db.execute(
         select(AuthorizationRecord)

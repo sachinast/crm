@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Booking Information</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; color: #1e293b; }
+    .container { max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .header-bar { background: #0f4c81; color: #ffffff; padding: 16px 24px; display: table; width: 100%; box-sizing: border-box; }
+    .header-title { font-size: 18px; font-weight: bold; text-align: left; vertical-align: middle; display: table-cell; }
+    .header-brand { font-size: 18px; font-weight: bold; color: #f59e0b; text-align: right; vertical-align: middle; display: table-cell; }
+    .content { padding: 24px; }
+    .intro { font-size: 13px; line-height: 1.6; color: #334155; margin-bottom: 20px; }
+    .status-badge { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+    .section-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #cbd5e1; }
+    .section-table th { background: #f8fafc; color: #0f4c81; font-size: 13px; font-weight: bold; text-align: left; padding: 10px 14px; border-bottom: 2px solid #cbd5e1; }
+    .section-table td { padding: 9px 14px; font-size: 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .section-table tr td:first-child { width: 40%; font-weight: 600; color: #475569; }
+    .legal-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; font-size: 12px; line-height: 1.5; color: #475569; margin-bottom: 20px; }
+    .policy-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; font-size: 11.5px; line-height: 1.6; color: #334155; margin-bottom: 20px; }
+    .policy-box h4 { margin: 0 0 8px 0; font-size: 13px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cta-container { text-align: center; margin: 30px 0; }
+    .cta-button { background: #ea580c; color: #ffffff !important; padding: 14px 44px; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 6px; display: inline-block; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3); text-transform: uppercase; }
+    .footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div class="header-title">Car Booking Information</div>
+      <div class="header-brand">E-Booking Desk</div>
+    </div>
+
+    <div class="content">
+      <div class="intro">
+        We would like you to go through your itinerary carefully. Please click on <strong>'Acknowledge'</strong> only when you have checked all the information and you are completely satisfied with the itinerary and price. As per our conversation and as agreed, we are Booking your itinerary as follows:
+      </div>
+
+      <div class="status-badge">
+        &#10004; Booking Processed — Awaiting Electronic Authorization
+      </div>
+
+      <!-- Booking Info Table -->
+      <table class="section-table">
+        <thead>
+          <tr><th colspan="2">Booking Info</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Our Booking Ref. No</td><td><strong>EC23345</strong></td></tr>
+          <tr><td>Agency Ref. No</td><td>done</td></tr>
+          <tr><td>Booking Platform</td><td>Direct Portal</td></tr>
+          <tr><td>Car Provider</td><td>Hertz Car Rental</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Renter Details Table -->
+      <table class="section-table">
+        <thead>
+          <tr><th colspan="2">Renter Details</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Name</td><td>John Doe</td></tr>
+          <tr><td>Date of Birth</td><td>15-Aug-1990</td></tr>
+          <tr><td>Email</td><td>johndoe@example.com</td></tr>
+          <tr><td>Phone</td><td>+1 (555) 234-5678</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Card & Charges Table -->
+      <table class="section-table">
+        <thead>
+          <tr><th colspan="2">Payment &amp; Card Details</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Card Type</td><td>Visa</td></tr>
+          <tr><td>Card Number</td><td><span style="font-family: monospace;">**** **** **** 9899</span></td></tr>
+          <tr><td>Card Holder Name</td><td>John Doe</td></tr>
+          <tr><td>Prepaid Amount</td><td>USD 150.00</td></tr>
+          <tr><td>Pay at Counter Amount</td><td>USD 45.00</td></tr>
+          <tr><td>Total Charged Amount</td><td><strong style="color: #0f4c81; font-size: 13px;">USD 195.00</strong></td></tr>
+        </tbody>
+      </table>
+
+      <!-- Legal Authorization Statement -->
+      <div class="legal-box">
+        This is to confirm that, in keeping with all applicable laws, I/We <strong>John Doe</strong> are instructing <strong>E-Booking Desk</strong>, to book the Car mentioned against the following credit card. It is expressly understood that the amount charged will be <strong>(USD 195.00)</strong> inclusive of all taxes and fees. However, it may be charged in split payments, not exceeding the total amount mentioned above. I/We further represent that, the Credit Card Type, (Visa) card ending with <strong>9899</strong> has been provided by me/us to authorize this transaction. It is also understood and accepted that to provide additional security of my/our personal information, E-Booking Desk may verify Credit Card information and billing address. It is further understood and agreed that I/We <strong>John Doe</strong> accept full responsibility for the amount due to <strong>E-Booking Desk</strong> and the Terms &amp; Conditions of cancellation or refund as mentioned.
+      </div>
+
+      <!-- Important Rental Info -->
+      <div class="policy-box">
+        <h4>Important Rental Information</h4>
+        <ul style="margin: 0; padding-left: 18px;">
+          <li>Your credit card may be billed in multiple charges, not exceeding the total amount.</li>
+          <li>Additional fees may apply if changes are made to your return date, time, and/or location.</li>
+          <li>Lead driver must carry a valid original driving license card at the time of vehicle pickup.</li>
+          <li><strong>Please note that the prepaid amount is non-refundable.</strong></li>
+          <li>Ensure all travel documents (such as visas) required for your destination or transit countries are valid.</li>
+        </ul>
+      </div>
+
+      <!-- Debit Card Policy -->
+      <div class="policy-box">
+        <h4>Debit Card Policy</h4>
+        <ol style="margin: 0; padding-left: 18px;">
+          <li>Your address must be within a 50-mile radius of the rental location.</li>
+          <li>You may be required to present a utility bill at the time of pickup.</li>
+          <li>A soft credit check may be conducted at the time of pickup.</li>
+          <li>In some cases, a higher security deposit may be required.</li>
+          <li>For airport pickups, a round-trip ticket is mandatory.</li>
+        </ol>
+      </div>
+
+      <!-- CTA Button -->
+      <div class="cta-container">
+        <a href="https://crm-omega-ochre-90.vercel.app/authorize/3fa85f64-5717-4562-b3fc-2c963f66afa6" target="_blank" class="cta-button">Acknowledge &amp; Authorize</a>
+        <p style="font-size: 11px; color: #64748b; margin-top: 8px;">Clicking the button will open a secure authorization page to record your confirmation.</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p style="margin: 0 0 6px 0;"><strong>Need Help?</strong> Sumit | 24/7 Customer Support: <strong>+1 (877) 362-2838</strong></p>
+      <p style="margin: 0 0 6px 0;"><a href="mailto:sales@ebookingdesk.com" style="color: #0f4c81;">sales@ebookingdesk.com</a></p>
+      <p style="margin: 0;">Thank you for choosing E-Booking Desk. &copy; 2026 E-Booking Desk. All rights reserved. <em>This is an automated email.</em></p>
+    </div>
+  </div>
+</body>
+</html>

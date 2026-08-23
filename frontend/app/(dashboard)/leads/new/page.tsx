@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check, Flame } from "lucide-react";
+import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check, Flame, Mail } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -230,19 +230,28 @@ export default function NewLeadPage() {
       body: JSON.stringify(bookingPayload),
     });
     const bookingBody = await bookingResp.json();
-    setSubmitting(false);
 
     if (!bookingResp.ok) {
       setError(typeof bookingBody.detail === "string" ? bookingBody.detail : "Could not save the booking");
+      setSubmitting(false);
       return;
     }
 
+    if (sendAuthEmail) {
+      try {
+        await fetch(`/api/leads/${leadId}/send-auth-email`, { method: "POST" });
+      } catch (e) {
+        console.error("Failed to trigger auth email:", e);
+      }
+    }
+
+    setSubmitting(false);
     router.push(`/leads/${leadId}`);
     router.refresh();
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function handleSubmit(event?: FormEvent, sendAuthEmail: boolean = false) {
+    if (event) event.preventDefault();
     setSubmitting(true);
     setError(null);
 
@@ -595,10 +604,20 @@ export default function NewLeadPage() {
                 </div>
 
                 {/* Right-aligned Submit & Cancel Actions */}
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <Link href="/leads" className="btn-secondary">
                     Cancel
                   </Link>
+
+                  <button
+                    type="button"
+                    disabled={submitting || !serviceType || !unlocked}
+                    onClick={() => handleSubmit(undefined, true)}
+                    className="btn-secondary border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 flex items-center gap-1.5 font-semibold"
+                  >
+                    <Mail size={15} />
+                    <span>{submitting ? "Processing…" : "Create & Send Auth Email"}</span>
+                  </button>
 
                   <button
                     type="submit"
