@@ -24,13 +24,11 @@ class Settings(BaseSettings):
     jwt_access_ttl_min: int = 15
     jwt_refresh_ttl_days: int = 7
 
-    # Email / SMTP Configuration
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from_email: str = "sales@ebookingdesk.com"
-    smtp_from_name: str = "E-Booking Desk"
+    # Email / Resend Configuration
+    resend_api_key: str = ""
+    resend_from_email: str = ""
+    resend_from_name: str = ""
+    support_phone: str = "+1 (877) 362-2838"
     frontend_url: str = "https://crm-omega-ochre-90.vercel.app"
 
     # Google Sheets sync (Phase 8 — placeholders for now)

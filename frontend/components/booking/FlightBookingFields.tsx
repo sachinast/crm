@@ -292,8 +292,8 @@ export default function FlightBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 1: BOOKING SOURCE DETAILS (MATCHING SCREENSHOTS) */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink">
             <span className="p-1 rounded-lg bg-accent-soft text-accent">
               <Info size={17} />
@@ -396,13 +396,14 @@ export default function FlightBookingFields({
               />
             </Field>
 
-            <Field label="Booking Reference / CRMID" required>
+            <Field label="Booking Reference / CRMID (System Locked)" required>
               <input
-                required
+                readOnly
+                disabled
                 value={value.booking_reference}
-                onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
-                className="input font-mono font-bold uppercase text-accent"
+                className="input font-mono font-bold uppercase text-accent bg-surface-sunken cursor-not-allowed opacity-90 select-all"
                 placeholder="CRM-9021A4"
+                title="System CRM ID is permanently locked and cannot be modified."
               />
             </Field>
 
@@ -443,8 +444,8 @@ export default function FlightBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 2: PASSENGER DETAILS (MATCHING SCREENSHOT) */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <span className="p-1 rounded-lg bg-accent-soft text-accent">
             <Users size={17} />
           </span>
@@ -568,8 +569,8 @@ export default function FlightBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 3: FLIGHT & ROUTING DETAILS */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <span className="p-1 rounded-lg bg-accent-soft text-accent">
             <Plane size={17} />
           </span>
@@ -668,8 +669,8 @@ export default function FlightBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 4: ANCILLARIES & FARE SUMMARY (AUTO-CALCULATED) */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink">
             <span className="p-1 rounded-lg bg-accent-soft text-accent">
               <DollarSign size={17} />

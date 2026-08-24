@@ -38,6 +38,9 @@ class AuthorizationCreate(BaseModel):
     booking_details_ack: bool
     terms_ack: bool
     non_refundable_ack: bool
+    system_name: str | None = None
+    client_ip: str | None = None
+
 
     @model_validator(mode="after")
     def _all_must_be_true(self) -> "AuthorizationCreate":

@@ -169,8 +169,8 @@ export default function CarBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 1: BOOKING INFO */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center justify-between bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink">
             <span className="p-1 rounded-lg bg-accent-soft text-accent">
               <Info size={17} />
@@ -209,13 +209,14 @@ export default function CarBookingFields({
             />
           </Field>
 
-          <Field label="Booking Reference / CRMID" required>
+          <Field label="Booking Reference / CRMID (System Locked)" required>
             <input
-              required
+              readOnly
+              disabled
               value={value.booking_reference}
-              onChange={(e) => onChange({ ...value, booking_reference: e.target.value.toUpperCase() })}
-              className="input font-mono font-bold uppercase text-accent"
-              placeholder="CRM-9021A4"
+              className="input font-mono font-bold uppercase text-accent bg-surface-sunken cursor-not-allowed opacity-90 select-all"
+              placeholder="CRN-9ELTVA"
+              title="System CRM ID is permanently locked and cannot be modified."
             />
           </Field>
 
@@ -254,8 +255,8 @@ export default function CarBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 2: RENTER & DRIVER DETAILS */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <span className="p-1 rounded-lg bg-accent-soft text-accent">
             <UserCheck size={17} />
           </span>
@@ -310,8 +311,8 @@ export default function CarBookingFields({
       {/* ========================================================================= */}
       {/* SECTION 3: CAR DETAILS & SCHEDULE / ROUTING */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-hidden">
-        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-card overflow-visible relative">
+        <div className="flex items-center gap-2.5 font-bold text-sm tracking-wide text-ink bg-surface-raised px-4 sm:px-5 py-3 border-b border-hairline rounded-t-2xl">
           <span className="p-1 rounded-lg bg-accent-soft text-accent">
             <Car size={17} />
           </span>

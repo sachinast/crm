@@ -1,0 +1,142 @@
+/* ---------------------------------------------------------------------
+   CRM PRO — Dedicated Theme Tokens (2-Theme System)
+   1. Light Mode: Clean Slate & Ocean Blue (#2563eb) with Crisp White (#ffffff)
+   2. Dark Mode: Deep Slate (#0b0f19) & Rich Indigo (#6366f1) with Slate Surface (#111827)
+   ------------------------------------------------------------------- */
+
+:root,
+[data-theme="light"],
+.light {
+  color-scheme: light;
+
+  /* Backgrounds & Surfaces */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-raised: #f1f5f9;
+  --surface-sunken: #e2e8f0;
+
+  /* Inputs & Form Elements (Light Mode: Clean White with Soft Slate Border) */
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-border-focus: #2563eb;
+  --input-placeholder: #94a3b8;
+
+  /* Typography & Ink */
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --ink-faint: #94a3b8;
+
+  /* Borders & Dividers */
+  --hairline: #e2e8f0;
+  --hairline-strong: #cbd5e1;
+
+  /* Sidebar (Deep Slate in Light Mode for Premium Contrast) */
+  --sidebar-bg: #0f172a;
+  --sidebar-surface: #1e293b;
+  --sidebar-surface-raised: #334155;
+  --sidebar-sunken: #090d16;
+  --sidebar-ink: #f8fafc;
+  --sidebar-ink-muted: #94a3b8;
+  --sidebar-ink-faint: #64748b;
+  --sidebar-hairline: #1e293b;
+  --sidebar-hairline-strong: #334155;
+
+  /* Header Bar */
+  --header-bg: #0f172a;
+  --header-ink: #f8fafc;
+  --header-ink-muted: #94a3b8;
+  --header-hairline: #1e293b;
+
+  /* Accents & Brand Colors */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-ink: #1d4ed8;
+
+  --navy: #0f172a;
+  --navy-soft: #1e293b;
+
+  /* Feedback Colors */
+  --success: #10b981;
+  --success-soft: #d1fae5;
+  --danger: #ef4444;
+  --danger-soft: #fee2e2;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+  --info: #3b82f6;
+  --info-soft: #dbeafe;
+
+  /* Shadows & Radius */
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 6px 16px -4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 4px 6px rgba(15, 23, 42, 0.05), 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+  --shadow-popover: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+
+  /* Backgrounds & Surfaces */
+  --background: #0b0f19;
+  --surface: #111827;
+  --surface-raised: #1e293b;
+  --surface-sunken: #070a12;
+
+  /* Inputs & Form Elements (Dark Mode: Deep Slate #1e293b with Slate Border) */
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --input-border-focus: #6366f1;
+  --input-placeholder: #64748b;
+
+  /* Typography & Ink */
+  --ink: #f8fafc;
+  --ink-muted: #94a3b8;
+  --ink-faint: #64748b;
+
+  /* Borders & Dividers */
+  --hairline: #1e293b;
+  --hairline-strong: #334155;
+
+  /* Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-surface: #111827;
+  --sidebar-surface-raised: #1e293b;
+  --sidebar-sunken: #090d16;
+  --sidebar-ink: #f8fafc;
+  --sidebar-ink-muted: #94a3b8;
+  --sidebar-ink-faint: #64748b;
+  --sidebar-hairline: #1e293b;
+  --sidebar-hairline-strong: #334155;
+
+  /* Header Bar */
+  --header-bg: #0f172a;
+  --header-ink: #f8fafc;
+  --header-ink-muted: #94a3b8;
+  --header-hairline: #1e293b;
+
+  /* Accents & Brand Colors */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-soft: #1e1b4b;
+  --accent-ink: #c7d2fe;
+
+  --navy: #0f172a;
+  --navy-soft: #1e293b;
+
+  /* Feedback Colors */
+  --success: #10b981;
+  --success-soft: #064e3b;
+  --danger: #f43f5e;
+  --danger-soft: #4c0519;
+  --warning: #f59e0b;
+  --warning-soft: #451a03;
+  --info: #8b5cf6;
+  --info-soft: #2e1065;
+
+  /* Shadows & Radius */
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 10px 24px -6px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4), 0 16px 32px -8px rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
+}

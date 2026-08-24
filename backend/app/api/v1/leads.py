@@ -30,6 +30,7 @@ from app.schemas.lead import (
     LeadCreate,
     LeadRead,
     LeadSummary,
+    LeadUpdate,
     ServiceTypeUpdate,
     StatusHistoryEntry,
     StatusUpdate,
@@ -316,6 +317,72 @@ async def update_status(
     POST /payments (Billing charging/declining is the same kind of transition).
     """
     lead = await apply_status_transition(db, lead_id=lead_id, target=payload.new_status, actor=current_user)
+    await db.commit()
+    await db.refresh(lead)
+    return lead
+
+
+@router.patch("/{lead_id}", response_model=LeadRead)
+async def update_lead(
+    lead_id: uuid.UUID,
+    payload: LeadUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> Lead:
+    """Update lead customer details with a mandatory reason for full audit trail."""
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+        request.client.host if request.client else "0.0.0.0"
+    )
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    changed_fields = {}
+    if payload.name is not None and payload.name.strip() and payload.name.strip() != lead.name:
+        changed_fields["name"] = {"old": lead.name, "new": payload.name.strip()}
+        lead.name = payload.name.strip()
+
+    if payload.phone is not None and payload.phone.strip() and "*" not in payload.phone and payload.phone.strip() != lead.phone:
+        changed_fields["phone"] = {"old": lead.phone, "new": payload.phone.strip()}
+        lead.phone = payload.phone.strip()
+
+    if payload.email is not None and payload.email.strip() and "*" not in payload.email and payload.email.strip() != lead.email:
+        changed_fields["email"] = {"old": lead.email, "new": payload.email.strip()}
+        lead.email = payload.email.strip()
+
+    if payload.service_type is not None and payload.service_type != lead.service_type:
+        changed_fields["service_type"] = {
+            "old": lead.service_type.value if lead.service_type else None,
+            "new": payload.service_type.value,
+        }
+        lead.service_type = payload.service_type
+
+    # Audit log in ActivityLog
+    log_activity(
+        db,
+        actor_id=current_user.id,
+        action="lead_updated",
+        category="lead",
+        target_type="lead",
+        target_id=lead.id,
+        metadata={"reason": payload.reason, "changed_fields": changed_fields},
+        ip_address=client_ip,
+        user_agent=user_agent,
+    )
+
+    # Process events for history timeline
+    for field_name, diff in changed_fields.items():
+        log_process_event(
+            db,
+            lead_id=lead.id,
+            actor_id=current_user.id,
+            action="lead_edit",
+            field_changed=field_name,
+            old_value=str(diff["old"]),
+            new_value=str(diff["new"]),
+        )
+
     await db.commit()
     await db.refresh(lead)
     return lead
