@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Car,
   Hotel,
@@ -107,6 +108,371 @@ interface CancellationEntry {
   created_at: string;
 }
 
+function PIIRevealModal({
+  isOpen,
+  onClose,
+  field,
+  onConfirm,
+  loading,
+  error,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  field: "email" | "phone" | "card";
+  onConfirm: (reason: string) => void;
+  loading: boolean;
+  error?: string | null;
+}) {
+  const [reason, setReason] = useState("Customer Verification");
+  const PRESET_REASONS = [
+    "Customer Verification",
+    "Billing & Payment Processing",
+    "Reservation / Itinerary Update",
+    "Customer Service Support",
+  ];
+
+  if (!isOpen) return null;
+
+  const fieldLabel = field === "email" ? "Email Address" : field === "phone" ? "Phone Number" : "Payment Card Details";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="card w-full max-w-md bg-surface p-5 shadow-2xl space-y-4 border border-hairline">
+        <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex items-center gap-2">
+            <Eye size={16} className="text-accent" />
+            <h3 className="text-sm font-bold text-ink">Access Masked {fieldLabel}</h3>
+          </div>
+          <button onClick={onClose} disabled={loading} className="text-ink-muted hover:text-ink">
+            <X size={16} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-danger">
+            {error}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-hairline bg-surface-raised p-3 text-xs text-ink-muted leading-relaxed">
+          Unmasking sensitive customer PII is audited. Please select or state your reason for accessing this field.
+        </div>
+
+        <div>
+          <label className="text-[11px] font-semibold text-ink-muted uppercase">Select or Enter Reason *</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5 mb-2">
+            {PRESET_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setReason(r)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium border transition-colors ${
+                  reason === r
+                    ? "border-accent bg-accent-soft text-accent-ink font-semibold"
+                    : "border-hairline bg-surface hover:bg-surface-raised text-ink-muted hover:text-ink"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="input text-xs"
+            placeholder="State why you need to reveal this customer information..."
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
+          <button type="button" onClick={onClose} disabled={loading} className="btn-ghost btn-sm">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!reason.trim() || loading}
+            onClick={() => onConfirm(reason.trim())}
+            className="btn-primary btn-sm flex items-center gap-1.5"
+          >
+            <Eye size={13} />
+            <span>{loading ? "Unmasking…" : "Confirm & Reveal"}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingRedirectConfirmModal({
+  isOpen,
+  onClose,
+  serviceType,
+  customerName,
+  crmId,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  serviceType: string;
+  customerName: string;
+  crmId: string;
+  onConfirm: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="card w-full max-w-md bg-surface p-5 shadow-2xl space-y-4 border border-hairline">
+        <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex items-center gap-2">
+            <PencilLine size={16} className="text-accent" />
+            <h3 className="text-sm font-bold text-ink capitalize">Open {serviceType} Booking Form</h3>
+          </div>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2 text-xs">
+          <p className="text-ink leading-relaxed">
+            Do you want to proceed to the <span className="font-bold text-accent capitalize">{serviceType}</span> reservation editor?
+          </p>
+          <div className="pt-1 text-ink-muted space-y-1">
+            <div><span className="text-ink-faint">Customer:</span> <strong className="text-ink">{customerName}</strong></div>
+            <div><span className="text-ink-faint">Reference:</span> <strong className="font-mono text-accent">{crmId}</strong></div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
+          <button type="button" onClick={onClose} className="btn-ghost btn-sm">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn-primary btn-sm flex items-center gap-1.5"
+          >
+            <span>Proceed to Form</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditLeadModal({
+  lead,
+  isOpen,
+  onClose,
+  onSaved,
+}: {
+  lead: LeadDetail;
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: (updatedLead: Partial<LeadDetail>) => void;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState(lead.name);
+  const [phone, setPhone] = useState(lead.phone);
+  const [email, setEmail] = useState(lead.email);
+  const [serviceType, setServiceType] = useState<string>(lead.service_type || "car");
+  const [reason, setReason] = useState("Customer requested detail update");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const PRESET_EDIT_REASONS = [
+    "Customer requested detail update",
+    "Typo / spelling correction",
+    "Contact information update",
+    "Service switch requested by customer",
+  ];
+
+  if (!isOpen) return null;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reason.trim()) {
+      setError("Please provide a reason for this edit.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const payload: Record<string, any> = {
+      name: name.trim(),
+      service_type: serviceType,
+      reason: reason.trim(),
+    };
+
+    if (phone && !phone.includes("*")) {
+      payload.phone = phone.trim();
+    }
+    if (email && !email.includes("*")) {
+      payload.email = email.trim();
+    }
+
+    try {
+      const resp = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        onSaved({
+          name: name.trim(),
+          ...(payload.phone ? { phone: payload.phone } : {}),
+          ...(payload.email ? { email: payload.email } : {}),
+          service_type: serviceType,
+        });
+        onClose();
+        router.refresh();
+      } else {
+        const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
+        setError(detail || "Failed to update lead details.");
+      }
+    } catch {
+      setError("Network error while updating lead.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="card w-full max-w-lg bg-surface p-5 shadow-2xl space-y-4 border border-hairline max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex items-center gap-2">
+            <PencilLine size={16} className="text-accent" />
+            <h3 className="text-sm font-bold text-ink">Edit Customer & Lead Details</h3>
+          </div>
+          <button onClick={onClose} disabled={loading} className="text-ink-muted hover:text-ink">
+            <X size={16} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-danger">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <div>
+            <label className="text-[11px] font-semibold text-ink-muted uppercase">Customer Full Name *</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input text-xs mt-1"
+              placeholder="e.g. John Doe"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-ink-muted uppercase">
+                Phone / Mobile {phone.includes("*") ? "(Masked)" : "*"}
+              </label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input text-xs mt-1 font-mono"
+                placeholder="+1 (555) 000-0000"
+              />
+              {phone.includes("*") && (
+                <span className="text-[10px] text-ink-faint mt-0.5 block">
+                  Leave unchanged or type new full number
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-ink-muted uppercase">
+                Email Address {email.includes("*") ? "(Masked)" : "*"}
+              </label>
+              <input
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input text-xs mt-1 font-mono"
+                placeholder="customer@example.com"
+              />
+              {email.includes("*") && (
+                <span className="text-[10px] text-ink-faint mt-0.5 block">
+                  Leave unchanged or type new full email
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-ink-muted uppercase">Service Type</label>
+            <select
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+              className="select text-xs mt-1"
+            >
+              <option value="car">Car Rental</option>
+              <option value="hotel">Hotel Reservation</option>
+              <option value="flight">Flight Booking</option>
+            </select>
+          </div>
+
+          <div className="border-t border-hairline pt-3">
+            <label className="text-[11px] font-semibold text-accent uppercase">Reason for Editing * (Stored in DB Audit)</label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5 mb-2">
+              {PRESET_EDIT_REASONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setReason(r)}
+                  className={`rounded-lg px-2 py-0.5 text-[11px] font-medium border transition-colors ${
+                    reason === r
+                      ? "border-accent bg-accent-soft text-accent-ink font-semibold"
+                      : "border-hairline bg-surface hover:bg-surface-raised text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              required
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="input text-xs"
+              placeholder="Provide reason for editing this lead..."
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
+            <button type="button" onClick={onClose} disabled={loading} className="btn-ghost btn-sm">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !reason.trim()}
+              className="btn-primary btn-sm flex items-center gap-1.5"
+            >
+              <PencilLine size={13} />
+              <span>{loading ? "Saving Changes…" : "Save Changes"}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function PIIField({
   leadId,
   field,
@@ -118,44 +484,72 @@ function PIIField({
 }) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleReveal() {
+  async function handleConfirmReveal(reason: string) {
     setLoading(true);
+    setError(null);
     try {
       const resp = await fetch(`/api/leads/${leadId}/reveal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ field, reason: "Customer Verification" }),
+        body: JSON.stringify({ field, reason }),
       });
+      const data = await resp.json().catch(() => ({}));
       if (resp.ok) {
-        const body = await resp.json();
-        setRevealed(body.revealed_value);
+        const val = data.value || data.revealed_value || data.raw_value;
+        if (val) {
+          setRevealed(val);
+          setShowModal(false);
+        } else {
+          setError("No value returned from server");
+        }
+      } else {
+        setError(data.detail || "Failed to reveal sensitive field");
       }
     } catch {
-      // ignore
+      setError("Network error while unmasking");
     } finally {
       setLoading(false);
     }
   }
 
   if (revealed) {
-    return <span className="font-mono text-ink select-all">{revealed}</span>;
+    return (
+      <span className="font-mono text-ink font-semibold select-all bg-accent-soft/40 px-1.5 py-0.5 rounded border border-accent/20">
+        {revealed}
+      </span>
+    );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-ink-muted">
-      <span>{maskedValue}</span>
-      <button
-        type="button"
-        onClick={handleReveal}
-        disabled={loading}
-        className="text-[10px] font-sans font-semibold text-accent hover:underline"
-      >
-        {loading ? "..." : "Reveal"}
-      </button>
-    </span>
+    <>
+      <span className="inline-flex items-center gap-1.5 font-mono text-ink-muted">
+        <span>{maskedValue}</span>
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-1 text-[10px] font-sans font-semibold text-accent hover:underline px-1.5 py-0.5 rounded bg-accent-soft/40 border border-accent/20 hover:bg-accent-soft transition-colors"
+          title="Click to reveal full value (requires audit reason)"
+        >
+          <Eye size={10} />
+          <span>Reveal</span>
+        </button>
+      </span>
+
+      <PIIRevealModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        field={field}
+        onConfirm={handleConfirmReveal}
+        loading={loading}
+        error={error}
+      />
+    </>
   );
 }
+
 
 function SMSDispatchModal({
   customerName,
@@ -284,16 +678,20 @@ export default function LeadDetailWorkspace({
   canProcessPayment,
   canEditCustomFields,
 }: WorkspaceProps) {
+  const [leadState, setLeadState] = useState<LeadDetail>(lead);
+  const [showEditLeadModal, setShowEditLeadModal] = useState(false);
+  const [confirmRedirectService, setConfirmRedirectService] = useState<string | null>(null);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "history">("overview");
   const [copiedAuthLink, setCopiedAuthLink] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
-  const ServiceIcon = lead.service_type ? SERVICE_ICON[lead.service_type] : null;
-  const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${lead.id}` : `/authorize/${lead.id}`;
+  const ServiceIcon = leadState.service_type ? SERVICE_ICON[leadState.service_type] : null;
+  const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${leadState.id}` : `/authorize/${leadState.id}`;
 
-  const crmId = booking?.booking_reference || (lead.custom_fields?.booking_reference as string) || `CRM-${lead.id.replace(/-/g, "").slice(0, 7).toUpperCase()}`;
+  const crmId = booking?.booking_reference || (leadState.custom_fields?.booking_reference as string) || `CRM-${leadState.id.replace(/-/g, "").slice(0, 7).toUpperCase()}`;
 
   const copyAuthLink = () => {
     navigator.clipboard.writeText(authUrl);
@@ -302,17 +700,17 @@ export default function LeadDetailWorkspace({
   };
 
   const handleSendAuthEmail = async () => {
-    if (!lead.email) {
+    if (!leadState.email) {
       alert("This lead does not have a customer email address configured.");
       return;
     }
     setSendingEmail(true);
     setEmailStatus(null);
     try {
-      const resp = await fetch(`/api/leads/${lead.id}/send-auth-email`, { method: "POST" });
+      const resp = await fetch(`/api/leads/${leadState.id}/send-auth-email`, { method: "POST" });
       const data = await resp.json();
       if (resp.ok) {
-        setEmailStatus(`Auth email sent to ${lead.email}`);
+        setEmailStatus(`Auth email sent to ${leadState.email}`);
         setTimeout(() => setEmailStatus(null), 4000);
       } else {
         alert(data.detail || "Failed to send authorization email.");
@@ -337,14 +735,23 @@ export default function LeadDetailWorkspace({
             <span className="font-mono text-accent font-semibold">{crmId}</span>
           </nav>
           <div className="mt-1 flex items-center gap-3">
-            <h1 className="text-xl font-black tracking-tight text-ink">{lead.name}</h1>
-            <StatusBadge status={lead.status} />
+            <h1 className="text-xl font-black tracking-tight text-ink">{leadState.name}</h1>
+            <StatusBadge status={leadState.status} />
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {lead.email && (
+          <button
+            onClick={() => setShowEditLeadModal(true)}
+            className="btn-secondary btn-sm flex items-center gap-1.5 font-semibold"
+            title="Edit Customer Profile (Requires Reason)"
+          >
+            <PencilLine size={13} className="text-accent" />
+            <span>Edit Lead</span>
+          </button>
+
+          {leadState.email && (
             <button
               onClick={handleSendAuthEmail}
               disabled={sendingEmail}
@@ -355,7 +762,7 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
-          {lead.phone && (
+          {leadState.phone && (
             <button
               onClick={() => setShowSMSModal(true)}
               className="btn-secondary btn-sm flex items-center gap-1.5"
@@ -365,7 +772,7 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
-          {lead.status === "authorization_pending" && (
+          {leadState.status === "authorization_pending" && (
             <button
               onClick={copyAuthLink}
               className="btn-primary btn-sm flex items-center gap-1.5 shadow-xs"
@@ -376,7 +783,7 @@ export default function LeadDetailWorkspace({
           )}
 
           <a
-            href={`/authorize/${lead.id}`}
+            href={`/authorize/${leadState.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-secondary btn-sm flex items-center gap-1.5"
@@ -391,23 +798,45 @@ export default function LeadDetailWorkspace({
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-hairline bg-surface p-3 text-xs shadow-xs">
         <div className="flex items-center gap-1.5">
           <Phone size={13} className="text-ink-faint" />
-          <PIIField leadId={lead.id} field="phone" maskedValue={lead.phone} />
+          <PIIField leadId={leadState.id} field="phone" maskedValue={leadState.phone} />
         </div>
         <span className="text-ink-faint">•</span>
         <div className="flex items-center gap-1.5">
           <Mail size={13} className="text-ink-faint" />
-          <PIIField leadId={lead.id} field="email" maskedValue={lead.email} />
+          <PIIField leadId={leadState.id} field="email" maskedValue={leadState.email} />
         </div>
         <span className="text-ink-faint">•</span>
         <div className="flex items-center gap-1.5 font-mono text-ink-muted">
           <Clock size={13} className="text-ink-faint" />
-          <span>Created {formatDate(lead.created_at)}</span>
+          <span>Created {formatDate(leadState.created_at)}</span>
         </div>
       </div>
 
+      <EditLeadModal
+        lead={leadState}
+        isOpen={showEditLeadModal}
+        onClose={() => setShowEditLeadModal(false)}
+        onSaved={(updated) => setLeadState((prev) => ({ ...prev, ...updated }))}
+      />
+
+      <BookingRedirectConfirmModal
+        isOpen={Boolean(confirmRedirectService)}
+        onClose={() => setConfirmRedirectService(null)}
+        serviceType={confirmRedirectService || ""}
+        customerName={leadState.name}
+        crmId={crmId}
+        onConfirm={() => {
+          const s = confirmRedirectService;
+          setConfirmRedirectService(null);
+          if (s) {
+            router.push(`/leads/${leadState.id}/booking/${s}`);
+          }
+        }}
+      />
+
       <SMSDispatchModal
-        customerName={lead.name}
-        customerPhone={lead.phone}
+        customerName={leadState.name}
+        customerPhone={leadState.phone}
         bookingRef={crmId}
         isOpen={showSMSModal}
         onClose={() => setShowSMSModal(false)}
@@ -418,7 +847,7 @@ export default function LeadDetailWorkspace({
         {/* LEFT COLUMN: Main Booking Highlights & Operational Tabs (lg:col-span-7) */}
         <div className="space-y-4 lg:col-span-7">
           {/* Booking Summary Hero Card */}
-          {lead.service_type && booking ? (
+          {leadState.service_type && booking ? (
             <div className="relative overflow-hidden rounded-2xl border border-hairline bg-surface p-4 shadow-card">
               <div className="flex items-center justify-between border-b border-hairline pb-3">
                 <div className="flex items-center gap-2">
@@ -427,20 +856,21 @@ export default function LeadDetailWorkspace({
                   </div>
                   <div>
                     <h2 className="text-sm font-bold capitalize text-ink">
-                      {lead.service_type} Booking Details
+                      {leadState.service_type} Booking Details
                     </h2>
                     <span className="font-mono text-xs text-accent font-semibold">Ref: {booking.booking_reference || crmId}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Link
-                    href={`/leads/${lead.id}/booking/${lead.service_type}`}
-                    className="btn-secondary btn-sm flex items-center gap-1 text-xs py-1 px-2.5"
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRedirectService(leadState.service_type)}
+                    className="btn-secondary btn-sm flex items-center gap-1 text-xs py-1 px-2.5 font-semibold"
                   >
                     <PencilLine size={12} />
                     <span>Edit Booking</span>
-                  </Link>
+                  </button>
                   <div className="text-right">
                     <div className="text-[10px] text-ink-faint uppercase font-bold">Total Amount</div>
                     <div className="font-mono text-base font-bold text-accent">
@@ -452,7 +882,7 @@ export default function LeadDetailWorkspace({
 
               {/* Booking Key Metrics Grid */}
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-                {BOOKING_SUMMARY_FIELDS[lead.service_type]?.map((f) => (
+                {BOOKING_SUMMARY_FIELDS[leadState.service_type]?.map((f) => (
                   <div key={f.key} className="rounded-lg bg-surface-raised p-2 border border-hairline">
                     <span className="block text-[10px] font-medium text-ink-faint uppercase tracking-wider">{f.label}</span>
                     <span className="mt-0.5 block font-semibold text-ink truncate">
@@ -462,7 +892,7 @@ export default function LeadDetailWorkspace({
                 ))}
               </div>
             </div>
-          ) : lead.service_type ? (
+          ) : leadState.service_type ? (
             <div className="rounded-2xl border border-accent/40 bg-surface p-4 text-xs shadow-card space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -471,14 +901,19 @@ export default function LeadDetailWorkspace({
                   </div>
                   <div>
                     <p className="font-bold text-sm text-ink capitalize">
-                      {lead.service_type} Service Selected
+                      {leadState.service_type} Service Selected
                     </p>
                     <p className="text-[11px] font-mono text-accent">CRMID: {crmId}</p>
                   </div>
                 </div>
-                <Link href={`/leads/${lead.id}/booking/${lead.service_type}`} className="btn-primary btn-sm">
-                  Complete {lead.service_type} Form
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => setConfirmRedirectService(leadState.service_type)}
+                  className="btn-primary btn-sm flex items-center gap-1.5"
+                >
+                  <PencilLine size={13} />
+                  <span>Complete {leadState.service_type} Form</span>
+                </button>
               </div>
             </div>
           ) : (
@@ -489,18 +924,30 @@ export default function LeadDetailWorkspace({
                   <p className="text-ink-muted text-xs">Attach reservation specifics to this lead to generate and send custom authorization contracts.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/leads/${lead.id}/booking/car`} className="btn-secondary btn-sm flex items-center gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRedirectService("car")}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-semibold"
+                  >
                     <Car size={13} />
                     <span>Car Rental</span>
-                  </Link>
-                  <Link href={`/leads/${lead.id}/booking/hotel`} className="btn-secondary btn-sm flex items-center gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-semibold">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRedirectService("hotel")}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-semibold"
+                  >
                     <Hotel size={13} />
                     <span>Hotel Booking</span>
-                  </Link>
-                  <Link href={`/leads/${lead.id}/booking/flight`} className="btn-secondary btn-sm flex items-center gap-1.5 border-sky-500/40 text-sky-400 hover:bg-sky-500/10 font-semibold">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRedirectService("flight")}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 border-sky-500/40 text-sky-400 hover:bg-sky-500/10 font-semibold"
+                  >
                     <Plane size={13} />
                     <span>Flight Ticket</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
@@ -622,24 +1069,34 @@ export default function LeadDetailWorkspace({
 
                 {/* Customer Contact Card */}
                 <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-ink">
-                    Customer Contact & Intake Profile
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink">
+                      Customer Contact & Intake Profile
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditLeadModal(true)}
+                      className="btn-secondary btn-sm text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold"
+                    >
+                      <PencilLine size={12} className="text-accent" />
+                      <span>Edit Customer</span>
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                       <span className="text-[10px] text-ink-faint">Customer Full Name</span>
-                      <p className="font-semibold text-ink text-sm">{lead.name}</p>
+                      <p className="font-semibold text-ink text-sm">{leadState.name}</p>
                     </div>
                     <div>
                       <span className="text-[10px] text-ink-faint">Phone Number</span>
                       <div className="mt-0.5">
-                        <PIIField leadId={lead.id} field="phone" maskedValue={lead.phone} />
+                        <PIIField leadId={leadState.id} field="phone" maskedValue={leadState.phone} />
                       </div>
                     </div>
                     <div>
                       <span className="text-[10px] text-ink-faint">Email Address</span>
                       <div className="mt-0.5">
-                        <PIIField leadId={lead.id} field="email" maskedValue={lead.email} />
+                        <PIIField leadId={leadState.id} field="email" maskedValue={leadState.email} />
                       </div>
                     </div>
                   </div>
@@ -860,15 +1317,21 @@ export default function LeadDetailWorkspace({
             <div className="space-y-1.5 text-[11px]">
               <div className="flex justify-between">
                 <span className="text-ink-muted">Lead UUID</span>
-                <span className="font-mono text-ink select-all">{lead.id}</span>
+                <span className="font-mono text-ink select-all">{leadState.id}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-muted">Assigned Agent</span>
-                <span className="font-mono text-ink">{lead.agent_id}</span>
+                <span className="font-mono text-ink">{leadState.agent_id}</span>
               </div>
+              {leadState.visitor_public_ip && (
+                <div className="flex justify-between">
+                  <span className="text-ink-muted">Client / Visitor IP</span>
+                  <span className="font-mono text-accent font-semibold">{leadState.visitor_public_ip}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-ink-muted">Last Updated</span>
-                <span className="font-mono text-ink">{formatDate(lead.updated_at)}</span>
+                <span className="font-mono text-ink">{formatDate(leadState.updated_at)}</span>
               </div>
             </div>
           </div>

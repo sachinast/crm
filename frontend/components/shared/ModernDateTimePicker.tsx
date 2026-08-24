@@ -287,8 +287,8 @@ export default function ModernDateTimePicker({
       {/* Popover Calendar */}
       {isOpen && (
         <div className="absolute z-50 mt-1.5 w-80 rounded-2xl border border-hairline bg-surface p-4 shadow-2xl animate-fadeIn space-y-3">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between">
+          {/* Calendar Header with Month & Year dropdowns for fast birth date selection */}
+          <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-hairline">
             <button
               type="button"
               onClick={() => {
@@ -299,14 +299,41 @@ export default function ModernDateTimePicker({
                   setViewMonth((m) => m - 1);
                 }
               }}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface hover:bg-surface-raised text-ink transition-colors"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-hairline bg-surface hover:bg-surface-raised text-ink transition-colors"
+              title="Previous Month"
             >
               <ChevronLeft size={15} />
             </button>
 
-            <div className="flex items-center gap-1 text-xs font-bold text-ink">
-              <span>{MONTH_NAMES[viewMonth]}</span>
-              <span className="font-mono text-ink-muted">{viewYear}</span>
+            <div className="flex items-center gap-1.5 flex-1 justify-center">
+              {/* Quick Month Select */}
+              <select
+                value={viewMonth}
+                onChange={(e) => setViewMonth(parseInt(e.target.value, 10))}
+                className="select text-xs py-1 px-2 font-semibold text-ink bg-surface border border-hairline rounded-lg cursor-pointer"
+              >
+                {MONTH_NAMES.map((name, idx) => (
+                  <option key={name} value={idx}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Quick Year Select (1930 to current+10) */}
+              <select
+                value={viewYear}
+                onChange={(e) => setViewYear(parseInt(e.target.value, 10))}
+                className="select text-xs py-1 px-2 font-mono font-semibold text-ink bg-surface border border-hairline rounded-lg cursor-pointer"
+              >
+                {Array.from({ length: new Date().getFullYear() + 10 - 1930 + 1 }, (_, i) => {
+                  const y = new Date().getFullYear() + 10 - i;
+                  return (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             <button
@@ -319,7 +346,8 @@ export default function ModernDateTimePicker({
                   setViewMonth((m) => m + 1);
                 }
               }}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface hover:bg-surface-raised text-ink transition-colors"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-hairline bg-surface hover:bg-surface-raised text-ink transition-colors"
+              title="Next Month"
             >
               <ChevronRight size={15} />
             </button>

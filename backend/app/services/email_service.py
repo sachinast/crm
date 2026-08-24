@@ -6,11 +6,10 @@ Implements responsive HTML templates matching Word documents & client screenshot
 """
 import logging
 import os
-import smtplib
 from datetime import datetime, timezone
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Any
+
+import httpx
 
 from app.core.config import get_settings
 
@@ -45,12 +44,16 @@ def generate_authorization_email_html(
     total_amount: float = 0.0,
     service_type: str = "car",
     agent_name: str = "Customer Support",
-    support_phone: str = "+1 (877) 362-2838",
-    support_email: str = "sales@ebookingdesk.com",
+    support_phone: str | None = None,
+    support_email: str | None = None,
     template_type: str = "new_booking",  # "new_booking" | "modification" | "cancellation"
 ) -> str:
-    """Generates email matching Screenshots 2 & 3 and Word template."""
+    """Generates email matching Word templates and client specifications dynamically using env configuration."""
     settings = get_settings()
+    brand_name = settings.resend_from_name or "E-Booking Desk"
+    active_support_email = support_email or settings.resend_from_email
+    active_support_phone = support_phone or settings.support_phone
+
     masked_card = mask_card_number(card_number)
     holder = card_holder_name or customer_name
     auth_url = f"{settings.frontend_url.rstrip('/')}/authorize/{lead_id}"
@@ -94,7 +97,7 @@ def generate_authorization_email_html(
   <div class="container">
     <div class="header-bar">
       <div class="header-title">{title_header}</div>
-      <div class="header-brand">E-Booking Desk</div>
+      <div class="header-brand">{brand_name}</div>
     </div>
 
     <div class="content">
@@ -149,7 +152,7 @@ def generate_authorization_email_html(
 
       <!-- Legal Authorization Statement -->
       <div class="legal-box">
-        This is to confirm that, in keeping with all applicable laws, I/We <strong>{holder}</strong> are instructing <strong>E-Booking Desk</strong>, to book the Car mentioned against the following credit card. It is expressly understood that the amount charged will be <strong>({charge_display})</strong> inclusive of all taxes and fees. However, it may be charged in split payments, not exceeding the total amount mentioned above. I/We further represent that, the Credit Card Type, ({card_type}) card ending with <strong>{masked_card[-4:]}</strong> has been provided by me/us to authorize this transaction. It is also understood and accepted that to provide additional security of my/our personal information, E-Booking Desk may verify Credit Card information and billing address. It is further understood and agreed that I/We <strong>{holder}</strong> accept full responsibility for the amount due to <strong>E-Booking Desk</strong> and the Terms &amp; Conditions of cancellation or refund as mentioned.
+        This is to confirm that, in keeping with all applicable laws, I/We <strong>{holder}</strong> are instructing <strong>{brand_name}</strong>, to book the Car mentioned against the following credit card. It is expressly understood that the amount charged will be <strong>({charge_display})</strong> inclusive of all taxes and fees. However, it may be charged in split payments, not exceeding the total amount mentioned above. I/We further represent that, the Credit Card Type, ({card_type}) card ending with <strong>{masked_card[-4:]}</strong> has been provided by me/us to authorize this transaction. It is also understood and accepted that to provide additional security of my/our personal information, {brand_name} may verify Credit Card information and billing address. It is further understood and agreed that I/We <strong>{holder}</strong> accept full responsibility for the amount due to <strong>{brand_name}</strong> and the Terms &amp; Conditions of cancellation or refund as mentioned.
       </div>
 
       <!-- Important Rental Info -->
@@ -185,9 +188,9 @@ def generate_authorization_email_html(
 
     <!-- Footer -->
     <div class="footer">
-      <p style="margin: 0 0 6px 0;"><strong>Need Help?</strong> {agent_name} | 24/7 Customer Support: <strong>{support_phone}</strong></p>
-      <p style="margin: 0 0 6px 0;"><a href="mailto:{support_email}" style="color: #0f4c81;">{support_email}</a></p>
-      <p style="margin: 0;">Thank you for choosing E-Booking Desk. &copy; {datetime.now().year} E-Booking Desk. All rights reserved. <em>This is an automated email.</em></p>
+      <p style="margin: 0 0 6px 0;"><strong>Need Help?</strong> {agent_name} | 24/7 Customer Support: <strong>{active_support_phone}</strong></p>
+      <p style="margin: 0 0 6px 0;"><a href="mailto:{active_support_email}" style="color: #0f4c81;">{active_support_email}</a></p>
+      <p style="margin: 0;">Thank you for choosing {brand_name}. &copy; {datetime.now().year} {brand_name}. All rights reserved. <em>This is an automated email.</em></p>
     </div>
   </div>
 </body>
@@ -209,6 +212,8 @@ def generate_confirmation_email_html(
     user_agent: str = "Desktop Browser",
 ) -> str:
     """Generates confirmation email matching Car_Rental_Payment_Authorization_Confirmation.docx."""
+    settings = get_settings()
+    brand_name = settings.resend_from_name or "E-Booking Desk"
     now_utc = datetime.now(timezone.utc)
     date_str = now_utc.strftime("%d-%b-%Y")
     time_str = now_utc.strftime("%H:%M:%S UTC")
@@ -233,7 +238,7 @@ def generate_confirmation_email_html(
   <div class="container">
     <div class="header">
       <h2 style="margin: 0; font-size: 18px;">Car Rental Payment Authorization Confirmed</h2>
-      <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.85;">E-Booking Desk</p>
+      <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.85;">{brand_name}</p>
     </div>
     <div class="content">
       <div class="badge">
@@ -241,7 +246,7 @@ def generate_confirmation_email_html(
       </div>
       <p style="font-size: 13px; line-height: 1.6; margin-top: 16px;">
         Dear <strong>{customer_name}</strong>,<br>
-        Thank you for confirming your authorization for your car rental reservation with <strong>E-Booking Desk</strong>. This email confirms that your authorization was successfully recorded for the reservation and payment described below.
+        Thank you for confirming your authorization for your car rental reservation with <strong>{brand_name}</strong>. This email confirms that your authorization was successfully recorded for the reservation and payment described below.
       </p>
 
       <table>
@@ -268,7 +273,7 @@ def generate_confirmation_email_html(
       </table>
 
       <p style="font-size: 11.5px; color: #64748b; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-        Important: You have authorized E-Booking Desk to charge USD {prepaid_amount:.2f} for the prepaid portion of your reservation. The USD {pay_at_counter_amount:.2f} balance is payable directly to the rental company at vehicle pickup.
+        Important: You have authorized {brand_name} to charge USD {prepaid_amount:.2f} for the prepaid portion of your reservation. The USD {pay_at_counter_amount:.2f} balance is payable directly to the rental company at vehicle pickup.
       </p>
     </div>
   </div>
@@ -281,35 +286,59 @@ async def send_customer_email(
     subject: str,
     html_content: str,
 ) -> bool:
-    """Dispatches email via SMTP if configured, or logs the action."""
+    """Dispatches email via Resend API (HTTP) using RESEND_API_KEY and RESEND_FROM_EMAIL from env."""
     if not to_email:
         logger.warning("send_customer_email: No recipient email provided.")
         return False
 
     settings = get_settings()
-    if not settings.smtp_host or not settings.smtp_user:
-        logger.info(
-            f"[EMAIL SIMULATION] SMTP not configured. Simulated sending email to '{to_email}' with subject '{subject}'."
-        )
-        return True
 
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
-        msg["To"] = to_email
+    # Resend API (Direct HTTP using environment variables)
+    if settings.resend_api_key:
+        from_name = settings.resend_from_name
+        from_email = settings.resend_from_email
 
-        part = MIMEText(html_content, "html", "utf-8")
-        msg.attach(part)
+        if not from_email:
+            logger.error("send_customer_email: RESEND_FROM_EMAIL environment variable is not configured.")
+            return False
 
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
-            server.starttls()
-            if settings.smtp_password:
-                server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(settings.smtp_from_email, [to_email], msg.as_string())
+        from_header = f"{from_name} <{from_email}>" if from_name else from_email
 
-        logger.info(f"Successfully sent email to {to_email}: {subject}")
-        return True
-    except Exception as exc:
-        logger.error(f"Failed to send email to {to_email}: {exc}")
-        return False
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {settings.resend_api_key.strip()}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": from_header,
+                        "to": [to_email],
+                        "subject": subject,
+                        "html": html_content,
+                    },
+                )
+
+                if response.status_code in (200, 201):
+                    res_data = response.json()
+                    logger.info(
+                        f"Successfully sent email to {to_email} via Resend: ID={res_data.get('id')}"
+                    )
+                    return True
+                else:
+                    logger.error(
+                        f"Resend API error ({response.status_code}): {response.text}"
+                    )
+                    return False
+        except Exception as exc:
+            logger.error(f"Failed to send email to {to_email} via Resend API: {exc}")
+            return False
+
+    # Simulation mode if Resend API key is not configured
+    logger.info(
+        f"[EMAIL SIMULATION] RESEND_API_KEY not configured in env. Simulated sending email to '{to_email}' with subject '{subject}'."
+    )
+    return True
+
+

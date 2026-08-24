@@ -188,10 +188,17 @@ async def submit_authorization(
             "(already authorized, or moved on)",
         )
 
-    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+    raw_ip = payload.client_ip or request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
         request.client.host if request.client else "0.0.0.0"
     )
-    user_agent = request.headers.get("user-agent", "unknown")
+    client_ip = raw_ip.strip() if raw_ip else "0.0.0.0"
+    # Basic sanitize for INET column
+    if ":" not in client_ip and "." not in client_ip:
+        client_ip = "0.0.0.0"
+
+    system_info = (payload.system_name or "").strip()
+    raw_ua = request.headers.get("user-agent", "unknown")
+    user_agent = f"{system_info} - {raw_ua}" if system_info and system_info not in raw_ua else raw_ua
 
     record = AuthorizationRecord(
         lead_id=lead.id,
@@ -206,6 +213,10 @@ async def submit_authorization(
         user_agent=user_agent,
     )
     db.add(record)
+
+    if not lead.visitor_public_ip:
+        lead.visitor_public_ip = client_ip
+
 
     actor_user_id = lead.agent_id
     if not actor_user_id:

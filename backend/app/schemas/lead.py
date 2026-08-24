@@ -28,6 +28,17 @@ class CustomFieldsUpdate(BaseModel):
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
 
+class LeadUpdate(BaseModel):
+    """PATCH /leads/{id} — Update customer details with a mandatory reason for audit logging."""
+
+    name: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    service_type: ServiceType | None = None
+    reason: str = Field(min_length=1, description="Mandatory reason for editing this lead")
+
+
+
 class LeadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

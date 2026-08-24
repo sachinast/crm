@@ -4,6 +4,9 @@ import { CheckCircle2, PhoneCall, Tag, Ticket } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
+const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+1 (877) 362-2838";
+const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? "E-Booking Desk";
 
 interface Summary {
   lead_id: string;
@@ -60,6 +63,11 @@ export default function AuthorizeForm({
     setSubmitting(true);
     setError(null);
 
+    const systemName =
+      typeof navigator !== "undefined"
+        ? (navigator as any).userAgentData?.platform || navigator.platform || navigator.userAgent
+        : "Web Client";
+
     const consentPayload = {
       cardholder_confirmed: true,
       prepaid_charge_ack: true,
@@ -67,7 +75,9 @@ export default function AuthorizeForm({
       booking_details_ack: true,
       terms_ack: true,
       non_refundable_ack: true,
+      system_name: systemName,
     };
+
 
     try {
       const resp = await fetch(`${API_BASE_URL}/leads/${leadId}/authorization`, {
@@ -103,14 +113,14 @@ export default function AuthorizeForm({
               ED
             </div>
             <div>
-              <div className="font-extrabold text-[#0f4c81] text-lg leading-tight">E-Booking Desk</div>
+              <div className="font-extrabold text-[#0f4c81] text-lg leading-tight">{BRAND_NAME}</div>
               <div className="text-[11px] text-slate-500">Customer Reservation Confirmation</div>
             </div>
           </div>
           <div className="flex items-center gap-3 text-right">
             <div className="hidden sm:block">
               <div className="text-xs font-bold text-slate-700">Book Online or Call Us 24/7</div>
-              <div className="text-xs font-bold text-[#0f4c81]">+1 (877) 362-2838</div>
+              <div className="text-xs font-bold text-[#0f4c81]">{SUPPORT_PHONE}</div>
             </div>
             <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[#0f4c81] shrink-0">
               <PhoneCall size={18} />
@@ -191,7 +201,7 @@ export default function AuthorizeForm({
               <div className="pt-2 border-t border-slate-100 font-semibold text-slate-800">
                 For immediate assistance please call:
                 <div className="text-slate-500 font-normal">To make changes to your ticketed reservation</div>
-                <div className="text-[#0f4c81] font-bold text-sm mt-0.5">Customer Service — +1 (877) 362-2838</div>
+                <div className="text-[#0f4c81] font-bold text-sm mt-0.5">Customer Service — {SUPPORT_PHONE}</div>
               </div>
             </div>
           </div>
@@ -205,7 +215,7 @@ export default function AuthorizeForm({
       {/* Blue Top Header Bar matching Screenshots 2 & 3 */}
       <div className="bg-[#0f4c81] text-white px-5 py-3.5 flex items-center justify-between">
         <div className="font-bold text-base tracking-tight">{serviceTitle} Booking Information</div>
-        <div className="font-bold text-base text-[#f59e0b]">E-Booking Desk</div>
+        <div className="font-bold text-base text-[#f59e0b]">{BRAND_NAME}</div>
       </div>
 
       <div className="p-6 sm:p-8 space-y-5">
@@ -356,8 +366,12 @@ export default function AuthorizeForm({
 
         {/* Footer info */}
         <div className="border-t border-[#e2e8f0] pt-4 text-center text-[11px] text-[#64748b] space-y-1">
-          <div><strong>Need Help?</strong> 24/7 Customer Support: <strong>+1 (877) 362-2838</strong> | <a href="mailto:sales@ebookingdesk.com" className="text-[#0f4c81]">sales@ebookingdesk.com</a></div>
-          <div>Thank you for choosing E-Booking Desk. &copy; 2026 E-Booking Desk. All rights reserved. <em>This is an automated authorization portal.</em></div>
+          <div>
+            <strong>Need Help?</strong>
+            {SUPPORT_PHONE && <span> 24/7 Customer Support: <strong>{SUPPORT_PHONE}</strong></span>}
+            {SUPPORT_EMAIL && <span> | <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#0f4c81]">{SUPPORT_EMAIL}</a></span>}
+          </div>
+          <div>Thank you for choosing {BRAND_NAME}. &copy; {new Date().getFullYear()} {BRAND_NAME}. All rights reserved. <em>This is an automated authorization portal.</em></div>
         </div>
       </div>
     </div>
