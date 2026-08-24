@@ -302,7 +302,7 @@ function EditLeadModal({
     setLoading(true);
     setError(null);
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, string | undefined> = {
       name: name.trim(),
       service_type: serviceType,
       reason: reason.trim(),

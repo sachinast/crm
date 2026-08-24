@@ -65,7 +65,9 @@ export default function AuthorizeForm({
 
     const systemName =
       typeof navigator !== "undefined"
-        ? (navigator as any).userAgentData?.platform || navigator.platform || navigator.userAgent
+        ? (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ||
+          navigator.platform ||
+          navigator.userAgent
         : "Web Client";
 
     const consentPayload = {
