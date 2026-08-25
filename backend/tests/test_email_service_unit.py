@@ -6,6 +6,16 @@ from app.services.email_service import (
     send_customer_email,
 )
 from app.api.v1.authorization import _safe_float
+from app.schemas.booking import _validate_card_digits
+
+
+def test_validate_card_digits():
+    assert _validate_card_digits("4111 1111 1111 1111") == "4111 1111 1111 1111"
+    assert _validate_card_digits("4111111111111111") == "4111111111111111"
+    assert _validate_card_digits(None) is None
+    assert _validate_card_digits("") == ""
+    with pytest.raises(ValueError, match="cannot exceed 16 digits"):
+        _validate_card_digits("411111111111111199")
 
 
 def test_mask_card_number():
