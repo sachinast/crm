@@ -35,10 +35,13 @@ async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
 
 async def _delete_user(user_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as db:
+        keys = (await db.scalars(select(ApiKey).where(ApiKey.assigned_agent_id == user_id))).all()
+        for k in keys:
+            await db.delete(k)
         user = await db.get(User, user_id)
         if user is not None:
             await db.delete(user)
-            await db.commit()
+        await db.commit()
 
 
 async def _delete_lead(lead_id: uuid.UUID) -> None:
@@ -188,7 +191,7 @@ async def test_capture_creates_lead_attributed_to_assigned_agent(api_client, adm
     resp = await api_client.post(
         "/leads/capture",
         json={
-            "name": "External Customer",
+            "name": f"ExtCust-{uuid.uuid4().hex[:8]}",
             "phone": _unique_phone(),
             "email": _unique_email("external"),
             "notes": "Submitted via website contact form",
@@ -224,7 +227,7 @@ async def test_capture_respects_explicit_source_override(api_client, admin, agen
     resp = await api_client.post(
         "/leads/capture",
         json={
-            "name": "Sourced Customer",
+            "name": f"SrcCust-{uuid.uuid4().hex[:8]}",
             "phone": _unique_phone(),
             "email": _unique_email("sourced"),
             "source": "Make — Landing Page B",
@@ -246,10 +249,11 @@ async def test_capture_flags_duplicates_same_as_internal_intake(api_client, admi
     admin_token = await _login(api_client, admin["email"], admin["password"])
     created = await _create_api_key(api_client, admin_token, agent["id"])
     phone = _unique_phone()
+    unique_suffix = uuid.uuid4().hex[:8]
 
     first = await api_client.post(
         "/leads/capture",
-        json={"name": "Dup One", "phone": phone, "email": _unique_email("capdup1")},
+        json={"name": f"Dup One {unique_suffix}", "phone": phone, "email": _unique_email("capdup1")},
         headers={"X-API-Key": created["api_key"]},
     )
     assert first.status_code == 201
@@ -257,7 +261,7 @@ async def test_capture_flags_duplicates_same_as_internal_intake(api_client, admi
 
     second = await api_client.post(
         "/leads/capture",
-        json={"name": "Dup Two", "phone": phone, "email": _unique_email("capdup2")},
+        json={"name": f"Dup Two {unique_suffix}", "phone": phone, "email": _unique_email("capdup2")},
         headers={"X-API-Key": created["api_key"]},
     )
     assert second.status_code == 201

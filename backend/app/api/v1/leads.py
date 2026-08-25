@@ -51,32 +51,28 @@ async def create_lead(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(*INTAKE_PERMISSIONS)),
 ) -> Lead:
-    """PRD §4.1 Step 1 + Step 2 — Check duplicate candidates BEFORE creating the lead.
-    If a duplicate candidate exists and no override reason is provided, halt creation
-    to prevent duplicate lead generation."""
+    """PRD §4.1 Step 1 + Step 2 — create the lead, then immediately run the
+    duplicate search so is_duplicate/duplicate_of_id are already known by the
+    time the response comes back (GET .../duplicate-check re-runs it to return
+    the full candidate list for the UI's confirmation prompt)."""
     custom_fields = await validate_custom_fields(db, "lead", payload.custom_fields)
-
-    candidates = await find_duplicate_candidates(
-        db, name=payload.name, phone=payload.phone, email=payload.email
-    )
-    if candidates and not payload.override_reason:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            detail=f"A lead matching this contact already exists in CRM PRO (Lead ID: {candidates[0].id}). Duplicate creation is blocked.",
-        )
-
     lead = Lead(
         name=payload.name,
         phone=payload.phone,
         email=payload.email,
         agent_id=current_user.id,
         custom_fields=custom_fields,
-        is_duplicate=bool(candidates),
-        duplicate_of_id=candidates[0].id if candidates else None,
-        duplicate_override_reason=payload.override_reason if (candidates and payload.override_reason) else None,
+        duplicate_override_reason=payload.override_reason,
     )
     db.add(lead)
-    await db.flush()
+    await db.flush()  # assigns lead.id without committing
+
+    candidates = await find_duplicate_candidates(
+        db, name=lead.name, phone=lead.phone, email=lead.email, exclude_lead_id=lead.id
+    )
+    if candidates:
+        lead.is_duplicate = True
+        lead.duplicate_of_id = candidates[0].id
 
     log_process_event(db, lead_id=lead.id, actor_id=current_user.id, action="created")
     if candidates and payload.override_reason:
