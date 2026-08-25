@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       ok: true,
       access_token,
+      refresh_token,
     });
 
     // Set secure httpOnly cookies

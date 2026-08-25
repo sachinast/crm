@@ -430,7 +430,11 @@ export default function PaymentSummarySection({
                 <button
                   type="button"
                   disabled={submitting}
-                  onClick={onSaveAndEmail}
+                  onClick={(e) => {
+                    const form = e.currentTarget.closest("form");
+                    if (form && !form.reportValidity()) return;
+                    onSaveAndEmail();
+                  }}
                   className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-4 border-accent/40 text-accent hover:bg-accent-soft"
                 >
                   <Mail size={14} />
@@ -442,7 +446,11 @@ export default function PaymentSummarySection({
                 <button
                   type="button"
                   disabled={submitting}
-                  onClick={onSave}
+                  onClick={(e) => {
+                    const form = e.currentTarget.closest("form");
+                    if (form && !form.reportValidity()) return;
+                    onSave();
+                  }}
                   className="btn-primary flex items-center gap-1.5 text-xs py-2 px-5 shadow-sm"
                 >
                   <CheckCircle2 size={14} className="text-white" />

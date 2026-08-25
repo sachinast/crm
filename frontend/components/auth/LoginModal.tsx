@@ -56,8 +56,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
 
       const data = await resp.json().catch(() => ({}));
-      if (data.access_token && typeof window !== "undefined") {
-        localStorage.setItem("crm_access_token", data.access_token);
+      if (typeof window !== "undefined") {
+        if (data.access_token) {
+          localStorage.setItem("crm_access_token", data.access_token);
+        }
+        if (data.refresh_token) {
+          localStorage.setItem("crm_refresh_token", data.refresh_token);
+        }
       }
 
       // Smooth direct navigation to dashboard without flashing landing page
