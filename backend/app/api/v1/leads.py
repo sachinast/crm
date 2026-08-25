@@ -62,6 +62,7 @@ async def create_lead(
         email=payload.email,
         agent_id=current_user.id,
         custom_fields=custom_fields,
+        duplicate_override_reason=payload.override_reason,
     )
     db.add(lead)
     await db.flush()  # assigns lead.id without committing
@@ -74,6 +75,16 @@ async def create_lead(
         lead.duplicate_of_id = candidates[0].id
 
     log_process_event(db, lead_id=lead.id, actor_id=current_user.id, action="created")
+    if candidates and payload.override_reason:
+        log_process_event(
+            db,
+            lead_id=lead.id,
+            actor_id=current_user.id,
+            action="field_update",
+            field_changed="duplicate_override_reason",
+            old_value=None,
+            new_value=payload.override_reason,
+        )
 
     await db.commit()
     await db.refresh(lead)

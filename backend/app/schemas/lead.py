@@ -14,6 +14,7 @@ class LeadCreate(BaseModel):
     name: str = Field(min_length=1)
     phone: str = Field(min_length=1)
     email: EmailStr
+    override_reason: str | None = None
     # Admin-defined extra fields (migration 0010) — validated against
     # custom_field_definitions by app/domain/custom_fields.py before the
     # lead is created.

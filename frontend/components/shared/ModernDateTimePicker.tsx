@@ -282,6 +282,17 @@ export default function ModernDateTimePicker({
           )}
           {mode === "datetime" && <Clock size={14} className="text-ink-muted" />}
         </div>
+
+        {/* Hidden native input for HTML5 form validation reportValidity */}
+        <input
+          tabIndex={-1}
+          required={required}
+          value={value || ""}
+          onChange={() => {}}
+          onFocus={() => setIsOpen(true)}
+          className="opacity-0 absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 pointer-events-none"
+          aria-hidden="true"
+        />
       </button>
 
       {/* Popover Calendar */}
