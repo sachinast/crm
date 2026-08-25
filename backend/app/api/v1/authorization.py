@@ -1,16 +1,14 @@
-"""Customer-facing "I Authorize" flow — PRD §8. Deliberately the one
-unauthenticated part of this API: no staff Bearer token, no RBAC visibility
-filter — the lead's own UUID in the URL is the capability link (see
-app/schemas/authorization.py for the security tradeoff this implies).
-"""
+import logging
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_visible_lead_or_404, require_ip_whitelisted
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.domain.booking_lookup import get_booking_for_lead
 from app.domain.process_log import log_process_event
@@ -34,13 +32,25 @@ from app.services.email_service import (
     send_customer_email,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/leads/{lead_id}", tags=["authorization"])
+
+
+def _safe_float(val: Any) -> float:
+    if val is None:
+        return 0.0
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
 
 
 async def _load_lead_and_booking(db: AsyncSession, lead_id: uuid.UUID) -> tuple[Lead, object]:
     lead = await db.get(Lead, lead_id)
     if lead is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
+        logger.error(f"[Auth Email] Lead {lead_id} not found in database.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Lead {lead_id} not found.")
     booking = await get_booking_for_lead(db, lead)
     return lead, booking
 
@@ -53,86 +63,122 @@ async def send_lead_auth_email(
     current_user: User = Depends(require_ip_whitelisted),
 ) -> dict:
     """Dispatches the customer authorization email based on attached templates."""
-    lead, booking = await _load_lead_and_booking(db, lead_id)
-    if not lead.email:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Lead does not have an email address configured.")
+    try:
+        lead, booking = await _load_lead_and_booking(db, lead_id)
 
-    # Extract booking fields safely
-    booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
-    car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
-    booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
-    agency_ref = (getattr(booking, "agency_reference", "done") if booking else "done") or "done"
-    prepaid = float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
-    pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
-    total = float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
-    card_type = (getattr(booking, "card_type", "Credit Card") if booking else "Credit Card") or "Credit Card"
-    card_num = (getattr(booking, "card_number", "") if booking else "") or ""
-    card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
-    customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
-
-    agent_name = current_user.full_name or "E-Booking Desk Specialist"
-
-    # Generate HTML content
-    html_content = generate_authorization_email_html(
-        lead_id=str(lead.id),
-        customer_name=lead.name,
-        customer_email=lead.email,
-        customer_phone=lead.phone or "",
-        customer_dob=customer_dob,
-        booking_reference=booking_ref,
-        agency_reference=agency_ref,
-        booking_platform=booking_platform,
-        car_provider=car_provider,
-        card_type=card_type,
-        card_number=card_num,
-        card_holder_name=card_holder,
-        prepaid_amount=prepaid,
-        pay_at_counter_amount=pay_at_counter,
-        total_amount=total,
-        service_type=lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car"),
-        agent_name=agent_name,
-        template_type=template_type,
-    )
-
-    subject = f"Car Booking Authorisation: {booking_ref}"
-    if template_type == "modification":
-        subject = f"Car Rental Modification Payment Authorization: {booking_ref}"
-    elif template_type == "cancellation":
-        subject = f"Car Rental Cancellation Authorization: {booking_ref}"
-
-    sent = await send_customer_email(lead.email, subject, html_content)
-
-    # Ensure lead status reflects authorization_pending
-    if lead.status != BookingStatus.authorization_pending and lead.status != BookingStatus.client_approved:
-        previous_status = lead.status
-        lead.status = BookingStatus.authorization_pending
-        db.add(
-            StatusHistory(
-                lead_id=lead.id,
-                from_status=previous_status,
-                to_status=BookingStatus.authorization_pending,
-                changed_by=current_user.id,
+        # 1. Validate Lead Email
+        if not lead.email or not lead.email.strip():
+            logger.error(f"[Auth Email] Lead {lead_id} is missing a customer email address.")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Customer email is missing for this lead. Please set an email address before sending authorization.",
             )
+
+        # 2. Validate Server Environment Keys
+        settings = get_settings()
+        if settings.resend_api_key and not settings.resend_from_email:
+            logger.error("[Auth Email] RESEND_FROM_EMAIL environment variable is missing on the server.")
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Server configuration error: RESEND_FROM_EMAIL is missing in environment variables.",
+            )
+
+        # 3. Extract booking fields safely
+        booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
+        car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
+        booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
+        agency_ref = (getattr(booking, "agency_reference", "done") if booking else "done") or "done"
+        
+        prepaid = _safe_float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
+        pay_at_counter = _safe_float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
+        total = _safe_float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
+        
+        card_type = (getattr(booking, "card_type", "Credit Card") if booking else "Credit Card") or "Credit Card"
+        card_num = (getattr(booking, "card_number", "") if booking else "") or ""
+        card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
+        customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
+
+        agent_name = current_user.full_name or "E-Booking Desk Specialist"
+        service_type_str = lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car")
+
+        # 4. Generate HTML content
+        html_content = generate_authorization_email_html(
+            lead_id=str(lead.id),
+            customer_name=lead.name,
+            customer_email=lead.email,
+            customer_phone=lead.phone or "",
+            customer_dob=customer_dob,
+            booking_reference=booking_ref,
+            agency_reference=agency_ref,
+            booking_platform=booking_platform,
+            car_provider=car_provider,
+            card_type=card_type,
+            card_number=card_num,
+            card_holder_name=card_holder,
+            prepaid_amount=prepaid,
+            pay_at_counter_amount=pay_at_counter,
+            total_amount=total,
+            service_type=service_type_str,
+            agent_name=agent_name,
+            template_type=template_type,
         )
 
-    log_process_event(
-        db,
-        lead_id=lead.id,
-        actor_id=current_user.id,
-        action="auth_email_sent",
-        field_changed="authorization_email",
-        old_value="",
-        new_value=lead.email,
-    )
-    await db.commit()
+        subject = f"Car Booking Authorisation: {booking_ref}"
+        if template_type == "modification":
+            subject = f"Car Rental Modification Payment Authorization: {booking_ref}"
+        elif template_type == "cancellation":
+            subject = f"Car Rental Cancellation Authorization: {booking_ref}"
 
-    return {
-        "success": True,
-        "message": f"Authorization email successfully dispatched to {lead.email}",
-        "auth_url": f"/authorize/{lead.id}",
-        "customer_email": lead.email,
-        "email_sent": sent,
-    }
+        # 5. Dispatch email
+        sent, email_msg = await send_customer_email(lead.email, subject, html_content)
+        if not sent:
+            logger.error(f"[Auth Email] Email dispatch failed for lead {lead.id}: {email_msg}")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                f"Email delivery failed: {email_msg}",
+            )
+
+        # 6. Ensure lead status reflects authorization_pending
+        if lead.status != BookingStatus.authorization_pending and lead.status != BookingStatus.client_approved:
+            previous_status = lead.status
+            lead.status = BookingStatus.authorization_pending
+            db.add(
+                StatusHistory(
+                    lead_id=lead.id,
+                    from_status=previous_status,
+                    to_status=BookingStatus.authorization_pending,
+                    changed_by=current_user.id,
+                )
+            )
+
+        log_process_event(
+            db,
+            lead_id=lead.id,
+            actor_id=current_user.id,
+            action="auth_email_sent",
+            field_changed="authorization_email",
+            old_value={"status": lead.status.value if hasattr(lead.status, "value") else str(lead.status)},
+            new_value={"recipient_email": lead.email, "template_type": template_type},
+        )
+        await db.commit()
+
+        logger.info(f"[Auth Email] Authorization email successfully dispatched to {lead.email} for lead {lead.id}")
+        return {
+            "success": True,
+            "message": f"Authorization email successfully dispatched to {lead.email}",
+            "auth_url": f"/authorize/{lead.id}",
+            "customer_email": lead.email,
+            "email_sent": True,
+            "detail": f"Authorization email sent to {lead.email}",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"[Auth Email] Unexpected server error sending email for lead {lead_id}: {exc}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error while processing authorization email: {str(exc)}",
+        )
 
 
 @router.get("/authorization-summary", response_model=AuthorizationSummary)
@@ -257,9 +303,9 @@ async def submit_authorization(
         booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
         car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
         booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
-        prepaid = float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
-        pay_at_counter = float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
-        total = float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
+        prepaid = _safe_float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
+        pay_at_counter = _safe_float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
+        total = _safe_float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
 
         conf_html = generate_confirmation_email_html(
             lead_id=str(lead.id),
