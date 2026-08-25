@@ -35,6 +35,11 @@ async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
 
 async def _delete_user(user_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as db:
+        # Delete any leads assigned to this user first
+        leads = (await db.scalars(select(Lead).where(Lead.agent_id == user_id))).all()
+        for l in leads:
+            await db.delete(l)
+        # Delete any ApiKeys assigned to this user
         keys = (await db.scalars(select(ApiKey).where(ApiKey.assigned_agent_id == user_id))).all()
         for k in keys:
             await db.delete(k)
@@ -249,11 +254,12 @@ async def test_capture_flags_duplicates_same_as_internal_intake(api_client, admi
     admin_token = await _login(api_client, admin["email"], admin["password"])
     created = await _create_api_key(api_client, admin_token, agent["id"])
     phone = _unique_phone()
-    unique_suffix = uuid.uuid4().hex[:8]
+    unique_a = uuid.uuid4().hex[:10]
+    unique_b = uuid.uuid4().hex[:10]
 
     first = await api_client.post(
         "/leads/capture",
-        json={"name": f"Dup One {unique_suffix}", "phone": phone, "email": _unique_email("capdup1")},
+        json={"name": f"Alpha-{unique_a}", "phone": phone, "email": _unique_email("capdup1")},
         headers={"X-API-Key": created["api_key"]},
     )
     assert first.status_code == 201
@@ -261,7 +267,7 @@ async def test_capture_flags_duplicates_same_as_internal_intake(api_client, admi
 
     second = await api_client.post(
         "/leads/capture",
-        json={"name": f"Dup Two {unique_suffix}", "phone": phone, "email": _unique_email("capdup2")},
+        json={"name": f"Beta-{unique_b}", "phone": phone, "email": _unique_email("capdup2")},
         headers={"X-API-Key": created["api_key"]},
     )
     assert second.status_code == 201
