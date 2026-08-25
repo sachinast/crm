@@ -723,8 +723,9 @@ export default function LeadDetailWorkspace({
             : "Failed to send authorization email.";
         alert(`Error: ${errorMsg}`);
       }
-    } catch (err: any) {
-      alert(`Network error while sending authorization email: ${err?.message || "Please check server connection"}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Please check server connection";
+      alert(`Network error while sending authorization email: ${msg}`);
     } finally {
       setSendingEmail(false);
     }

@@ -41,7 +41,7 @@ export async function proxyToBackend(
     }
 
     const rawText = await resp.text();
-    let body: any = null;
+    let body: unknown = null;
 
     if (rawText) {
       try {
@@ -65,8 +65,8 @@ export async function proxyToBackend(
     }
 
     return NextResponse.json(body, { status: resp.status });
-  } catch (err: any) {
-    const errMsg = err?.message || String(err);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     console.error(`[backend-proxy] Network failure contacting backend at ${targetUrl}:`, err);
     return NextResponse.json(
       {
