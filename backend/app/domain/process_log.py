@@ -20,14 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.audit import BookingProcessLog
 
 
-def _normalize_json_value(val: Any) -> Any:
-    if val is None:
-        return None
-    if isinstance(val, (dict, list)):
-        return val
-    return {"value": str(val)}
-
-
 def log_process_event(
     db: AsyncSession,
     *,
@@ -44,7 +36,7 @@ def log_process_event(
             actor_id=actor_id,
             action=action,
             field_changed=field_changed,
-            old_value=_normalize_json_value(old_value),
-            new_value=_normalize_json_value(new_value),
+            old_value=old_value,
+            new_value=new_value,
         )
     )

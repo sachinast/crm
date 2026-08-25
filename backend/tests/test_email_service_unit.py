@@ -6,7 +6,6 @@ from app.services.email_service import (
     send_customer_email,
 )
 from app.api.v1.authorization import _safe_float
-from app.domain.process_log import _normalize_json_value
 
 
 def test_mask_card_number():
@@ -23,14 +22,6 @@ def test_safe_float_helper():
     assert _safe_float(100) == 100.0
     assert _safe_float(0) == 0.0
     assert _safe_float("invalid") == 0.0
-
-
-def test_normalize_json_value():
-    assert _normalize_json_value(None) is None
-    assert _normalize_json_value({"key": "val"}) == {"key": "val"}
-    assert _normalize_json_value(["item1", "item2"]) == ["item1", "item2"]
-    assert _normalize_json_value("status_string") == {"value": "status_string"}
-    assert _normalize_json_value(123) == {"value": "123"}
 
 
 def test_generate_authorization_email_html():
