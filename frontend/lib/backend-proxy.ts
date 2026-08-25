@@ -18,25 +18,63 @@ export async function proxyToBackend(
 ): Promise<NextResponse> {
   const token = await getAccessToken();
   if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Not authenticated", detail: "Not authenticated" }, { status: 401 });
   }
 
   const { search, headers, ...rest } = init;
   const query = search && search.toString() ? `?${search.toString()}` : "";
-  const resp = await fetch(`${API_BASE_URL}${path}${query}`, {
-    ...rest,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...headers },
-    cache: "no-store",
-  });
+  const targetUrl = `${API_BASE_URL}${path}${query}`;
 
-  // A 204 (e.g. DELETE /admin/roles/{id}) has no body — constructing a
-  // NextResponse.json() with one throws ("Response with null body status
-  // cannot have body"), which without this check surfaces as an opaque 500
-  // to the client instead of the backend's real 204.
-  if (resp.status === 204) {
-    return new NextResponse(null, { status: 204 });
+  try {
+    const resp = await fetch(targetUrl, {
+      ...rest,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...headers },
+      cache: "no-store",
+    });
+
+    // A 204 (e.g. DELETE /admin/roles/{id}) has no body — constructing a
+    // NextResponse.json() with one throws ("Response with null body status
+    // cannot have body"), which without this check surfaces as an opaque 500
+    // to the client instead of the backend's real 204.
+    if (resp.status === 204) {
+      return new NextResponse(null, { status: 204 });
+    }
+
+    const rawText = await resp.text();
+    let body: any = null;
+
+    if (rawText) {
+      try {
+        body = JSON.parse(rawText);
+      } catch {
+        body = {
+          detail: rawText,
+          error: rawText,
+          status: resp.status,
+        };
+      }
+    } else {
+      body = {
+        detail: resp.statusText || `Backend returned status ${resp.status}`,
+        error: resp.statusText || `Backend returned status ${resp.status}`,
+      };
+    }
+
+    if (!resp.ok) {
+      console.error(`[backend-proxy] Error ${resp.status} from ${targetUrl}:`, body);
+    }
+
+    return NextResponse.json(body, { status: resp.status });
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    console.error(`[backend-proxy] Network failure contacting backend at ${targetUrl}:`, err);
+    return NextResponse.json(
+      {
+        error: `Failed to connect to backend server: ${errMsg}`,
+        detail: `Failed to connect to backend server: ${errMsg}`,
+        url: targetUrl,
+      },
+      { status: 502 },
+    );
   }
-
-  const body = await resp.json().catch(() => null);
-  return NextResponse.json(body, { status: resp.status });
 }

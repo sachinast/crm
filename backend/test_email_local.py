@@ -59,15 +59,15 @@ async def main():
 
     # 3. Test Email Dispatching
     print(f"\n3. Dispatching Live Test Email to: {recipient_email}...")
-    result = await send_customer_email(
+    success, status_msg = await send_customer_email(
         to_email=recipient_email,
         subject="Car Booking Authorisation: EC23345",
         html_content=auth_html,
     )
-    if result:
-        print(f"   [SUCCESS] Email successfully delivered via Resend API!")
+    if success:
+        print(f"   [SUCCESS] {status_msg}")
     else:
-        print(f"   [FAILED] Email dispatch failed. Check terminal logs.")
+        print(f"   [FAILED] Email dispatch failed: {status_msg}")
 
     # 4. Save Preview HTML
     preview_path = os.path.join(os.path.dirname(__file__), "test_auth_email_preview.html")

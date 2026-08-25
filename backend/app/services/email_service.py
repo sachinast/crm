@@ -285,11 +285,13 @@ async def send_customer_email(
     to_email: str,
     subject: str,
     html_content: str,
-) -> bool:
-    """Dispatches email via Resend API (HTTP) using RESEND_API_KEY and RESEND_FROM_EMAIL from env."""
-    if not to_email:
-        logger.warning("send_customer_email: No recipient email provided.")
-        return False
+) -> tuple[bool, str]:
+    """Dispatches email via Resend API (HTTP) using RESEND_API_KEY and RESEND_FROM_EMAIL from env.
+    Returns (success: bool, detail_message: str).
+    """
+    if not to_email or not to_email.strip():
+        logger.warning("[Email Service] send_customer_email: No recipient email provided.")
+        return False, "Recipient email address is missing."
 
     settings = get_settings()
 
@@ -299,8 +301,9 @@ async def send_customer_email(
         from_email = settings.resend_from_email
 
         if not from_email:
-            logger.error("send_customer_email: RESEND_FROM_EMAIL environment variable is not configured.")
-            return False
+            msg = "RESEND_FROM_EMAIL environment variable is not configured on the backend."
+            logger.error(f"[Email Service] {msg}")
+            return False, msg
 
         from_header = f"{from_name} <{from_email}>" if from_name else from_email
 
@@ -314,7 +317,7 @@ async def send_customer_email(
                     },
                     json={
                         "from": from_header,
-                        "to": [to_email],
+                        "to": [to_email.strip()],
                         "subject": subject,
                         "html": html_content,
                     },
@@ -322,23 +325,29 @@ async def send_customer_email(
 
                 if response.status_code in (200, 201):
                     res_data = response.json()
+                    email_id = res_data.get("id", "unknown")
                     logger.info(
-                        f"Successfully sent email to {to_email} via Resend: ID={res_data.get('id')}"
+                        f"[Email Service] Successfully sent email to {to_email} via Resend: ID={email_id}"
                     )
-                    return True
+                    return True, f"Email delivered successfully (ID: {email_id})"
                 else:
-                    logger.error(
-                        f"Resend API error ({response.status_code}): {response.text}"
-                    )
-                    return False
+                    err_body = response.text
+                    try:
+                        err_json = response.json()
+                        err_detail = err_json.get("message") or err_json.get("name") or err_body
+                    except Exception:
+                        err_detail = err_body
+                    msg = f"Resend API error ({response.status_code}): {err_detail}"
+                    logger.error(f"[Email Service] {msg}")
+                    return False, msg
         except Exception as exc:
-            logger.error(f"Failed to send email to {to_email} via Resend API: {exc}")
-            return False
+            msg = f"Failed to connect to Resend API: {exc}"
+            logger.error(f"[Email Service] {msg}")
+            return False, msg
 
     # Simulation mode if Resend API key is not configured
-    logger.info(
-        f"[EMAIL SIMULATION] RESEND_API_KEY not configured in env. Simulated sending email to '{to_email}' with subject '{subject}'."
-    )
-    return True
+    msg = f"[EMAIL SIMULATION] RESEND_API_KEY not configured in env. Simulated sending email to '{to_email}' with subject '{subject}'."
+    logger.info(msg)
+    return True, "Simulation mode: Email simulated (RESEND_API_KEY not configured)."
 
 

@@ -713,10 +713,18 @@ export default function LeadDetailWorkspace({
         setEmailStatus(`Auth email sent to ${leadState.email}`);
         setTimeout(() => setEmailStatus(null), 4000);
       } else {
-        alert(data.detail || "Failed to send authorization email.");
+        const errorMsg =
+          typeof data?.detail === "string"
+            ? data.detail
+            : typeof data?.error === "string"
+            ? data.error
+            : typeof data?.message === "string"
+            ? data.message
+            : "Failed to send authorization email.";
+        alert(`Error: ${errorMsg}`);
       }
-    } catch {
-      alert("Network error while sending authorization email.");
+    } catch (err: any) {
+      alert(`Network error while sending authorization email: ${err?.message || "Please check server connection"}`);
     } finally {
       setSendingEmail(false);
     }
