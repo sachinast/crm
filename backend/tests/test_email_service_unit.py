@@ -77,12 +77,12 @@ async def test_send_customer_email_empty_recipient():
 
 
 @pytest.mark.asyncio
-async def test_send_customer_email_simulation_mode(monkeypatch):
+async def test_send_customer_email_missing_api_key(monkeypatch):
     from app.core import config
 
     settings = config.Settings(resend_api_key="", resend_from_email="")
     monkeypatch.setattr(config, "get_settings", lambda: settings)
 
     success, msg = await send_customer_email("test@example.com", "Test Subject", "<html>Test</html>")
-    assert success is True
-    assert "Simulation mode" in msg
+    assert success is False
+    assert "RESEND_API_KEY" in msg

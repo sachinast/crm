@@ -9,7 +9,14 @@ import CarBookingFields, {
 } from "@/components/booking/CarBookingFields";
 
 function toIsoUtc(localValue: string): string {
-  return localValue ? `${localValue}:00Z` : localValue;
+  if (!localValue) return "";
+  try {
+    const d = new Date(localValue);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString();
+    }
+  } catch {}
+  return localValue.endsWith("Z") ? localValue : `${localValue}:00Z`;
 }
 function fromIsoUtc(isoValue: string): string {
   return isoValue ? isoValue.slice(0, 16) : "";
@@ -43,6 +50,7 @@ export default function CarBookingForm({
 
     const payload = {
       ...form,
+      renter_dob: form.renter_dob ? form.renter_dob.split("T")[0] : "1990-01-01",
       pickup_datetime: toIsoUtc(form.pickup_datetime),
       return_datetime: toIsoUtc(form.return_datetime),
       prepaid_amount: Number(form.prepaid_amount) || 0,
@@ -57,11 +65,24 @@ export default function CarBookingForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await resp.json();
+      const body = await resp.json().catch(() => ({}));
       setSubmitting(false);
 
       if (!resp.ok) {
-        setError(typeof body.detail === "string" ? body.detail : "Could not save car booking");
+        let msg = "Could not save car booking";
+        if (typeof body.detail === "string") {
+          msg = body.detail;
+        } else if (Array.isArray(body.detail)) {
+          msg = body.detail
+            .map((d: { msg?: string; loc?: string[] }) => {
+              const field = d.loc && d.loc.length ? d.loc[d.loc.length - 1] : "";
+              return field ? `${field.replace(/_/g, " ")}: ${d.msg}` : d.msg || JSON.stringify(d);
+            })
+            .join(" • ");
+        } else if (body.message) {
+          msg = body.message;
+        }
+        setError(msg);
         return;
       }
 

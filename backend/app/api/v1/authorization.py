@@ -162,14 +162,14 @@ async def send_lead_auth_email(
         )
         await db.commit()
 
-        logger.info(f"[Auth Email] Authorization email successfully dispatched to {lead.email} for lead {lead.id}")
+        logger.info(f"[Auth Email] Authorization email successfully dispatched to {lead.email} for lead {lead.id}: {email_msg}")
         return {
             "success": True,
-            "message": f"Authorization email successfully dispatched to {lead.email}",
+            "message": email_msg,
             "auth_url": f"/authorize/{lead.id}",
             "customer_email": lead.email,
             "email_sent": True,
-            "detail": f"Authorization email sent to {lead.email}",
+            "detail": email_msg,
         }
     except HTTPException:
         raise

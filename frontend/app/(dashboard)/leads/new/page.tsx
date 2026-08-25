@@ -45,7 +45,14 @@ type ServiceType = (typeof SERVICE_TYPES)[number]["value"];
 type CheckStatus = "idle" | "checking" | "exists" | "available";
 
 function toIsoUtc(localValue: string): string {
-  return localValue ? `${localValue}:00Z` : localValue;
+  if (!localValue) return "";
+  try {
+    const d = new Date(localValue);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString();
+    }
+  } catch {}
+  return localValue.endsWith("Z") ? localValue : `${localValue}:00Z`;
 }
 
 function CheckTick({ status }: { status: CheckStatus }) {
@@ -113,6 +120,7 @@ export default function NewLeadPage() {
   const [pendingConfirmLead, setPendingConfirmLead] = useState<LeadResponse | null>(null);
   const [pendingCandidates, setPendingCandidates] = useState<Candidate[]>([]);
   const [pendingReason, setPendingReason] = useState("");
+  const [sendEmailOnSubmit, setSendEmailOnSubmit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,10 +202,13 @@ export default function NewLeadPage() {
             ...carForm,
             driver_name: carForm.driver_name || name,
             driver_phone: carForm.driver_phone || phone,
+            renter_dob: carForm.renter_dob ? carForm.renter_dob.split("T")[0] : "1990-01-01",
             pickup_datetime: toIsoUtc(carForm.pickup_datetime),
             return_datetime: toIsoUtc(carForm.return_datetime),
-            prepaid_amount: Number(carForm.prepaid_amount),
-            pay_at_counter_amount: Number(carForm.pay_at_counter_amount),
+            prepaid_amount: Number(carForm.prepaid_amount) || 0,
+            pay_at_counter_amount: Number(carForm.pay_at_counter_amount) || 0,
+            company_amount: Number(carForm.company_amount) || 0,
+            platform_amount: Number(carForm.platform_amount) || 0,
           }
         : serviceType === "hotel"
           ? {
@@ -205,8 +216,10 @@ export default function NewLeadPage() {
               primary_guest_name: hotelForm.primary_guest_name || name,
               guest_email: hotelForm.guest_email || email,
               guest_phone: hotelForm.guest_phone || phone,
-              prepaid_amount: Number(hotelForm.prepaid_amount),
-              pay_at_counter_amount: Number(hotelForm.pay_at_counter_amount),
+              prepaid_amount: Number(hotelForm.prepaid_amount) || 0,
+              pay_at_counter_amount: Number(hotelForm.pay_at_counter_amount) || 0,
+              company_amount: Number(hotelForm.company_amount) || 0,
+              platform_amount: Number(hotelForm.platform_amount) || 0,
               num_guests: Number(hotelForm.num_guests) || 1,
               num_rooms: Number(hotelForm.num_rooms) || 1,
             }
@@ -214,8 +227,10 @@ export default function NewLeadPage() {
               ...flightForm,
               contact_email: flightForm.contact_email || email,
               contact_phone: flightForm.contact_phone || phone,
-              prepaid_amount: Number(flightForm.prepaid_amount),
-              pay_at_counter_amount: Number(flightForm.pay_at_counter_amount),
+              prepaid_amount: Number(flightForm.prepaid_amount) || 0,
+              pay_at_counter_amount: Number(flightForm.pay_at_counter_amount) || 0,
+              company_amount: Number(flightForm.company_amount) || 0,
+              platform_amount: Number(flightForm.platform_amount) || 0,
               ticket_cost: Number(flightForm.ticket_cost) || 0,
               mco_charge: Number(flightForm.mco_charge) || 0,
               merchant_fee: Number(flightForm.merchant_fee) || 15,
@@ -229,10 +244,23 @@ export default function NewLeadPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bookingPayload),
     });
-    const bookingBody = await bookingResp.json();
+    const bookingBody = await bookingResp.json().catch(() => ({}));
 
     if (!bookingResp.ok) {
-      setError(typeof bookingBody.detail === "string" ? bookingBody.detail : "Could not save the booking");
+      let detailMsg = "Could not save the booking";
+      if (typeof bookingBody.detail === "string") {
+        detailMsg = bookingBody.detail;
+      } else if (Array.isArray(bookingBody.detail)) {
+        detailMsg = bookingBody.detail
+          .map((d: { msg?: string; loc?: string[] }) => {
+            const field = d.loc && d.loc.length ? d.loc[d.loc.length - 1] : "";
+            return field ? `${field.replace(/_/g, " ")}: ${d.msg}` : d.msg || JSON.stringify(d);
+          })
+          .join(" • ");
+      } else if (bookingBody.message) {
+        detailMsg = bookingBody.message;
+      }
+      setError(detailMsg);
       setSubmitting(false);
       return;
     }
@@ -250,7 +278,7 @@ export default function NewLeadPage() {
     router.refresh();
   }
 
-  async function handleSubmit(event?: FormEvent, sendAuthEmail: boolean = false) {
+  async function handleSubmit(event?: FormEvent) {
     if (event) event.preventDefault();
     setSubmitting(true);
     setError(null);
@@ -260,7 +288,7 @@ export default function NewLeadPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, phone, email, custom_fields: customFields }),
     });
-    const body: LeadResponse = await resp.json();
+    const body: LeadResponse = await resp.json().catch(() => ({}));
 
     if (!resp.ok) {
       setError((body as unknown as { detail?: string }).detail ?? "Could not create lead");
@@ -291,7 +319,7 @@ export default function NewLeadPage() {
       }
     }
 
-    await finishServiceTypeAndBooking(body.id, sendAuthEmail);
+    await finishServiceTypeAndBooking(body.id, sendEmailOnSubmit);
   }
 
   async function handlePendingConfirm() {
@@ -311,7 +339,7 @@ export default function NewLeadPage() {
       return;
     }
 
-    await finishServiceTypeAndBooking(pendingConfirmLead.id);
+    await finishServiceTypeAndBooking(pendingConfirmLead.id, sendEmailOnSubmit);
   }
 
   return (
@@ -610,9 +638,13 @@ export default function NewLeadPage() {
                   </Link>
 
                   <button
-                    type="button"
+                    type="submit"
                     disabled={submitting || !serviceType || !unlocked}
-                    onClick={() => handleSubmit(undefined, true)}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      setSendEmailOnSubmit(true);
+                    }}
                     className="btn-secondary border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 flex items-center gap-1.5 font-semibold"
                   >
                     <Mail size={15} />
@@ -622,6 +654,11 @@ export default function NewLeadPage() {
                   <button
                     type="submit"
                     disabled={submitting || !serviceType || !unlocked}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      setSendEmailOnSubmit(false);
+                    }}
                     className="btn-primary"
                   >
                     <span>{submitting ? "Processing…" : "Create Lead"}</span>

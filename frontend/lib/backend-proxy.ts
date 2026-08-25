@@ -1,24 +1,69 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getAccessToken } from "@/lib/auth";
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, getAccessToken } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const isProd = process.env.NODE_ENV === "production";
+
+async function attemptBackendRefresh(): Promise<{ accessToken: string; refreshToken?: string } | null> {
+  try {
+    const cookieStore = await cookies();
+    const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
+    if (!refreshToken) return null;
+
+    const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return { accessToken: data.access_token, refreshToken: data.refresh_token };
+  } catch {
+    return null;
+  }
+}
+
+function applyRefreshedCookies(response: NextResponse, refreshed: { accessToken: string; refreshToken?: string }) {
+  response.cookies.set(ACCESS_TOKEN_COOKIE, refreshed.accessToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+  if (refreshed.refreshToken) {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, refreshed.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+  }
+}
 
 /**
- * Shared body for API route handlers that just forward a request to FastAPI
- * with the bearer token pulled from the httpOnly session cookie, and relay
- * the backend's status code + JSON body back verbatim. Used by client
- * components that can't hold the token themselves (see TECHNICAL_SPEC.md §8) —
- * server components fetch the backend directly with apiFetch instead, since
- * they already have server-side access to the cookie.
+ * Shared body for API route handlers that forwards a request to FastAPI
+ * with the bearer token pulled from the session cookie.
+ * If expired (401), automatically attempts silent refresh and retries once.
  */
 export async function proxyToBackend(
   path: string,
   init: (RequestInit & { search?: URLSearchParams }) = {},
 ): Promise<NextResponse> {
-  const token = await getAccessToken();
+  let token = await getAccessToken();
+  let refreshedTokens: { accessToken: string; refreshToken?: string } | null = null;
+
   if (!token) {
-    return NextResponse.json({ error: "Not authenticated", detail: "Not authenticated" }, { status: 401 });
+    refreshedTokens = await attemptBackendRefresh();
+    if (refreshedTokens) {
+      token = refreshedTokens.accessToken;
+    } else {
+      return NextResponse.json({ error: "Not authenticated", detail: "Not authenticated" }, { status: 401 });
+    }
   }
 
   const { search, headers, ...rest } = init;
@@ -26,18 +71,29 @@ export async function proxyToBackend(
   const targetUrl = `${API_BASE_URL}${path}${query}`;
 
   try {
-    const resp = await fetch(targetUrl, {
+    let resp = await fetch(targetUrl, {
       ...rest,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...headers },
       cache: "no-store",
     });
 
-    // A 204 (e.g. DELETE /admin/roles/{id}) has no body — constructing a
-    // NextResponse.json() with one throws ("Response with null body status
-    // cannot have body"), which without this check surfaces as an opaque 500
-    // to the client instead of the backend's real 204.
+    // Auto-refresh and retry once on 401
+    if (resp.status === 401 && !refreshedTokens) {
+      refreshedTokens = await attemptBackendRefresh();
+      if (refreshedTokens) {
+        token = refreshedTokens.accessToken;
+        resp = await fetch(targetUrl, {
+          ...rest,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...headers },
+          cache: "no-store",
+        });
+      }
+    }
+
     if (resp.status === 204) {
-      return new NextResponse(null, { status: 204 });
+      const response = new NextResponse(null, { status: 204 });
+      if (refreshedTokens) applyRefreshedCookies(response, refreshedTokens);
+      return response;
     }
 
     const rawText = await resp.text();
@@ -64,7 +120,9 @@ export async function proxyToBackend(
       console.error(`[backend-proxy] Error ${resp.status} from ${targetUrl}:`, body);
     }
 
-    return NextResponse.json(body, { status: resp.status });
+    const response = NextResponse.json(body, { status: resp.status });
+    if (refreshedTokens) applyRefreshedCookies(response, refreshedTokens);
+    return response;
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error(`[backend-proxy] Network failure contacting backend at ${targetUrl}:`, err);

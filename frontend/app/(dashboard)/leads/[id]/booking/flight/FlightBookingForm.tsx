@@ -41,11 +41,24 @@ export default function FlightBookingForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await resp.json();
+      const body = await resp.json().catch(() => ({}));
       setSubmitting(false);
 
       if (!resp.ok) {
-        setError(typeof body.detail === "string" ? body.detail : "Could not save flight booking");
+        let msg = "Could not save flight booking";
+        if (typeof body.detail === "string") {
+          msg = body.detail;
+        } else if (Array.isArray(body.detail)) {
+          msg = body.detail
+            .map((d: { msg?: string; loc?: string[] }) => {
+              const field = d.loc && d.loc.length ? d.loc[d.loc.length - 1] : "";
+              return field ? `${field.replace(/_/g, " ")}: ${d.msg}` : d.msg || JSON.stringify(d);
+            })
+            .join(" • ");
+        } else if (body.message) {
+          msg = body.message;
+        }
+        setError(msg);
         return;
       }
 

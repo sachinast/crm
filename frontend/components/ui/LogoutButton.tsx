@@ -13,6 +13,10 @@ export default function LogoutButton() {
     } catch {
       // Ignore if not checked in or already checked out
     }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("crm_access_token");
+      localStorage.removeItem("crm_refresh_token");
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
