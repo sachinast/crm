@@ -20,8 +20,8 @@ export interface CardValidationResult {
  * Standard Luhn (MOD 10) Checksum Algorithm
  */
 export function validateLuhn(rawNumber: string): boolean {
-  const digits = rawNumber.replace(/\D/g, "");
-  if (digits.length < 13 || digits.length > 19) return false;
+  const digits = rawNumber.replace(/\D/g, "").slice(0, 16);
+  if (digits.length < 13 || digits.length > 16) return false;
 
   let sum = 0;
   let shouldDouble = false;
@@ -45,7 +45,7 @@ export function validateLuhn(rawNumber: string): boolean {
  * Detects card network by IIN / BIN prefix ranges
  */
 export function detectCardBrand(rawNumber: string): CardBrand {
-  const digits = rawNumber.replace(/\D/g, "");
+  const digits = rawNumber.replace(/\D/g, "").slice(0, 16);
   if (!digits) return "Unknown";
 
   // Visa: starts with 4
@@ -73,7 +73,7 @@ export function detectCardBrand(rawNumber: string): CardBrand {
  * Validates Expiry Date (MM/YY or MM/YYYY)
  */
 export function validateExpiry(expiryStr: string): { isValid: boolean; isExpired: boolean; error?: string } {
-  const clean = expiryStr.replace(/\D/g, "");
+  const clean = expiryStr.replace(/\D/g, "").slice(0, 4);
   if (!clean || clean.length < 4) {
     return { isValid: false, isExpired: false, error: clean.length > 0 ? "Incomplete date (MM/YY)" : undefined };
   }
@@ -122,26 +122,27 @@ export function validateCVV(cvv: string, brand: CardBrand = "Unknown"): { isVali
 }
 
 /**
- * Comprehensive Card Validator
+ * Comprehensive Card Validator (Enforcing Max 16 Digits)
  */
 export function validateCardDetails(
   cardNumber: string,
   cardExpiry: string,
   cvv: string
 ): CardValidationResult {
-  const cleanNum = cardNumber.replace(/\D/g, "");
+  const cleanNum = cardNumber.replace(/\D/g, "").slice(0, 16);
   const brand = detectCardBrand(cleanNum);
+  const expectedLen = brand === "Amex" ? 15 : 16;
 
   let isValidNumber = false;
   let numberError: string | undefined;
 
-  if (cleanNum.length >= 13) {
+  if (cleanNum.length === expectedLen || (brand === "Unknown" && cleanNum.length >= 13 && cleanNum.length <= 16)) {
     isValidNumber = validateLuhn(cleanNum);
     if (!isValidNumber) {
-      numberError = "Invalid card number (checksum failed)";
+      numberError = "Invalid card number (Luhn checksum failed)";
     }
   } else if (cleanNum.length > 0) {
-    numberError = "Card number is too short";
+    numberError = `Card number must be ${expectedLen} digits (${cleanNum.length}/${expectedLen})`;
   }
 
   const expiryRes = validateExpiry(cardExpiry);

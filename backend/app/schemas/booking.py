@@ -8,7 +8,17 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+def _validate_card_digits(v: str | None) -> str | None:
+    if not v:
+        return v
+    digits_only = "".join(filter(str.isdigit, v))
+    if len(digits_only) > 16:
+        raise ValueError("Credit card number cannot exceed 16 digits")
+    return v.strip()
+
 
 # --- Car ---------------------------------------------------------------
 
@@ -50,6 +60,11 @@ class CarBookingCreate(BaseModel):
     platform_amount: float | None = 0
     remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
 
     @model_validator(mode="after")
     def _return_after_pickup(self) -> "CarBookingCreate":
@@ -95,6 +110,11 @@ class CarBookingUpdate(BaseModel):
     platform_amount: float | None = None
     remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
+
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
 
 
 class CarBookingRead(BaseModel):
@@ -183,6 +203,11 @@ class HotelBookingCreate(BaseModel):
     remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
+
     @model_validator(mode="after")
     def _checkout_after_checkin(self) -> "HotelBookingCreate":
         if self.check_out_date <= self.check_in_date:
@@ -226,6 +251,11 @@ class HotelBookingUpdate(BaseModel):
     platform_amount: float | None = None
     remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
+
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
 
 
 class HotelBookingRead(BaseModel):
@@ -331,6 +361,11 @@ class FlightBookingCreate(BaseModel):
     remarks_history: list[dict[str, Any]] | None = Field(default_factory=list)
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
+
 
 class FlightBookingUpdate(BaseModel):
     booking_reference: str | None = None
@@ -386,6 +421,11 @@ class FlightBookingUpdate(BaseModel):
     platform_amount: float | None = None
     remarks_history: list[dict[str, Any]] | None = None
     custom_fields: dict[str, Any] | None = None
+
+    @field_validator("card_number")
+    @classmethod
+    def _validate_card_number(cls, v: str | None) -> str | None:
+        return _validate_card_digits(v)
 
 
 class FlightBookingRead(BaseModel):

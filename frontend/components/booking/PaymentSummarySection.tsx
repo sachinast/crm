@@ -130,7 +130,7 @@ export default function PaymentSummarySection({
                     required
                     value={cardNumber}
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "").slice(0, 19);
+                      const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
                       const brand = detectCardBrand(raw);
                       
                       // Amex format (4-6-5), others (4-4-4-4)
@@ -145,7 +145,7 @@ export default function PaymentSummarySection({
 
                       onChange({ card_number: formatted, card_type: brand !== "Unknown" ? brand : data.card_type });
                     }}
-                    className={`input font-mono font-medium pr-28 ${
+                    className={`input font-mono font-medium pr-32 ${
                       rawCardDigits.length >= 13
                         ? validation.isValidNumber
                           ? "border-emerald-500/50 focus:border-emerald-500"
@@ -153,10 +153,10 @@ export default function PaymentSummarySection({
                         : ""
                     }`}
                     placeholder="•••• •••• •••• ••••"
-                    maxLength={23}
+                    maxLength={19}
                   />
 
-                  {/* Card Brand Badge & Valid Checkmark */}
+                  {/* Card Brand Badge & Status */}
                   <div className="absolute right-2 flex items-center gap-1.5 pointer-events-none">
                     {validation.brand !== "Unknown" && (
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider border ${brandStyle.bg} ${brandStyle.text} ${brandStyle.border}`}>
@@ -173,12 +173,26 @@ export default function PaymentSummarySection({
                   </div>
                 </div>
               </Field>
-              {rawCardDigits.length >= 13 && !validation.isValidNumber && (
-                <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
-                  <AlertCircle size={13} />
-                  <span>Invalid card number (Checksum failed. Check for typos)</span>
-                </p>
-              )}
+
+              {/* Digit Counter & Validation Messages */}
+              <div className="mt-1 flex items-center justify-between text-xs">
+                {validation.numberError && rawCardDigits.length > 0 ? (
+                  <p className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
+                    <AlertCircle size={13} />
+                    <span>{validation.numberError}</span>
+                  </p>
+                ) : validation.isValidNumber ? (
+                  <p className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 animate-fadeIn">
+                    <Check size={13} />
+                    <span>Valid card number ({validation.brand})</span>
+                  </p>
+                ) : (
+                  <span className="text-ink-muted">Max 16 digits allowed</span>
+                )}
+                <span className="font-mono text-ink-muted text-[11px] ml-auto">
+                  {rawCardDigits.length} / {validation.brand === "Amex" ? 15 : 16} digits
+                </span>
+              </div>
             </div>
           </div>
 
@@ -218,7 +232,7 @@ export default function PaymentSummarySection({
                   )}
                 </div>
               </Field>
-              {validation.expiryError && (
+              {validation.expiryError && cardExpiry.length > 0 && (
                 <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                   <AlertCircle size={13} />
                   <span>{validation.expiryError}</span>
@@ -235,7 +249,8 @@ export default function PaymentSummarySection({
                     maxLength={validation.brand === "Amex" ? 4 : 3}
                     value={cardCvv}
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "").slice(0, validation.brand === "Amex" ? 4 : 3);
+                      const maxLen = validation.brand === "Amex" ? 4 : 3;
+                      const raw = e.target.value.replace(/\D/g, "").slice(0, maxLen);
                       onChange({ cvv: raw });
                     }}
                     className={`input font-mono ${

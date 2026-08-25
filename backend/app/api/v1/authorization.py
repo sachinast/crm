@@ -98,7 +98,7 @@ async def send_lead_auth_email(
         card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
         customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
 
-        agent_name = current_user.full_name or "E-Booking Desk Specialist"
+        agent_name = (getattr(current_user, "name", "") if current_user else "") or (getattr(current_user, "email", "") if current_user else "") or "E-Booking Desk Specialist"
         service_type_str = lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car")
 
         # 4. Generate HTML content

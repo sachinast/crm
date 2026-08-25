@@ -331,7 +331,7 @@ function EditLeadModal({
           service_type: serviceType,
         });
         onClose();
-        router.refresh();
+        router.push(`/leads/${lead.id}/booking/${serviceType || "car"}`);
       } else {
         const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
         setError(detail || "Failed to update lead details.");
@@ -454,17 +454,17 @@ function EditLeadModal({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-hairline">
             <button type="button" onClick={onClose} disabled={loading} className="btn-ghost btn-sm">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !reason.trim()}
-              className="btn-primary btn-sm flex items-center gap-1.5"
+              className="btn-primary btn-sm flex items-center gap-1.5 shadow-sm"
             >
-              <PencilLine size={13} />
-              <span>{loading ? "Saving Changes…" : "Save Changes"}</span>
+              <span>{loading ? "Saving & Redirecting…" : "Save & Open Booking Form"}</span>
+              <ArrowRight size={13} />
             </button>
           </div>
         </form>
