@@ -274,8 +274,9 @@ export default function CarBookingFields({
             />
           </Field>
 
-          <Field label="Driver Full Name">
+          <Field label="Driver Full Name" required>
             <input
+              required
               value={value.driver_name ?? ""}
               onChange={(e) => onChange({ ...value, driver_name: e.target.value })}
               className="input"
@@ -283,8 +284,9 @@ export default function CarBookingFields({
             />
           </Field>
 
-          <Field label="Driver Phone / Mobile">
+          <Field label="Driver Phone / Mobile" required>
             <input
+              required
               type="tel"
               inputMode="tel"
               value={value.driver_phone ?? ""}
@@ -297,8 +299,9 @@ export default function CarBookingFields({
             />
           </Field>
 
-          <Field label="Driver License / ID">
+          <Field label="Driver License / ID" required>
             <input
+              required
               value={value.driver_license ?? ""}
               onChange={(e) => onChange({ ...value, driver_license: e.target.value })}
               className="input font-mono"

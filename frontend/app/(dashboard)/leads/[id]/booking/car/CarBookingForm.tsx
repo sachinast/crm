@@ -45,8 +45,58 @@ export default function CarBookingForm({
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSaveBooking(sendEmail: boolean = false) {
-    setSubmitting(true);
     setError(null);
+
+    if (!form.booking_platform?.trim()) {
+      setError("Booking Platform is required");
+      return;
+    }
+    if (!form.car_provider?.trim()) {
+      setError("Car Provider is required");
+      return;
+    }
+    if (!form.vehicle_type?.trim()) {
+      setError("Vehicle Type is required");
+      return;
+    }
+    if (!form.transmission?.trim()) {
+      setError("Transmission is required");
+      return;
+    }
+    if (!form.renter_dob?.trim()) {
+      setError("Renter Date of Birth is required");
+      return;
+    }
+    if (!form.driver_name?.trim()) {
+      setError("Driver Full Name is required");
+      return;
+    }
+    if (!form.driver_phone?.trim()) {
+      setError("Driver Phone / Mobile is required");
+      return;
+    }
+    if (!form.driver_license?.trim()) {
+      setError("Driver License / ID is required");
+      return;
+    }
+    if (!form.pickup_location?.trim()) {
+      setError("Pick-up Location is required");
+      return;
+    }
+    if (!form.pickup_datetime?.trim()) {
+      setError("Pick-up Date & Time is required");
+      return;
+    }
+    if (!form.return_location?.trim()) {
+      setError("Drop-off / Return Location is required");
+      return;
+    }
+    if (!form.return_datetime?.trim()) {
+      setError("Return Date & Time is required");
+      return;
+    }
+
+    setSubmitting(true);
 
     const payload = {
       ...form,

@@ -280,13 +280,78 @@ export default function NewLeadPage() {
 
   async function handleSubmit(event?: FormEvent) {
     if (event) event.preventDefault();
-    setSubmitting(true);
     setError(null);
+
+    if (serviceType === "car") {
+      if (!carForm.booking_platform?.trim()) {
+        setError("Booking Platform is required");
+        return;
+      }
+      if (!carForm.car_provider?.trim()) {
+        setError("Car Provider is required");
+        return;
+      }
+      if (!carForm.vehicle_type?.trim()) {
+        setError("Vehicle Type is required");
+        return;
+      }
+      if (!carForm.transmission?.trim()) {
+        setError("Transmission is required");
+        return;
+      }
+      if (!carForm.renter_dob?.trim()) {
+        setError("Renter Date of Birth is required");
+        return;
+      }
+      const driverName = carForm.driver_name?.trim() || name.trim();
+      if (!driverName) {
+        setError("Driver Full Name is required");
+        return;
+      }
+      const driverPhone = carForm.driver_phone?.trim() || phone.trim();
+      if (!driverPhone) {
+        setError("Driver Phone / Mobile is required");
+        return;
+      }
+      if (!carForm.driver_license?.trim()) {
+        setError("Driver License / ID is required");
+        return;
+      }
+      if (!carForm.pickup_location?.trim()) {
+        setError("Pick-up Location is required");
+        return;
+      }
+      if (!carForm.pickup_datetime?.trim()) {
+        setError("Pick-up Date & Time is required");
+        return;
+      }
+      if (!carForm.return_location?.trim()) {
+        setError("Drop-off / Return Location is required");
+        return;
+      }
+      if (!carForm.return_datetime?.trim()) {
+        setError("Return Date & Time is required");
+        return;
+      }
+    }
+
+    if (showDuplicateWarning && !hasOverride) {
+      setError("Duplicate contact detected. A lead with this email or phone already exists in CRM PRO. Provide an override reason to proceed or open the existing lead.");
+      return;
+    }
+
+    setSubmitting(true);
 
     const resp = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, email, custom_fields: customFields }),
+      body: JSON.stringify({
+        name,
+        phone,
+        email,
+        custom_fields: customFields,
+        override_reason: overrideReason.trim() || undefined,
+      }),
     });
     const body: LeadResponse = await resp.json().catch(() => ({}));
 
@@ -294,29 +359,6 @@ export default function NewLeadPage() {
       setError((body as unknown as { detail?: string }).detail ?? "Could not create lead");
       setSubmitting(false);
       return;
-    }
-
-    if (body.is_duplicate && !hasOverride) {
-      const dupResp = await fetch(`/api/leads/${body.id}/duplicate-check`);
-      const dupBody = await dupResp.json().catch(() => ({ candidates: [] }));
-      setPendingCandidates(dupBody.candidates ?? []);
-      setPendingConfirmLead(body);
-      setSubmitting(false);
-      return;
-    }
-
-    if (body.is_duplicate && hasOverride) {
-      const confirmResp = await fetch(`/api/leads/${body.id}/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: overrideReason }),
-      });
-      if (!confirmResp.ok) {
-        const confirmBody = await confirmResp.json().catch(() => ({}));
-        setError(confirmBody.detail ?? "Could not confirm duplicate");
-        setSubmitting(false);
-        return;
-      }
     }
 
     await finishServiceTypeAndBooking(body.id, sendEmailOnSubmit);
@@ -501,16 +543,25 @@ export default function NewLeadPage() {
             </div>
 
             {showDuplicateWarning && (
-              <div className="alert-warning flex flex-col gap-2">
-                <div className="flex items-start gap-2 font-semibold">
-                  <AlertTriangle size={17} className="mt-0.5 shrink-0" />
-                  <span>This contact is already on file. Provide an override reason to proceed:</span>
+              <div className="alert-warning flex flex-col gap-2.5 rounded-xl p-3.5 border border-amber-500/30 bg-amber-500/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 font-bold text-amber-700 dark:text-amber-300 text-xs">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Duplicate Contact Detected: A lead with this email or phone number is already registered in CRM PRO. Duplicate creation is blocked unless an override reason is provided:</span>
+                  </div>
+                  <Link
+                    href="/leads"
+                    className="text-xs font-bold text-accent hover:underline shrink-0 flex items-center gap-1"
+                  >
+                    <span>View Leads Queue</span>
+                    <ArrowRight size={13} />
+                  </Link>
                 </div>
                 <input
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
-                  placeholder="e.g. different customer, corporate group booking"
-                  className="input"
+                  placeholder="Enter mandatory override reason (e.g. corporate group, repeat client with separate booking)…"
+                  className="input text-xs"
                 />
               </div>
             )}
