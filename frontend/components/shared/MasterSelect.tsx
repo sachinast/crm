@@ -104,11 +104,11 @@ export default function MasterSelect({
       }}
       className={className}
     >
-      <option value="" disabled={required}>
+      <option value="" disabled={required} hidden={Boolean(safeValue)}>
         {placeholder ?? "Select…"}
       </option>
       {safeValue && !allDropdownOptions.includes(safeValue) && (
-        <option value={safeValue}>
+        <option value={safeValue} hidden>
           {safeValue}
         </option>
       )}
