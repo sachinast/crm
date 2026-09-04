@@ -96,6 +96,14 @@ export default function CarBookingForm({
       return;
     }
 
+    const hasRemarks =
+      (form.remarks_history && form.remarks_history.length > 0) ||
+      (form.remarks && form.remarks.trim().length > 0);
+    if (!hasRemarks) {
+      setError("Remarks is mandatory. Please enter at least one remark in the Remarks section.");
+      return;
+    }
+
     setSubmitting(true);
 
     const payload = {

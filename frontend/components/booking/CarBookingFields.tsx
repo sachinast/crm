@@ -68,7 +68,7 @@ export const EMPTY_CAR_BOOKING: CarBookingValue = {
   booking_source: "ZAD CARS",
   transaction_type: "New",
   transaction_status: "Pending",
-  status: "Authorization pending",
+  status: "Authorisation pending",
   car_provider: "",
   car_model: "",
   driver_name: "",
@@ -94,7 +94,7 @@ export const EMPTY_CAR_BOOKING: CarBookingValue = {
   billing_address: "",
   cvv: "",
   card_expiry: "",
-  charge_name: "Car Rental Base + Taxes",
+  charge_name: "ZAD CARS",
   charge_amount: 0,
   company_amount: 0,
   platform_amount: 0,
@@ -139,8 +139,15 @@ export default function CarBookingFields({
   }
 
   useEffect(() => {
+    const updates: Partial<CarBookingValue> = {};
     if (!value.booking_reference) {
-      onChange({ ...value, booking_reference: generateRandomCRMID() });
+      updates.booking_reference = generateRandomCRMID();
+    }
+    if (!value.charge_name && value.booking_source) {
+      updates.charge_name = value.booking_source;
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...value, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -185,7 +192,7 @@ export default function CarBookingFields({
               fieldKey="booking_source"
               optionType="master"
               value={value.booking_source}
-              onChange={(v) => onChange({ ...value, booking_source: v })}
+              onChange={(v) => onChange({ ...value, booking_source: v, charge_name: v })}
               placeholder="Select Booking Source…"
             />
           </Field>
@@ -454,8 +461,14 @@ export default function CarBookingFields({
                   type="number"
                   min={0}
                   step="0.01"
-                  value={value.prepaid_amount}
-                  onChange={(e) => handleAmountChange(Number(e.target.value), value.pay_at_counter_amount)}
+                  value={value.prepaid_amount === 0 ? "" : value.prepaid_amount}
+                  placeholder="0.00"
+                  onChange={(e) =>
+                    handleAmountChange(
+                      e.target.value === "" ? 0 : Number(e.target.value),
+                      value.pay_at_counter_amount,
+                    )
+                  }
                   className="input font-mono font-bold"
                 />
               </Field>
@@ -465,8 +478,14 @@ export default function CarBookingFields({
                   type="number"
                   min={0}
                   step="0.01"
-                  value={value.pay_at_counter_amount}
-                  onChange={(e) => handleAmountChange(value.prepaid_amount, Number(e.target.value))}
+                  value={value.pay_at_counter_amount === 0 ? "" : value.pay_at_counter_amount}
+                  placeholder="0.00"
+                  onChange={(e) =>
+                    handleAmountChange(
+                      value.prepaid_amount,
+                      e.target.value === "" ? 0 : Number(e.target.value),
+                    )
+                  }
                   className="input font-mono font-bold"
                 />
               </Field>
@@ -474,9 +493,9 @@ export default function CarBookingFields({
               <Field label="Total Rental Amount ($) (Auto)">
                 <input
                   readOnly
-                  type="number"
-                  step="0.01"
-                  value={totalBookingCost.toFixed(2)}
+                  type="text"
+                  value={totalBookingCost > 0 ? totalBookingCost.toFixed(2) : ""}
+                  placeholder="0.00"
                   className="input font-mono font-extrabold bg-accent-soft text-accent cursor-not-allowed"
                 />
               </Field>

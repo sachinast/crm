@@ -107,6 +107,11 @@ export default function MasterSelect({
       <option value="" disabled={required}>
         {placeholder ?? "Select…"}
       </option>
+      {safeValue && !allDropdownOptions.includes(safeValue) && (
+        <option value={safeValue}>
+          {safeValue}
+        </option>
+      )}
       {allDropdownOptions.map((opt) => (
         <option key={opt} value={opt}>
           {opt}
