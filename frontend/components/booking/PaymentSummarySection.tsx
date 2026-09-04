@@ -85,6 +85,20 @@ export default function PaymentSummarySection({
     setNewRemark("");
   }
 
+  function handlePrepareAction(action: () => void) {
+    if (newRemark.trim()) {
+      const item: RemarkHistoryItem = {
+        s_no: remarksList.length + 1,
+        remark: newRemark.trim(),
+        entered_by: agentName,
+        entered_on: new Date().toISOString(),
+      };
+      onChange({ remarks_history: [...remarksList, item] });
+      setNewRemark("");
+    }
+    action();
+  }
+
   return (
     <div className="rounded-2xl border border-hairline bg-surface shadow-sm overflow-hidden">
       {/* Header Bar */}
@@ -321,8 +335,9 @@ export default function PaymentSummarySection({
                     type="number"
                     min={0}
                     step="0.01"
-                    value={data.company_amount ?? 0}
-                    onChange={(e) => onChange({ company_amount: Number(e.target.value) })}
+                    value={data.company_amount ? data.company_amount : ""}
+                    placeholder="0.00"
+                    onChange={(e) => onChange({ company_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="input font-mono font-medium"
                   />
                 </Field>
@@ -332,8 +347,9 @@ export default function PaymentSummarySection({
                     type="number"
                     min={0}
                     step="0.01"
-                    value={data.platform_amount ?? 0}
-                    onChange={(e) => onChange({ platform_amount: Number(e.target.value) })}
+                    value={data.platform_amount ? data.platform_amount : ""}
+                    placeholder="0.00"
+                    onChange={(e) => onChange({ platform_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="input font-mono font-bold text-ink"
                   />
                 </Field>
@@ -344,9 +360,9 @@ export default function PaymentSummarySection({
                   <Field label="Total Amount">
                     <input
                       readOnly
-                      type="number"
-                      step="0.01"
-                      value={totalCalculatedAmount.toFixed(2)}
+                      type="text"
+                      value={totalCalculatedAmount > 0 ? totalCalculatedAmount.toFixed(2) : ""}
+                      placeholder="0.00"
                       className="input font-mono font-extrabold text-accent bg-surface-sunken border-hairline cursor-not-allowed text-base"
                     />
                   </Field>
@@ -357,7 +373,9 @@ export default function PaymentSummarySection({
             {/* Right Remarks Table & Input (7 cols) */}
             <div className="lg:col-span-7 space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-ink-muted">Remarks</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                  Remarks <span className="text-rose-500">*</span>
+                </label>
                 <div className="flex gap-2">
                   <input
                     value={newRemark}
@@ -433,7 +451,7 @@ export default function PaymentSummarySection({
                   onClick={(e) => {
                     const form = e.currentTarget.closest("form");
                     if (form && !form.reportValidity()) return;
-                    onSaveAndEmail();
+                    handlePrepareAction(onSaveAndEmail);
                   }}
                   className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-4 border-accent/40 text-accent hover:bg-accent-soft"
                 >
@@ -449,7 +467,7 @@ export default function PaymentSummarySection({
                   onClick={(e) => {
                     const form = e.currentTarget.closest("form");
                     if (form && !form.reportValidity()) return;
-                    onSave();
+                    handlePrepareAction(onSave);
                   }}
                   className="btn-primary flex items-center gap-1.5 text-xs py-2 px-5 shadow-sm"
                 >

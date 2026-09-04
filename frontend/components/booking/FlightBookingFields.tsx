@@ -159,14 +159,14 @@ export const EMPTY_FLIGHT_BOOKING: FlightBookingValue = {
   title: "Mr",
   class_of_service: "Economy",
   add_on_services: "",
-  status: "Authorization pending",
+  status: "Authorisation pending",
   card_holder_name: "",
   card_number: "",
   card_type: "Visa",
   billing_address: "",
   cvv: "",
   card_expiry: "",
-  charge_name: "Flight Airfare + Ancillaries",
+  charge_name: "Flight Ticket Desk",
   charge_amount: 15,
   company_amount: 15,
   platform_amount: 0,
@@ -207,8 +207,15 @@ export default function FlightBookingFields({
   const specialNotesList = value.special_notes ?? [];
 
   useEffect(() => {
+    const updates: Partial<FlightBookingValue> = {};
     if (!value.booking_reference) {
-      onChange({ ...value, booking_reference: generateRandomCRMID() });
+      updates.booking_reference = generateRandomCRMID();
+    }
+    if (!value.charge_name && value.booking_source) {
+      updates.charge_name = value.booking_source;
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...value, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -372,7 +379,7 @@ export default function FlightBookingFields({
                 fieldKey="booking_source"
                 optionType="master"
                 value={value.booking_source}
-                onChange={(v) => onChange({ ...value, booking_source: v })}
+                onChange={(v) => onChange({ ...value, booking_source: v, charge_name: v })}
                 placeholder="Select Booking Source…"
               />
             </Field>
@@ -720,8 +727,9 @@ export default function FlightBookingFields({
                 type="number"
                 min={0}
                 step="0.01"
-                value={value.ticket_cost ?? 0}
-                onChange={(e) => recalculateFare({ ticket_cost: Number(e.target.value) })}
+                value={value.ticket_cost ? value.ticket_cost : ""}
+                placeholder="0.00"
+                onChange={(e) => recalculateFare({ ticket_cost: e.target.value === "" ? 0 : Number(e.target.value) })}
                 className="input font-mono font-bold text-ink"
               />
             </Field>
@@ -731,8 +739,9 @@ export default function FlightBookingFields({
                 type="number"
                 min={0}
                 step="0.01"
-                value={value.mco_charge ?? 0}
-                onChange={(e) => recalculateFare({ mco_charge: Number(e.target.value) })}
+                value={value.mco_charge ? value.mco_charge : ""}
+                placeholder="0.00"
+                onChange={(e) => recalculateFare({ mco_charge: e.target.value === "" ? 0 : Number(e.target.value) })}
                 className="input font-mono font-bold text-ink"
               />
             </Field>
@@ -742,8 +751,9 @@ export default function FlightBookingFields({
                 type="number"
                 min={0}
                 step="0.01"
-                value={value.merchant_fee ?? 15}
-                onChange={(e) => recalculateFare({ merchant_fee: Number(e.target.value) })}
+                value={value.merchant_fee ? value.merchant_fee : ""}
+                placeholder="0.00"
+                onChange={(e) => recalculateFare({ merchant_fee: e.target.value === "" ? 0 : Number(e.target.value) })}
                 className="input font-mono font-bold text-ink"
               />
             </Field>
@@ -753,8 +763,9 @@ export default function FlightBookingFields({
                 type="number"
                 min={0}
                 step="0.01"
-                value={value.cvv_fee ?? 0}
-                onChange={(e) => recalculateFare({ cvv_fee: Number(e.target.value) })}
+                value={value.cvv_fee ? value.cvv_fee : ""}
+                placeholder="0.00"
+                onChange={(e) => recalculateFare({ cvv_fee: e.target.value === "" ? 0 : Number(e.target.value) })}
                 className="input font-mono font-bold text-ink"
               />
             </Field>

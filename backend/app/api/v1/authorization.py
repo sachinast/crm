@@ -98,6 +98,14 @@ async def send_lead_auth_email(
         card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
         customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
 
+        vehicle_type = (getattr(booking, "vehicle_type", "") if booking else "") or "Economy"
+        car_model = (getattr(booking, "car_model", "") if booking else "") or ""
+        driver_name = (getattr(booking, "driver_name", "") if booking else "") or lead.name
+        pickup_datetime = getattr(booking, "pickup_datetime", None) if booking else None
+        pickup_location = (getattr(booking, "pickup_location", "") if booking else "") or ""
+        return_datetime = getattr(booking, "return_datetime", None) if booking else None
+        return_location = (getattr(booking, "return_location", "") if booking else "") or ""
+
         agent_name = (getattr(current_user, "name", "") if current_user else "") or (getattr(current_user, "email", "") if current_user else "") or "E-Booking Desk Specialist"
         service_type_str = lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car")
 
@@ -112,6 +120,13 @@ async def send_lead_auth_email(
             agency_reference=agency_ref,
             booking_platform=booking_platform,
             car_provider=car_provider,
+            driver_name=driver_name,
+            vehicle_type=vehicle_type,
+            car_model=car_model,
+            pickup_datetime=pickup_datetime,
+            pickup_location=pickup_location,
+            return_datetime=return_datetime,
+            return_location=return_location,
             card_type=card_type,
             card_number=card_num,
             card_holder_name=card_holder,

@@ -47,7 +47,7 @@ export default async function AuthorizePage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const bookingRef = String(summary.booking.booking_reference || `EC${id.slice(0, 6).toUpperCase()}`);
+  const bookingRef = String(summary.booking.booking_reference || `CRM-${id.slice(0, 6).toUpperCase()}`);
   const serviceTitle = summary.service_type.charAt(0).toUpperCase() + summary.service_type.slice(1);
   const isAlreadyApproved = summary.status === "client_approved" || summary.status === "card_charged" || summary.status === "transferred_to_billing";
 
