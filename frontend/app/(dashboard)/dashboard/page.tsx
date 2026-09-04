@@ -20,11 +20,38 @@ interface LeaderboardEntry {
   bookings_count: number;
 }
 
-interface DashboardSummary {
+export interface StatusLeadItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  status: string;
+  agent_id: string;
+  created_at: string;
+  updated_at: string;
+  status_changed_at: string;
+  time_diff: string;
+  time_diff_seconds: number;
+  sla_breached: boolean;
+}
+
+export interface StatusWidget {
+  status: string;
+  label: string;
+  count: number;
+  sla_breached_count: number;
+  leads: StatusLeadItem[];
+}
+
+export interface DashboardSummary {
   role: string;
   total_visible_leads: number;
   leads_by_status: Record<string, number>;
   recent_leads: LeadSummaryRow[];
+  status_widgets?: StatusWidget[] | null;
+  department_queue_count?: number | null;
+  department_queue_name?: string | null;
+  department_queue_status?: string | null;
   pending_qc_count: number | null;
   pending_payment_count: number | null;
   my_processed_revenue: number | null;

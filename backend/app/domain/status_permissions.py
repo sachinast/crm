@@ -13,6 +13,9 @@ from app.models.enums import BookingStatus
 from app.models.status import StatusRolePermission
 
 
+from app.models.rbac import Role
+
+
 async def get_settable_statuses(db: AsyncSession, role_id: uuid.UUID) -> set[BookingStatus]:
     """Every status this role is currently allowed to transition a lead TO.
     Fetched as one set rather than a per-status can_set() query, since the
@@ -20,12 +23,41 @@ async def get_settable_statuses(db: AsyncSession, role_id: uuid.UUID) -> set[Boo
     available-transitions endpoint) would otherwise issue one query per
     status.
     """
+    role = await db.get(Role, role_id)
+    if role and role.name in ("super_admin", "admin"):
+        return {s for s in BookingStatus if s != BookingStatus.client_approved}
+
     rows = await db.execute(
         select(StatusRolePermission.status).where(
             StatusRolePermission.role_id == role_id, StatusRolePermission.kind == "set_by"
         )
     )
-    return set(rows.scalars().all())
+    result = set(rows.scalars().all())
+
+    # Department workflow rules defined in technical spec & department state machine
+    if role and role.name == "agent":
+        result.update({
+            BookingStatus.transferred_to_billing,
+            BookingStatus.tag_cr_booking,
+            BookingStatus.tag_change_dep,
+            BookingStatus.tag_auditor,
+        })
+    elif role and role.name in ("cr_booking", "cs"):
+        result.update({
+            BookingStatus.tag_auditor,
+            BookingStatus.authorization_pending,
+        })
+    elif role and role.name == "change_dep":
+        result.update({
+            BookingStatus.tag_auditor,
+            BookingStatus.tag_cr_booking,
+        })
+    elif role and role.name in ("auditor", "qc"):
+        result.update({
+            BookingStatus.qc_done,
+            BookingStatus.tag_change_dep,
+        })
+    return result
 
 
 async def can_set(db: AsyncSession, target: BookingStatus, role_id: uuid.UUID) -> bool:

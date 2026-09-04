@@ -165,3 +165,16 @@ class StatusHistoryEntry(BaseModel):
     to_status: BookingStatus
     changed_by: uuid.UUID
     changed_at: datetime
+
+
+class ChangeEmailRequest(BaseModel):
+    to_email: EmailStr
+    subject: str = Field(min_length=1)
+    body: str = Field(min_length=1)
+    pdf_filename: str | None = None
+    pdf_base64: str | None = None
+    notify_admin: bool = True
+    notify_changes_user: bool = True
+    internal_notes: str | None = None
+
+

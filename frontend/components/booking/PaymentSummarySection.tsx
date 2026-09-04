@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { CreditCard, Minus, Plus, Mail, CheckCircle2, ArrowLeft, AlertCircle, Check, ShieldCheck } from "lucide-react";
 import Field from "@/components/shared/FormField";
-import { validateCardDetails, detectCardBrand, type CardBrand } from "@/lib/card-validator";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
+import { validateCardDetails, detectCardBrand, maskCardNumber, maskCardExpiry, type CardBrand } from "@/lib/card-validator";
 
 export interface RemarkHistoryItem {
   s_no: number;
@@ -44,6 +45,7 @@ export default function PaymentSummarySection({
   onBack,
   agentName = "Current Agent",
   submitting = false,
+  readOnly = false,
 }: {
   data: PaymentSummaryData;
   onChange: (updated: Partial<PaymentSummaryData>) => void;
@@ -52,6 +54,7 @@ export default function PaymentSummarySection({
   onBack?: () => void;
   agentName?: string;
   submitting?: boolean;
+  readOnly?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [newRemark, setNewRemark] = useState("");
@@ -72,6 +75,11 @@ export default function PaymentSummarySection({
 
   const rawCardDigits = cardNumber.replace(/\D/g, "");
   const brandStyle = BRAND_COLORS[validation.brand];
+
+  // Masked values for read-only view
+  const displayCardNumber = readOnly ? maskCardNumber(cardNumber, validation.brand) : cardNumber;
+  const displayCardExpiry = readOnly ? maskCardExpiry(cardExpiry) : cardExpiry;
+  const displayCvv = readOnly ? (cardCvv ? (validation.brand === "Amex" ? "••••" : "•••") : "—") : cardCvv;
 
   function handleAddRemark() {
     if (!newRemark.trim()) return;
@@ -108,7 +116,15 @@ export default function PaymentSummarySection({
             <CreditCard size={17} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-ink">Payment & Card Authorization Details</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-ink">Payment & Card Authorization Details</h3>
+              {readOnly && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                  <ShieldCheck size={12} />
+                  <span>Masked / Read-Only</span>
+                </span>
+              )}
+            </div>
             <p className="text-xs text-ink-muted">Encrypted payment verification, billing address, and transaction fee breakdown.</p>
           </div>
         </div>
@@ -127,23 +143,35 @@ export default function PaymentSummarySection({
         <div className="p-4 sm:p-6 space-y-6">
           {/* Card & Billing Information Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Billing Address" required>
-              <input
-                required
-                value={data.billing_address ?? ""}
-                onChange={(e) => onChange({ billing_address: e.target.value })}
-                className="input"
-                placeholder="Billing Street, City, State, ZIP"
-              />
+            <Field label="Billing Address" required={!readOnly}>
+              {readOnly ? (
+                <input
+                  readOnly
+                  disabled
+                  value={data.billing_address ?? ""}
+                  className="input bg-surface-sunken cursor-not-allowed border-hairline"
+                  placeholder="Billing Street, City, State, ZIP"
+                />
+              ) : (
+                <AddressAutocomplete
+                  value={data.billing_address ?? ""}
+                  onChange={(val) => onChange({ billing_address: val })}
+                  placeholder="Billing Street, City, State, ZIP"
+                  required
+                />
+              )}
             </Field>
 
             <div>
-              <Field label="Credit Card No." required>
+              <Field label="Credit Card No." required={!readOnly}>
                 <div className="relative flex items-center">
                   <input
-                    required
-                    value={cardNumber}
+                    required={!readOnly}
+                    readOnly={readOnly}
+                    disabled={readOnly}
+                    value={displayCardNumber}
                     onChange={(e) => {
+                      if (readOnly) return;
                       const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
                       const brand = detectCardBrand(raw);
                       
@@ -160,11 +188,13 @@ export default function PaymentSummarySection({
                       onChange({ card_number: formatted, card_type: brand !== "Unknown" ? brand : data.card_type });
                     }}
                     className={`input font-mono font-medium pr-32 ${
-                      rawCardDigits.length >= 13
-                        ? validation.isValidNumber
-                          ? "border-emerald-500/50 focus:border-emerald-500"
-                          : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
-                        : ""
+                      readOnly
+                        ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline select-all"
+                        : rawCardDigits.length >= 13
+                          ? validation.isValidNumber
+                            ? "border-emerald-500/50 focus:border-emerald-500"
+                            : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
+                          : ""
                     }`}
                     placeholder="•••• •••• •••• ••••"
                     maxLength={19}
@@ -177,12 +207,17 @@ export default function PaymentSummarySection({
                         {validation.brand}
                       </span>
                     )}
-                    {rawCardDigits.length >= 13 && (
+                    {!readOnly && rawCardDigits.length >= 13 && (
                       validation.isValidNumber ? (
                         <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
                       ) : (
                         <AlertCircle size={16} className="text-rose-600 dark:text-rose-400" />
                       )
+                    )}
+                    {readOnly && rawCardDigits.length >= 4 && (
+                      <span title="Card masked for security">
+                        <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      </span>
                     )}
                   </div>
                 </div>
@@ -190,7 +225,12 @@ export default function PaymentSummarySection({
 
               {/* Digit Counter & Validation Messages */}
               <div className="mt-1 flex items-center justify-between text-xs">
-                {validation.numberError && rawCardDigits.length > 0 ? (
+                {readOnly ? (
+                  <p className="flex items-center gap-1.5 font-medium text-ink-muted text-[11px]">
+                    <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Encrypted & masked in read-only mode</span>
+                  </p>
+                ) : validation.numberError && rawCardDigits.length > 0 ? (
                   <p className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                     <AlertCircle size={13} />
                     <span>{validation.numberError}</span>
@@ -203,21 +243,26 @@ export default function PaymentSummarySection({
                 ) : (
                   <span className="text-ink-muted">Max 16 digits allowed</span>
                 )}
-                <span className="font-mono text-ink-muted text-[11px] ml-auto">
-                  {rawCardDigits.length} / {validation.brand === "Amex" ? 15 : 16} digits
-                </span>
+                {!readOnly && (
+                  <span className="font-mono text-ink-muted text-[11px] ml-auto">
+                    {rawCardDigits.length} / {validation.brand === "Amex" ? 15 : 16} digits
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <Field label="Exp.Date." required>
+              <Field label="Exp.Date." required={!readOnly}>
                 <div className="relative flex items-center">
                   <input
-                    required
-                    value={cardExpiry}
+                    required={!readOnly}
+                    readOnly={readOnly}
+                    disabled={readOnly}
+                    value={displayCardExpiry}
                     onChange={(e) => {
+                      if (readOnly) return;
                       const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
                       let formatted = raw;
                       if (raw.length >= 2) {
@@ -226,16 +271,18 @@ export default function PaymentSummarySection({
                       onChange({ card_expiry: formatted });
                     }}
                     className={`input font-mono ${
-                      cardExpiry.length >= 4
-                        ? validation.isExpiryValid
-                          ? "border-emerald-500/50 focus:border-emerald-500"
-                          : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
-                        : ""
+                      readOnly
+                        ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline"
+                        : cardExpiry.length >= 4
+                          ? validation.isExpiryValid
+                            ? "border-emerald-500/50 focus:border-emerald-500"
+                            : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
+                          : ""
                     }`}
                     placeholder="MM/YY"
                     maxLength={5}
                   />
-                  {cardExpiry.length >= 4 && (
+                  {!readOnly && cardExpiry.length >= 4 && (
                     <div className="absolute right-2.5 pointer-events-none">
                       {validation.isExpiryValid ? (
                         <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
@@ -246,7 +293,7 @@ export default function PaymentSummarySection({
                   )}
                 </div>
               </Field>
-              {validation.expiryError && cardExpiry.length > 0 && (
+              {!readOnly && validation.expiryError && cardExpiry.length > 0 && (
                 <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                   <AlertCircle size={13} />
                   <span>{validation.expiryError}</span>
@@ -255,33 +302,38 @@ export default function PaymentSummarySection({
             </div>
 
             <div>
-              <Field label="CVV" required>
+              <Field label="CVV" required={!readOnly}>
                 <div className="relative flex items-center">
                   <input
-                    required
-                    type="password"
+                    required={!readOnly}
+                    readOnly={readOnly}
+                    disabled={readOnly}
+                    type={readOnly ? "text" : "password"}
                     maxLength={validation.brand === "Amex" ? 4 : 3}
-                    value={cardCvv}
+                    value={displayCvv}
                     onChange={(e) => {
+                      if (readOnly) return;
                       const maxLen = validation.brand === "Amex" ? 4 : 3;
                       const raw = e.target.value.replace(/\D/g, "").slice(0, maxLen);
                       onChange({ cvv: raw });
                     }}
                     className={`input font-mono ${
-                      cardCvv.length >= (validation.brand === "Amex" ? 4 : 3)
-                        ? "border-emerald-500/50 focus:border-emerald-500"
-                        : ""
+                      readOnly
+                        ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline"
+                        : cardCvv.length >= (validation.brand === "Amex" ? 4 : 3)
+                          ? "border-emerald-500/50 focus:border-emerald-500"
+                          : ""
                     }`}
                     placeholder={validation.brand === "Amex" ? "••••" : "•••"}
                   />
-                  {validation.isCvvValid && (
+                  {!readOnly && validation.isCvvValid && (
                     <div className="absolute right-2.5 pointer-events-none">
                       <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                   )}
                 </div>
               </Field>
-              {validation.cvvError && cardCvv.length > 0 && (
+              {!readOnly && validation.cvvError && cardCvv.length > 0 && (
                 <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                   <AlertCircle size={13} />
                   <span>{validation.cvvError}</span>
@@ -289,12 +341,14 @@ export default function PaymentSummarySection({
               )}
             </div>
 
-            <Field label="Card Holder Name" required>
+            <Field label="Card Holder Name" required={!readOnly}>
               <input
-                required
+                required={!readOnly}
+                readOnly={readOnly}
+                disabled={readOnly}
                 value={data.card_holder_name ?? ""}
-                onChange={(e) => onChange({ card_holder_name: e.target.value })}
-                className="input"
+                onChange={(e) => !readOnly && onChange({ card_holder_name: e.target.value })}
+                className={`input ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                 placeholder="Name on Card"
               />
             </Field>
@@ -305,52 +359,61 @@ export default function PaymentSummarySection({
             {/* Left Charge Breakdown (5 cols) */}
             <div className="lg:col-span-5 space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Charge Name" required>
+                <Field label="Charge Name" required={!readOnly}>
                   <input
+                    readOnly={readOnly}
+                    disabled={readOnly}
                     value={data.charge_name ?? ""}
-                    onChange={(e) => onChange({ charge_name: e.target.value })}
-                    className="input text-xs"
+                    onChange={(e) => !readOnly && onChange({ charge_name: e.target.value })}
+                    className={`input text-xs ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                     placeholder="e.g. Booking Charges"
                   />
                 </Field>
 
-                <Field label="Amount" required>
+                <Field label="Amount" required={!readOnly}>
                   <input
+                    readOnly={readOnly}
+                    disabled={readOnly}
                     type="number"
                     min={0}
                     step="0.01"
                     value={data.charge_amount ?? companyAmt}
                     onChange={(e) => {
+                      if (readOnly) return;
                       const v = Number(e.target.value);
                       onChange({ charge_amount: v, company_amount: v });
                     }}
-                    className="input font-mono font-bold text-ink"
+                    className={`input font-mono font-bold text-ink ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                   />
                 </Field>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Company Amount" required>
+                <Field label="Company Amount" required={!readOnly}>
                   <input
+                    readOnly={readOnly}
+                    disabled={readOnly}
                     type="number"
                     min={0}
                     step="0.01"
                     value={data.company_amount ? data.company_amount : ""}
                     placeholder="0.00"
-                    onChange={(e) => onChange({ company_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className="input font-mono font-medium"
+                    onChange={(e) => !readOnly && onChange({ company_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    className={`input font-mono font-medium ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                   />
                 </Field>
 
-                <Field label="Platform Amount" required>
+                <Field label="Platform Amount" required={!readOnly}>
                   <input
+                    readOnly={readOnly}
+                    disabled={readOnly}
                     type="number"
                     min={0}
                     step="0.01"
                     value={data.platform_amount ? data.platform_amount : ""}
                     placeholder="0.00"
-                    onChange={(e) => onChange({ platform_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className="input font-mono font-bold text-ink"
+                    onChange={(e) => !readOnly && onChange({ platform_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    className={`input font-mono font-bold text-ink ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                   />
                 </Field>
               </div>
@@ -372,27 +435,29 @@ export default function PaymentSummarySection({
 
             {/* Right Remarks Table & Input (7 cols) */}
             <div className="lg:col-span-7 space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-                  Remarks <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    value={newRemark}
-                    onChange={(e) => setNewRemark(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddRemark())}
-                    placeholder="Enter remark…"
-                    className="input text-xs flex-1"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddRemark}
-                    className="btn-primary text-xs py-1.5 px-4 rounded-xl font-semibold shrink-0 shadow-xs"
-                  >
-                    Add Remarks
-                  </button>
+              {!readOnly && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                    Remarks <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={newRemark}
+                      onChange={(e) => setNewRemark(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddRemark())}
+                      placeholder="Enter remark…"
+                      className="input text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddRemark}
+                      className="btn-primary text-xs py-1.5 px-4 rounded-xl font-semibold shrink-0 shadow-xs"
+                    >
+                      Add Remarks
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Remarks History Table */}
               <div className="rounded-xl border border-hairline overflow-hidden max-h-44 overflow-y-auto">
@@ -439,46 +504,49 @@ export default function PaymentSummarySection({
                 className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-4"
               >
                 <ArrowLeft size={14} />
-                <span>Back to Leads</span>
+                <span>Back to Lead Workspace</span>
               </button>
             ) : <div />}
 
-            <div className="flex items-center gap-3">
-              {onSaveAndEmail && (
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={(e) => {
-                    const form = e.currentTarget.closest("form");
-                    if (form && !form.reportValidity()) return;
-                    handlePrepareAction(onSaveAndEmail);
-                  }}
-                  className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-4 border-accent/40 text-accent hover:bg-accent-soft"
-                >
-                  <Mail size={14} />
-                  <span>{submitting ? "Processing…" : "Save & Send Auth Email"}</span>
-                </button>
-              )}
+            {!readOnly && (
+              <div className="flex items-center gap-3">
+                {onSaveAndEmail && (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      handlePrepareAction(onSaveAndEmail);
+                    }}
+                    className="btn-secondary flex items-center gap-1.5 text-xs py-2 px-4 border-accent/40 text-accent hover:bg-accent-soft"
+                  >
+                    <Mail size={14} />
+                    <span>{submitting ? "Processing…" : "Save & Send Auth Email"}</span>
+                  </button>
+                )}
 
-              {onSave && (
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={(e) => {
-                    const form = e.currentTarget.closest("form");
-                    if (form && !form.reportValidity()) return;
-                    handlePrepareAction(onSave);
-                  }}
-                  className="btn-primary flex items-center gap-1.5 text-xs py-2 px-5 shadow-sm"
-                >
-                  <CheckCircle2 size={14} className="text-white" />
-                  <span>{submitting ? "Saving Booking…" : "Save & Update Booking"}</span>
-                </button>
-              )}
-            </div>
+                {onSave && (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      handlePrepareAction(onSave);
+                    }}
+                    className="btn-primary flex items-center gap-1.5 text-xs py-2 px-5 shadow-sm"
+                  >
+                    <CheckCircle2 size={14} className="text-white" />
+                    <span>{submitting ? "Saving Booking…" : "Save & Update Booking"}</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+

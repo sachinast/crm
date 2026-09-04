@@ -34,11 +34,13 @@ import {
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatDate } from "@/lib/formatters";
 import { formatStatus } from "@/lib/status-meta";
+import { maskCardNumber, maskCardExpiry } from "@/lib/card-validator";
 import LeadCustomFieldsPanel from "./LeadCustomFieldsPanel";
 import ModificationsPanel from "./ModificationsPanel";
 import CancellationPanel from "./CancellationPanel";
 import StatusActions from "./StatusActions";
 import PaymentActions from "./PaymentActions";
+import ChangesEmailModal from "@/components/leads/ChangesEmailModal";
 
 interface LeadDetail {
   id: string;
@@ -624,30 +626,69 @@ function SMSDispatchModal({
   );
 }
 
-const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string }[]> = {
+const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string; format?: (v: unknown) => string }[]> = {
   car: [
     { key: "car_provider", label: "Car Provider" },
     { key: "car_model", label: "Car Model" },
+    { key: "vehicle_type", label: "Vehicle Type" },
+    { key: "transmission", label: "Transmission" },
+    { key: "fuel_policy", label: "Fuel Policy" },
     { key: "booking_confirmation", label: "Confirmation #" },
-    { key: "pickup_datetime", label: "Pickup Date" },
+    { key: "pickup_datetime", label: "Pickup Date & Time", format: (v) => formatDate(String(v)) },
     { key: "pickup_location", label: "Pickup Location" },
+    { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
     { key: "return_location", label: "Return Location" },
+    { key: "driver_name", label: "Driver Name" },
+    { key: "driver_phone", label: "Driver Phone" },
+    { key: "driver_license", label: "Driver License" },
+    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "card_holder_name", label: "Card Holder" },
+    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
+    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
+    { key: "billing_address", label: "Billing Address" },
+    { key: "remarks", label: "Remarks / Notes" },
   ],
   hotel: [
     { key: "hotel_name", label: "Hotel Name" },
     { key: "room_type", label: "Room Category" },
-    { key: "call_type", label: "Call Type" },
+    { key: "location", label: "Location" },
     { key: "itinerary_number", label: "Itinerary #" },
-    { key: "check_in_date", label: "Check-in" },
-    { key: "check_out_date", label: "Check-out" },
+    { key: "call_type", label: "Call Type" },
+    { key: "check_in_date", label: "Check-in Date", format: (v) => formatDate(String(v)) },
+    { key: "check_out_date", label: "Check-out Date", format: (v) => formatDate(String(v)) },
+    { key: "num_rooms", label: "Rooms" },
+    { key: "num_guests", label: "Guests" },
+    { key: "bed_type", label: "Bed Type" },
+    { key: "primary_guest_name", label: "Primary Guest" },
+    { key: "guest_email", label: "Guest Email" },
+    { key: "guest_phone", label: "Guest Phone" },
+    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "card_holder_name", label: "Card Holder" },
+    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
+    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
+    { key: "billing_address", label: "Billing Address" },
+    { key: "remarks", label: "Special Requests / Remarks" },
   ],
   flight: [
     { key: "airline", label: "Airline Carrier" },
+    { key: "flight_number", label: "Flight Number" },
     { key: "pnr", label: "PNR Code" },
     { key: "trip_type", label: "Trip Type" },
     { key: "class_of_service", label: "Cabin Class" },
-    { key: "origin", label: "Origin" },
-    { key: "destination", label: "Destination" },
+    { key: "origin", label: "Origin Airport" },
+    { key: "destination", label: "Destination Airport" },
+    { key: "departure_datetime", label: "Departure Date & Time", format: (v) => formatDate(String(v)) },
+    { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
+    { key: "passengers", label: "Passengers / Travelers" },
+    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+    { key: "card_holder_name", label: "Card Holder" },
+    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
+    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
+    { key: "billing_address", label: "Billing Address" },
+    { key: "remarks", label: "Ticket Notes / Remarks" },
   ],
 };
 
@@ -664,6 +705,7 @@ interface WorkspaceProps {
   canModify: boolean;
   canProcessPayment: boolean;
   canEditCustomFields: boolean;
+  currentUser?: { id: string; role: string; name: string } | null;
 }
 
 export default function LeadDetailWorkspace({
@@ -677,6 +719,7 @@ export default function LeadDetailWorkspace({
   canModify,
   canProcessPayment,
   canEditCustomFields,
+  currentUser,
 }: WorkspaceProps) {
   const [leadState, setLeadState] = useState<LeadDetail>(lead);
   const [showEditLeadModal, setShowEditLeadModal] = useState(false);
@@ -685,8 +728,26 @@ export default function LeadDetailWorkspace({
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "history">("overview");
   const [copiedAuthLink, setCopiedAuthLink] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
+  const [showChangesEmailModal, setShowChangesEmailModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
+
+  const roleNormalized = (currentUser?.role || "").toLowerCase();
+  const isAgentOrAdmin =
+    Boolean(currentUser) &&
+    (roleNormalized === "admin" ||
+      roleNormalized === "super_admin" ||
+      roleNormalized === "superadmin" ||
+      roleNormalized === "agent");
+
+  const canManageLeadActions = isAgentOrAdmin;
+
+  const isChangesRoleOrAdmin =
+    roleNormalized === "change_dep" ||
+    roleNormalized === "admin" ||
+    roleNormalized === "super_admin" ||
+    roleNormalized === "superadmin" ||
+    leadState.status === "tag_change_dep";
 
   const ServiceIcon = leadState.service_type ? SERVICE_ICON[leadState.service_type] : null;
   const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${leadState.id}` : `/authorize/${leadState.id}`;
@@ -746,21 +807,28 @@ export default function LeadDetailWorkspace({
           <div className="mt-1 flex items-center gap-3">
             <h1 className="text-xl font-black tracking-tight text-ink">{leadState.name}</h1>
             <StatusBadge status={leadState.status} />
+            {!isAgentOrAdmin && (
+              <span className="rounded-md border border-hairline bg-surface-raised px-2 py-0.5 text-[10px] font-bold text-ink-muted uppercase font-mono tracking-wider">
+                Read-Only
+              </span>
+            )}
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setShowEditLeadModal(true)}
-            className="btn-secondary btn-sm flex items-center gap-1.5 font-semibold"
-            title="Edit Customer Profile (Requires Reason)"
-          >
-            <PencilLine size={13} className="text-accent" />
-            <span>Edit Lead</span>
-          </button>
+          {canManageLeadActions && (
+            <button
+              onClick={() => setShowEditLeadModal(true)}
+              className="btn-secondary btn-sm flex items-center gap-1.5 font-semibold"
+              title="Edit Customer Profile (Requires Reason)"
+            >
+              <PencilLine size={13} className="text-accent" />
+              <span>Edit Lead</span>
+            </button>
+          )}
 
-          {leadState.email && (
+          {canManageLeadActions && leadState.email && (
             <button
               onClick={handleSendAuthEmail}
               disabled={sendingEmail}
@@ -771,7 +839,7 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
-          {leadState.phone && (
+          {canManageLeadActions && leadState.phone && (
             <button
               onClick={() => setShowSMSModal(true)}
               className="btn-secondary btn-sm flex items-center gap-1.5"
@@ -781,13 +849,24 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
-          {leadState.status === "authorization_pending" && (
+          {canManageLeadActions && leadState.status === "authorization_pending" && (
             <button
               onClick={copyAuthLink}
               className="btn-primary btn-sm flex items-center gap-1.5 shadow-xs"
             >
               <Copy size={13} />
               <span>{copiedAuthLink ? "Link Copied!" : "Copy Consent Link"}</span>
+            </button>
+          )}
+
+          {isChangesRoleOrAdmin && (
+            <button
+              onClick={() => setShowChangesEmailModal(true)}
+              className="btn-secondary btn-sm flex items-center gap-1.5 border-accent/40 text-accent hover:bg-accent-soft font-semibold shadow-xs"
+              title="Dispatch revised travel voucher email to customer"
+            >
+              <Send size={13} />
+              <span>Dispatch Change Voucher</span>
             </button>
           )}
 
@@ -851,6 +930,18 @@ export default function LeadDetailWorkspace({
         onClose={() => setShowSMSModal(false)}
       />
 
+      <ChangesEmailModal
+        isOpen={showChangesEmailModal}
+        onClose={() => setShowChangesEmailModal(false)}
+        leadId={leadState.id}
+        customerEmail={leadState.email}
+        customerName={leadState.name}
+        crmId={crmId}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
+
       {/* Main 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* LEFT COLUMN: Main Booking Highlights & Operational Tabs (lg:col-span-7) */}
@@ -872,14 +963,24 @@ export default function LeadDetailWorkspace({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmRedirectService(leadState.service_type)}
-                    className="btn-secondary btn-sm flex items-center gap-1 text-xs py-1 px-2.5 font-semibold"
-                  >
-                    <PencilLine size={12} />
-                    <span>Edit Booking</span>
-                  </button>
+                  {isAgentOrAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRedirectService(leadState.service_type)}
+                      className="btn-secondary btn-sm flex items-center gap-1 text-xs py-1 px-2.5 font-semibold"
+                    >
+                      <PencilLine size={12} />
+                      <span>Edit Booking</span>
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/leads/${leadState.id}/booking/${leadState.service_type}`}
+                      className="btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1 px-2.5 font-semibold border-accent/40 text-accent hover:bg-accent-soft shadow-xs"
+                    >
+                      <Eye size={12} />
+                      <span>View Full Booking (Read-Only)</span>
+                    </Link>
+                  )}
                   <div className="text-right">
                     <div className="text-[10px] text-ink-faint uppercase font-bold">Total Amount</div>
                     <div className="font-mono text-base font-bold text-accent">
@@ -891,14 +992,19 @@ export default function LeadDetailWorkspace({
 
               {/* Booking Key Metrics Grid */}
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-                {BOOKING_SUMMARY_FIELDS[leadState.service_type]?.map((f) => (
-                  <div key={f.key} className="rounded-lg bg-surface-raised p-2 border border-hairline">
-                    <span className="block text-[10px] font-medium text-ink-faint uppercase tracking-wider">{f.label}</span>
-                    <span className="mt-0.5 block font-semibold text-ink truncate">
-                      {String(booking[f.key] ?? "—")}
-                    </span>
-                  </div>
-                ))}
+                {BOOKING_SUMMARY_FIELDS[leadState.service_type]?.map((f) => {
+                  const rawVal = booking[f.key];
+                  if (rawVal === undefined || rawVal === null || rawVal === "") return null;
+                  const displayVal = f.format ? f.format(rawVal) : String(rawVal);
+                  return (
+                    <div key={f.key} className="rounded-lg bg-surface-raised p-2 border border-hairline">
+                      <span className="block text-[10px] font-medium text-ink-faint uppercase tracking-wider">{f.label}</span>
+                      <span className="mt-0.5 block font-semibold text-ink break-words">
+                        {displayVal}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : leadState.service_type ? (
@@ -915,17 +1021,27 @@ export default function LeadDetailWorkspace({
                     <p className="text-[11px] font-mono text-accent">CRMID: {crmId}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setConfirmRedirectService(leadState.service_type)}
-                  className="btn-primary btn-sm flex items-center gap-1.5"
-                >
-                  <PencilLine size={13} />
-                  <span>Complete {leadState.service_type} Form</span>
-                </button>
+                {isAgentOrAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRedirectService(leadState.service_type)}
+                    className="btn-primary btn-sm flex items-center gap-1.5"
+                  >
+                    <PencilLine size={13} />
+                    <span>Complete {leadState.service_type} Form</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={`/leads/${leadState.id}/booking/${leadState.service_type}`}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1 px-2.5 font-semibold border-accent/40 text-accent hover:bg-accent-soft shadow-xs"
+                  >
+                    <Eye size={12} />
+                    <span>View {leadState.service_type} Form (Read-Only)</span>
+                  </Link>
+                )}
               </div>
             </div>
-          ) : (
+          ) : isAgentOrAdmin ? (
             <div className="rounded-2xl border border-hairline bg-surface p-4 text-xs shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -957,6 +1073,50 @@ export default function LeadDetailWorkspace({
                     <Plane size={13} />
                     <span>Flight Ticket</span>
                   </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-hairline bg-surface p-4 text-xs shadow-card space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-raised text-ink-muted border border-hairline shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-ink">General Lead Intake Profile</p>
+                      <span className="rounded bg-surface-raised border border-hairline px-2 py-0.5 text-[10px] font-mono text-ink-muted font-bold uppercase">
+                        Read-Only
+                      </span>
+                    </div>
+                    <p className="text-ink-muted text-xs mt-0.5">
+                      No booking modality attached yet. View booking templates & records in read-only mode:
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/leads/${leadState.id}/booking/car`}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1 px-2.5 font-semibold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                  >
+                    <Car size={13} />
+                    <span>Car Rental Form (Read-Only)</span>
+                  </Link>
+                  <Link
+                    href={`/leads/${leadState.id}/booking/hotel`}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1 px-2.5 font-semibold border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                  >
+                    <Hotel size={13} />
+                    <span>Hotel Form (Read-Only)</span>
+                  </Link>
+                  <Link
+                    href={`/leads/${leadState.id}/booking/flight`}
+                    className="btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1 px-2.5 font-semibold border-sky-500/40 text-sky-400 hover:bg-sky-500/10"
+                  >
+                    <Plane size={13} />
+                    <span>Flight Form (Read-Only)</span>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -994,43 +1154,39 @@ export default function LeadDetailWorkspace({
                 )}
               </button>
 
-              {(canModify || modifications.length > 0) && (
-                <button
-                  onClick={() => setActiveTab("modifications")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    activeTab === "modifications"
-                      ? "bg-accent text-white shadow-xs"
-                      : "text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  }`}
-                >
-                  <PencilLine size={13} />
-                  <span>Modifications</span>
-                  {modifications.length > 0 && (
-                    <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-mono">
-                      {modifications.length}
-                    </span>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("modifications")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "modifications"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                }`}
+              >
+                <PencilLine size={13} />
+                <span>Modifications</span>
+                {modifications.length > 0 && (
+                  <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px] font-mono">
+                    {modifications.length}
+                  </span>
+                )}
+              </button>
 
-              {(canModify || cancellation) && (
-                <button
-                  onClick={() => setActiveTab("cancellation")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    activeTab === "cancellation"
-                      ? "bg-accent text-white shadow-xs"
-                      : "text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  }`}
-                >
-                  <Ban size={13} />
-                  <span>Cancellation</span>
-                  {cancellation && (
-                    <span className="rounded-full bg-red-500/20 px-1.5 py-0.2 text-[10px] font-mono text-danger">
-                      Cancelled
-                    </span>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("cancellation")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "cancellation"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                }`}
+              >
+                <Ban size={13} />
+                <span>Cancellation</span>
+                {cancellation && (
+                  <span className="rounded-full bg-red-500/20 px-1.5 py-0.2 text-[10px] font-mono text-danger">
+                    Cancelled
+                  </span>
+                )}
+              </button>
 
               <button
                 onClick={() => setActiveTab("history")}
@@ -1082,14 +1238,16 @@ export default function LeadDetailWorkspace({
                     <span className="text-xs font-bold uppercase tracking-wider text-ink">
                       Customer Contact & Intake Profile
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowEditLeadModal(true)}
-                      className="btn-secondary btn-sm text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold"
-                    >
-                      <PencilLine size={12} className="text-accent" />
-                      <span>Edit Customer</span>
-                    </button>
+                    {isAgentOrAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setShowEditLeadModal(true)}
+                        className="btn-secondary btn-sm text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold"
+                      >
+                        <PencilLine size={12} className="text-accent" />
+                        <span>Edit Customer</span>
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
@@ -1172,13 +1330,13 @@ export default function LeadDetailWorkspace({
                     <div>
                       <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Display</span>
                       <p className="font-mono font-medium text-ink">
-                        {(booking?.card_number as string) || "**** **** **** ****"}
+                        {maskCardNumber((booking?.card_number as string) || "")}
                       </p>
                     </div>
                     <div>
                       <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Expiry</span>
                       <p className="font-mono text-ink">
-                        {(booking?.card_expiry as string) || "MM/YY"}
+                        {maskCardExpiry((booking?.card_expiry as string) || "")}
                       </p>
                     </div>
                   </div>
@@ -1278,14 +1436,42 @@ export default function LeadDetailWorkspace({
 
         {/* RIGHT COLUMN: Action Center & Customer Authorization (lg:col-span-5) */}
         <div className="space-y-4 lg:col-span-5">
+          {/* Payment Processing Action Card for Billing / Admin */}
+          {canProcessPayment && (
+            <div className="rounded-2xl border border-emerald-500/40 bg-surface p-4 shadow-card">
+              <div className="flex items-center justify-between border-b border-hairline pb-2 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard size={14} className="text-emerald-500" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-ink">
+                    Payment Processing Workflow
+                  </h2>
+                </div>
+                <span className="rounded bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-500 uppercase">
+                  Billing Queue Action
+                </span>
+              </div>
+              <PaymentActions leadId={lead.id} />
+            </div>
+          )}
+
           {/* Status Workflow Action Card */}
-          <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2.5 flex items-center justify-between">
-              <span>Status Workflow Actions</span>
-              <span className="font-mono text-[10px] text-accent font-bold">{transitions.length} available</span>
-            </h2>
-            <StatusActions leadId={lead.id} transitions={transitions} />
-          </div>
+          {transitions.length > 0 ? (
+            <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2.5 flex items-center justify-between">
+                <span>Status Workflow Actions</span>
+                <span className="font-mono text-[10px] text-accent font-bold">{transitions.length} available</span>
+              </h2>
+              <StatusActions leadId={lead.id} transitions={transitions} />
+            </div>
+          ) : !canProcessPayment ? (
+            <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2.5 flex items-center justify-between">
+                <span>Status Workflow Actions</span>
+                <span className="font-mono text-[10px] text-accent font-bold">0 available</span>
+              </h2>
+              <StatusActions leadId={lead.id} transitions={transitions} />
+            </div>
+          ) : null}
 
           {/* Customer Authorization Link Card (if status is authorization pending) */}
           {lead.status === "authorization_pending" && (

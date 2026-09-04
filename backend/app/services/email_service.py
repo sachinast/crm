@@ -118,7 +118,6 @@ def generate_authorization_email_html(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title_header}</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }}
     .container {{ max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }}
@@ -269,7 +268,6 @@ def generate_confirmation_email_html(
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Payment Authorization Confirmed</title>
   <style>
     body {{ font-family: sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; color: #1e293b; }}
     .container {{ max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }}

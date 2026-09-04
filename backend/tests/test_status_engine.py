@@ -252,7 +252,12 @@ async def test_available_transitions_filtered_by_role(api_client, agent, billing
     for_agent = await api_client.get(f"/leads/{lead_id}/available-transitions", headers=_auth(agent_token))
     assert for_agent.status_code == 200
     agent_statuses = {row["status"] for row in for_agent.json()}
-    assert agent_statuses == {"transferred_to_billing"}
+    assert agent_statuses == {
+        "transferred_to_billing",
+        "tag_cr_booking",
+        "tag_change_dep",
+        "tag_auditor",
+    }
 
     # client_approved isn't one of Billing's relevant statuses yet (that's
     # transferred_to_billing onward) — Billing can't see this lead at all yet,

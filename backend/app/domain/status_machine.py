@@ -21,10 +21,25 @@ class Transition:
 
 TRANSITIONS: dict[BookingStatus, Transition] = {
     BookingStatus.authorization_pending: Transition(
-        next=frozenset({BookingStatus.client_approved}),
+        next=frozenset(
+            {
+                BookingStatus.client_approved,
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_cr_booking,
+                BookingStatus.tag_change_dep,
+                BookingStatus.tag_auditor,
+            }
+        ),
     ),
     BookingStatus.client_approved: Transition(
-        next=frozenset({BookingStatus.transferred_to_billing}),
+        next=frozenset(
+            {
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_cr_booking,
+                BookingStatus.tag_change_dep,
+                BookingStatus.tag_auditor,
+            }
+        ),
     ),
     BookingStatus.transferred_to_billing: Transition(
         next=frozenset({BookingStatus.card_charged, BookingStatus.card_declined}),
@@ -45,13 +60,13 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
         next=frozenset({BookingStatus.transferred_to_billing}),  # retry
     ),
     BookingStatus.tag_change_dep: Transition(
-        next=frozenset({BookingStatus.tag_auditor}),
+        next=frozenset({BookingStatus.tag_auditor, BookingStatus.tag_cr_booking}),
     ),
     BookingStatus.tag_cr_booking: Transition(
-        next=frozenset({BookingStatus.tag_auditor}),
+        next=frozenset({BookingStatus.tag_auditor, BookingStatus.authorization_pending}),
     ),
     BookingStatus.tag_auditor: Transition(
-        next=frozenset({BookingStatus.qc_done}),
+        next=frozenset({BookingStatus.qc_done, BookingStatus.tag_change_dep}),
     ),
     BookingStatus.qc_done: Transition(
         next=frozenset(),

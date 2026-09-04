@@ -1,0 +1,732 @@
+"use client";
+
+import { AlertTriangle, Car, CheckCircle2, Hotel, Loader2, Plane, XCircle, ArrowRight, Check, Flame, Mail } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { CountryCode } from "libphonenumber-js";
+
+import CarBookingFields, { EMPTY_CAR_BOOKING, generateRandomCRMID, type CarBookingValue } from "@/components/booking/CarBookingFields";
+import HotelBookingFields, { EMPTY_HOTEL_BOOKING, type HotelBookingValue } from "@/components/booking/HotelBookingFields";
+import FlightBookingFields, { EMPTY_FLIGHT_BOOKING, type FlightBookingValue } from "@/components/booking/FlightBookingFields";
+import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+import Field from "@/components/shared/FormField";
+import PhoneInput from "@/components/shared/PhoneInput";
+import { isValidEmail } from "@/lib/validation";
+import { detectDefaultCountry, isValidNationalNumber, toE164 } from "@/lib/phone";
+
+interface LeadResponse {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  is_duplicate: boolean;
+  duplicate_of_id: string | null;
+  duplicate_override_reason: string | null;
+  service_type: string | null;
+}
+
+interface Candidate {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  status: string;
+  created_at: string;
+}
+
+const SERVICE_TYPES = [
+  { value: "car" as const, label: "Car Rental", sublabel: "Chauffeur & Fleet Vehicles", icon: Car },
+  { value: "hotel" as const, label: "Hotel", sublabel: "Resorts, Rooms & Stays", icon: Hotel },
+  { value: "flight" as const, label: "Flight", sublabel: "PNR, Domestic & International", icon: Plane },
+];
+
+type ServiceType = (typeof SERVICE_TYPES)[number]["value"];
+type CheckStatus = "idle" | "checking" | "exists" | "available";
+
+function toIsoUtc(localValue: string): string {
+  if (!localValue) return "";
+  try {
+    const d = new Date(localValue);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString();
+    }
+  } catch {}
+  return localValue.endsWith("Z") ? localValue : `${localValue}:00Z`;
+}
+
+function CheckTick({ status }: { status: CheckStatus }) {
+  if (status === "idle") return null;
+  if (status === "checking") return <Loader2 size={16} className="animate-spin text-ink-muted" />;
+  if (status === "exists") return <XCircle size={16} className="text-danger" />;
+  return <CheckCircle2 size={16} className="text-success" />;
+}
+
+function useContactCheck(value: string, field: "email" | "phone", formatValid: boolean): CheckStatus {
+  const [result, setResult] = useState<{ value: string; exists: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!formatValid) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch(`/api/leads/check-contact?${field}=${encodeURIComponent(value)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => {
+          if (cancelled || !body) return;
+          const exists = field === "email" ? body.email_exists : body.phone_exists;
+          setResult({ value, exists });
+        })
+        .catch(() => {
+          if (!cancelled) setResult(null);
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [value, field, formatValid]);
+
+  if (!formatValid) return "idle";
+  if (result && result.value === value) return result.exists ? "exists" : "available";
+  return "checking";
+}
+
+export default function NewLeadClient() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [country, setCountry] = useState<CountryCode>("US");
+  const [nationalNumber, setNationalNumber] = useState("");
+  const [name, setName] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
+  const [serviceType, setServiceType] = useState<ServiceType | null>("car");
+  const [carForm, setCarForm] = useState<CarBookingValue>(() => ({
+    ...EMPTY_CAR_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
+  const [hotelForm, setHotelForm] = useState<HotelBookingValue>(() => ({
+    ...EMPTY_HOTEL_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
+  const [flightForm, setFlightForm] = useState<FlightBookingValue>(() => ({
+    ...EMPTY_FLIGHT_BOOKING,
+    booking_reference: generateRandomCRMID(),
+  }));
+
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [pendingConfirmLead, setPendingConfirmLead] = useState<LeadResponse | null>(null);
+  const [pendingCandidates, setPendingCandidates] = useState<Candidate[]>([]);
+  const [pendingReason, setPendingReason] = useState("");
+  const [sendEmailOnSubmit, setSendEmailOnSubmit] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    detectDefaultCountry().then((detected) => {
+      if (!cancelled) setCountry(detected);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const emailFormatOk = isValidEmail(email);
+  const phoneFormatOk = isValidNationalNumber(nationalNumber, country);
+  const phone = phoneFormatOk ? toE164(nationalNumber, country) : "";
+
+  const emailCheck = useContactCheck(email.trim(), "email", emailFormatOk);
+  const phoneCheck = useContactCheck(phone, "phone", phoneFormatOk);
+
+  const hasOverride = overrideReason.trim().length > 0;
+  const emailReady = emailCheck === "available" || (emailCheck === "exists" && hasOverride);
+  const phoneReady = phoneCheck === "available" || (phoneCheck === "exists" && hasOverride);
+  const unlocked = emailReady && phoneReady;
+  const showDuplicateWarning = emailCheck === "exists" || phoneCheck === "exists";
+
+  const currentFinancials = () => {
+    if (serviceType === "car") {
+      const prepaid = Number(carForm.prepaid_amount) || 0;
+      const counter = Number(carForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    if (serviceType === "hotel") {
+      const prepaid = Number(hotelForm.prepaid_amount) || 0;
+      const counter = Number(hotelForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    if (serviceType === "flight") {
+      const prepaid = Number(flightForm.prepaid_amount) || 0;
+      const counter = Number(flightForm.pay_at_counter_amount) || 0;
+      return { prepaid, counter, total: prepaid + counter };
+    }
+    return { prepaid: 0, counter: 0, total: 0 };
+  };
+
+  const updateFinancials = (prepaid: number, counter: number) => {
+    if (serviceType === "car") {
+      setCarForm({ ...carForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    } else if (serviceType === "hotel") {
+      setHotelForm({ ...hotelForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    } else if (serviceType === "flight") {
+      setFlightForm({ ...flightForm, prepaid_amount: prepaid, pay_at_counter_amount: counter });
+    }
+  };
+
+  const { prepaid, counter, total } = currentFinancials();
+
+  async function finishServiceTypeAndBooking(leadId: string, sendAuthEmail: boolean = false) {
+    if (!serviceType) {
+      setError("Choose a service type");
+      setSubmitting(false);
+      return;
+    }
+
+    const stResp = await fetch(`/api/leads/${leadId}/service-type`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ service_type: serviceType }),
+    });
+    if (!stResp.ok) {
+      const body = await stResp.json().catch(() => ({}));
+      setError(body.detail ?? "Could not set service type");
+      setSubmitting(false);
+      return;
+    }
+
+    const bookingPath = serviceType === "car" ? "car-booking" : serviceType === "hotel" ? "hotel-booking" : "flight-booking";
+    const bookingPayload =
+      serviceType === "car"
+        ? {
+            ...carForm,
+            driver_name: carForm.driver_name || name,
+            driver_phone: carForm.driver_phone || phone,
+            renter_dob: carForm.renter_dob ? carForm.renter_dob.split("T")[0] : "1990-01-01",
+            pickup_datetime: toIsoUtc(carForm.pickup_datetime),
+            return_datetime: toIsoUtc(carForm.return_datetime),
+            prepaid_amount: Number(carForm.prepaid_amount) || 0,
+            pay_at_counter_amount: Number(carForm.pay_at_counter_amount) || 0,
+            company_amount: Number(carForm.company_amount) || 0,
+            platform_amount: Number(carForm.platform_amount) || 0,
+          }
+        : serviceType === "hotel"
+          ? {
+              ...hotelForm,
+              primary_guest_name: hotelForm.primary_guest_name || name,
+              guest_email: hotelForm.guest_email || email,
+              guest_phone: hotelForm.guest_phone || phone,
+              prepaid_amount: Number(hotelForm.prepaid_amount) || 0,
+              pay_at_counter_amount: Number(hotelForm.pay_at_counter_amount) || 0,
+              company_amount: Number(hotelForm.company_amount) || 0,
+              platform_amount: Number(hotelForm.platform_amount) || 0,
+              num_guests: Number(hotelForm.num_guests) || 1,
+              num_rooms: Number(hotelForm.num_rooms) || 1,
+            }
+          : {
+              ...flightForm,
+              contact_email: flightForm.contact_email || email,
+              contact_phone: flightForm.contact_phone || phone,
+              prepaid_amount: Number(flightForm.prepaid_amount) || 0,
+              pay_at_counter_amount: Number(flightForm.pay_at_counter_amount) || 0,
+              company_amount: Number(flightForm.company_amount) || 0,
+              platform_amount: Number(flightForm.platform_amount) || 0,
+              ticket_cost: Number(flightForm.ticket_cost) || 0,
+              mco_charge: Number(flightForm.mco_charge) || 0,
+              merchant_fee: Number(flightForm.merchant_fee) || 15,
+              cvv_fee: Number(flightForm.cvv_fee) || 0,
+              total_auth_amount: Number(flightForm.total_auth_amount) || 0,
+              margin: Number(flightForm.margin) || 0,
+            };
+
+    const bookingResp = await fetch(`/api/leads/${leadId}/${bookingPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bookingPayload),
+    });
+    const bookingBody = await bookingResp.json().catch(() => ({}));
+
+    if (!bookingResp.ok) {
+      let detailMsg = "Could not save the booking";
+      if (typeof bookingBody.detail === "string") {
+        detailMsg = bookingBody.detail;
+      } else if (Array.isArray(bookingBody.detail)) {
+        detailMsg = bookingBody.detail
+          .map((d: { msg?: string; loc?: string[] }) => {
+            const field = d.loc && d.loc.length ? d.loc[d.loc.length - 1] : "";
+            return field ? `${field.replace(/_/g, " ")}: ${d.msg}` : d.msg || JSON.stringify(d);
+          })
+          .join(" • ");
+      } else if (bookingBody.message) {
+        detailMsg = bookingBody.message;
+      }
+      setError(detailMsg);
+      setSubmitting(false);
+      return;
+    }
+
+    if (sendAuthEmail) {
+      try {
+        await fetch(`/api/leads/${leadId}/send-auth-email`, { method: "POST" });
+      } catch (e) {
+        console.error("Failed to trigger auth email:", e);
+      }
+    }
+
+    setSubmitting(false);
+    router.push(`/leads/${leadId}`);
+    router.refresh();
+  }
+
+  async function handleSubmit(event?: FormEvent) {
+    if (event) event.preventDefault();
+    setError(null);
+
+    if (serviceType === "car") {
+      if (!carForm.booking_platform?.trim()) {
+        setError("Booking Platform is required");
+        return;
+      }
+      if (!carForm.car_provider?.trim()) {
+        setError("Car Provider is required");
+        return;
+      }
+      if (!carForm.vehicle_type?.trim()) {
+        setError("Vehicle Type is required");
+        return;
+      }
+      if (!carForm.transmission?.trim()) {
+        setError("Transmission is required");
+        return;
+      }
+      if (!carForm.renter_dob?.trim()) {
+        setError("Renter Date of Birth is required");
+        return;
+      }
+      const driverName = carForm.driver_name?.trim() || name.trim();
+      if (!driverName) {
+        setError("Driver Full Name is required");
+        return;
+      }
+      const driverPhone = carForm.driver_phone?.trim() || phone.trim();
+      if (!driverPhone) {
+        setError("Driver Phone / Mobile is required");
+        return;
+      }
+      if (!carForm.driver_license?.trim()) {
+        setError("Driver License / ID is required");
+        return;
+      }
+      if (!carForm.pickup_location?.trim()) {
+        setError("Pick-up Location is required");
+        return;
+      }
+      if (!carForm.pickup_datetime?.trim()) {
+        setError("Pick-up Date & Time is required");
+        return;
+      }
+      if (!carForm.return_location?.trim()) {
+        setError("Drop-off / Return Location is required");
+        return;
+      }
+      if (!carForm.return_datetime?.trim()) {
+        setError("Return Date & Time is required");
+        return;
+      }
+    }
+
+    if (showDuplicateWarning && !hasOverride) {
+      setError("Duplicate contact detected. A lead with this email or phone already exists in CRM PRO. Provide an override reason to proceed or open the existing lead.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    const resp = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        phone,
+        email,
+        custom_fields: customFields,
+        override_reason: overrideReason.trim() || undefined,
+      }),
+    });
+    const body: LeadResponse = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      setError((body as unknown as { detail?: string }).detail ?? "Could not create lead");
+      setSubmitting(false);
+      return;
+    }
+
+    await finishServiceTypeAndBooking(body.id, sendEmailOnSubmit);
+  }
+
+  async function handlePendingConfirm() {
+    if (!pendingConfirmLead || !pendingReason.trim()) return;
+    setSubmitting(true);
+    setError(null);
+
+    const confirmResp = await fetch(`/api/leads/${pendingConfirmLead.id}/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: pendingReason }),
+    });
+    if (!confirmResp.ok) {
+      const confirmBody = await confirmResp.json().catch(() => ({}));
+      setError(confirmBody.detail ?? "Could not confirm duplicate");
+      setSubmitting(false);
+      return;
+    }
+
+    await finishServiceTypeAndBooking(pendingConfirmLead.id, sendEmailOnSubmit);
+  }
+
+  return (
+    <div className="w-full max-w-7xl mx-auto space-y-4 pb-8">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-xs">
+              <Flame size={20} className="fill-amber-500/20 animate-pulse" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">New Lead Intake</h1>
+          </div>
+          <p className="mt-1 text-sm text-ink-muted">
+            Single-step client verification and unified booking dispatch.
+          </p>
+        </div>
+
+        <Link href="/leads" className="btn-secondary btn-sm">
+          Cancel Intake
+        </Link>
+      </div>
+
+      {pendingConfirmLead ? (
+        <div className="card flex flex-col gap-4">
+          <div className="alert-warning">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <span>A similarly-named client already exists — do you still want to proceed?</span>
+          </div>
+          <ul className="flex flex-col gap-2.5 text-sm">
+            {pendingCandidates.map((c) => (
+              <li key={c.id} className="card-flat py-3">
+                <p className="font-semibold text-ink">{c.name}</p>
+                <p className="text-sm text-ink-muted">
+                  {c.phone} · {c.email} · {c.status}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <Field label="Reason for proceeding">
+            <input
+              required
+              value={pendingReason}
+              onChange={(e) => setPendingReason(e.target.value)}
+              placeholder="e.g. different customer, shared office line"
+              className="input"
+            />
+          </Field>
+          {error && (
+            <p className="alert-danger">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handlePendingConfirm}
+            disabled={submitting || !pendingReason.trim()}
+            className="btn-primary"
+          >
+            {submitting ? "Confirming…" : "Yes, proceed anyway"}
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* STEP 1: Dynamic Client / Guest / Renter Information Card */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                {serviceType === "car"
+                  ? "Renter Details"
+                  : serviceType === "hotel"
+                    ? "Guest Details"
+                    : serviceType === "flight"
+                      ? "Passenger Details"
+                      : "Client Information"}
+              </span>
+              <span className="text-xs font-medium text-ink-faint">
+                {serviceType === "car"
+                  ? "Primary renter / driver contact"
+                  : serviceType === "hotel"
+                    ? "Primary hotel guest contact"
+                    : serviceType === "flight"
+                      ? "Ticketing & PNR contact"
+                      : "Verified against duplicates"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="Email Address">
+                <div className="relative">
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="input pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <CheckTick status={emailCheck} />
+                  </span>
+                </div>
+                {email.trim().length > 0 && !emailFormatOk && (
+                  <span className="mt-1 block text-xs text-danger">
+                    Enter a valid email address
+                  </span>
+                )}
+                {emailCheck === "exists" && (
+                  <span className="mt-1 block text-xs text-danger">
+                    A lead with this email already exists
+                  </span>
+                )}
+              </Field>
+
+              <Field label="Phone Number">
+                <div className="relative">
+                  <PhoneInput
+                    country={country}
+                    nationalNumber={nationalNumber}
+                    onCountryChange={setCountry}
+                    onNationalNumberChange={setNationalNumber}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <CheckTick status={phoneCheck} />
+                  </span>
+                </div>
+                {nationalNumber.trim().length > 0 && !phoneFormatOk && (
+                  <span className="mt-1 block text-xs text-danger">
+                    Enter a valid number
+                  </span>
+                )}
+                {phoneCheck === "exists" && (
+                  <span className="mt-1 block text-xs text-danger">
+                    A lead with this number already exists
+                  </span>
+                )}
+              </Field>
+
+              <Field
+                label={
+                  serviceType === "car"
+                    ? "Renter Full Name"
+                    : serviceType === "hotel"
+                      ? "Primary Guest Name"
+                      : serviceType === "flight"
+                        ? "Primary Passenger Name"
+                        : "Customer Name"
+                }
+                required
+              >
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="input font-medium"
+                />
+              </Field>
+            </div>
+
+            {showDuplicateWarning && (
+              <div className="alert-warning flex flex-col gap-2.5 rounded-xl p-3.5 border border-amber-500/30 bg-amber-500/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 font-bold text-amber-700 dark:text-amber-300 text-xs">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Duplicate Contact Detected: A lead with this email or phone number is already registered in CRM PRO. Duplicate creation is blocked unless an override reason is provided:</span>
+                  </div>
+                  <Link
+                    href="/leads"
+                    className="text-xs font-bold text-accent hover:underline shrink-0 flex items-center gap-1"
+                  >
+                    <span>View Leads Queue</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+                <input
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Enter mandatory override reason (e.g. corporate group, repeat client with separate booking)…"
+                  className="input text-xs"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <DynamicFieldsBlock entityType="lead" value={customFields} onChange={setCustomFields} />
+            </div>
+          </div>
+
+          {/* STEP 2: Service Selection Card - Always Switchable & Enabled */}
+          <div className="card">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+              {SERVICE_TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = serviceType === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setServiceType(t.value)}
+                    className={`group flex items-center gap-3.5 rounded-2xl border p-3.5 text-left transition-all cursor-pointer ${
+                      active
+                        ? "border-accent bg-accent-soft shadow-md ring-1 ring-accent"
+                        : "border-hairline bg-surface hover:border-hairline-strong hover:bg-surface-raised"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                        active
+                          ? "bg-accent text-white shadow-sm"
+                          : "bg-surface-raised text-accent border border-hairline group-hover:bg-accent-soft"
+                      }`}
+                    >
+                      <Icon size={20} strokeWidth={2.2} className={active ? "text-white" : "text-accent"} />
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-bold ${active ? "text-accent" : "text-ink"}`}>{t.label}</span>
+                        {active && <Check size={16} className="text-accent" strokeWidth={2.5} />}
+                      </div>
+                      <p className="text-xs text-ink-muted">{t.sublabel}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gated Booking Specification Banner */}
+          {!unlocked && (
+            <div className="alert-info">
+              <span>Enter and verify valid client email & phone number above to configure booking details.</span>
+            </div>
+          )}
+
+          {/* STEP 3 & 4: Booking Details & Financial Toolbar (Enabled once validated) */}
+          <fieldset
+            disabled={!unlocked}
+            className={`space-y-4 transition-opacity duration-200 ${
+              !unlocked ? "opacity-60 pointer-events-none select-none" : "opacity-100"
+            }`}
+          >
+            {/* STEP 3: Booking Specifications Card */}
+            {serviceType && (
+              <div className="card">
+                <div className="grid grid-cols-1 gap-4">
+                  {serviceType === "car" && <CarBookingFields value={carForm} onChange={setCarForm} />}
+                  {serviceType === "hotel" && (
+                    <HotelBookingFields
+                      value={hotelForm}
+                      onChange={setHotelForm}
+                      hideGuestDetails={true}
+                    />
+                  )}
+                  {serviceType === "flight" && <FlightBookingFields value={flightForm} onChange={setFlightForm} />}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4: Financial Summary & Actions Toolbar */}
+            <div className="card">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* Financial Breakdown Inputs */}
+                <div className="flex flex-wrap items-center gap-3.5">
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-sunken px-3.5 py-2 border border-hairline">
+                    <span className="text-xs font-semibold text-ink-muted">Prepaid ($):</span>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={prepaid}
+                      onChange={(e) => updateFinancials(Number(e.target.value), counter)}
+                      className="w-24 rounded-lg border border-hairline-strong bg-surface px-2.5 py-1 font-mono text-sm font-bold text-ink outline-none focus:border-accent"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-sunken px-3.5 py-2 border border-hairline">
+                    <span className="text-xs font-semibold text-ink-muted">Pay at Counter ($):</span>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={counter}
+                      onChange={(e) => updateFinancials(prepaid, Number(e.target.value))}
+                      className="w-24 rounded-lg border border-hairline-strong bg-surface px-2.5 py-1 font-mono text-sm font-bold text-ink outline-none focus:border-accent"
+                    />
+                  </div>
+
+                  {/* Grand Total Badge */}
+                  <div className="flex items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 border border-accent/40">
+                    <span className="text-xs font-semibold text-accent-ink">Total Value:</span>
+                    <span className="font-mono text-base font-extrabold text-accent">
+                      ${total.toFixed(2)} USD
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right-aligned Submit & Cancel Actions */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link href="/leads" className="btn-secondary">
+                    Cancel
+                  </Link>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !serviceType || !unlocked}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      setSendEmailOnSubmit(true);
+                    }}
+                    className="btn-secondary border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 flex items-center gap-1.5 font-semibold"
+                  >
+                    <Mail size={15} />
+                    <span>{submitting ? "Processing…" : "Create & Send Auth Email"}</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !serviceType || !unlocked}
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      if (form && !form.reportValidity()) return;
+                      setSendEmailOnSubmit(false);
+                    }}
+                    className="btn-primary"
+                  >
+                    <span>{submitting ? "Processing…" : "Create Lead"}</span>
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <p className="mt-3 alert-danger">
+                  {error}
+                </p>
+              )}
+            </div>
+          </fieldset>
+        </form>
+      )}
+    </div>
+  );
+}

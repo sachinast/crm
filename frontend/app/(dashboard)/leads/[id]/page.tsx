@@ -147,13 +147,26 @@ async function fetchCancellation(id: string): Promise<CancellationEntry | null> 
   }
 }
 
+async function fetchAnyBooking(id: string, serviceType: string | null): Promise<{ booking: BookingSummary | null; serviceType: string | null }> {
+  if (serviceType) {
+    const b = await fetchBooking(id, serviceType);
+    if (b) return { booking: b, serviceType };
+  }
+  for (const st of ["car", "hotel", "flight"]) {
+    if (st === serviceType) continue;
+    const b = await fetchBooking(id, st);
+    if (b) return { booking: b, serviceType: st };
+  }
+  return { booking: null, serviceType };
+}
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const lead = await fetchLead(id);
   if (!lead) notFound();
 
-  const [booking, allTransitions, history, payments, modifications, cancellation, currentUser] = await Promise.all([
-    lead.service_type ? fetchBooking(id, lead.service_type) : Promise.resolve(null),
+  const [bookingResult, allTransitions, history, payments, modifications, cancellation, currentUser] = await Promise.all([
+    fetchAnyBooking(id, lead.service_type),
     fetchAvailableTransitions(id),
     fetchStatusHistory(id),
     fetchPayments(id),
@@ -162,14 +175,30 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     getCurrentUser(),
   ]);
 
+  const booking = bookingResult.booking;
+  if (!lead.service_type && bookingResult.serviceType) {
+    lead.service_type = bookingResult.serviceType;
+  }
+
+  const roleNormalized = (currentUser?.role || "").toLowerCase();
+  const isAgentOrAdmin =
+    Boolean(currentUser) &&
+    (roleNormalized === "admin" ||
+      roleNormalized === "super_admin" ||
+      roleNormalized === "superadmin" ||
+      roleNormalized === "agent");
+
   const canModify =
-    currentUser !== null &&
+    Boolean(currentUser) &&
+    (isAgentOrAdmin || roleNormalized === "change_dep" || roleNormalized === "cs") &&
     hasPermission(currentUser, "modifications.manage", "cancellations.manage") &&
     booking !== null;
 
-  const canProcessPayment = allTransitions.some((t) => t.status === "card_charged" || t.status === "card_declined");
+  const canProcessPayment =
+    (roleNormalized === "billing" || isAgentOrAdmin) &&
+    allTransitions.some((t) => t.status === "card_charged" || t.status === "card_declined");
   const transitions = allTransitions.filter((t) => t.status !== "card_charged" && t.status !== "card_declined");
-  const canEditCustomFields = hasPermission(currentUser, "leads.create");
+  const canEditCustomFields = isAgentOrAdmin && hasPermission(currentUser, "leads.create");
 
   return (
     <LeadDetailWorkspace
@@ -183,6 +212,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       canModify={canModify}
       canProcessPayment={canProcessPayment}
       canEditCustomFields={canEditCustomFields}
+      currentUser={currentUser}
     />
   );
 }

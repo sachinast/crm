@@ -8,6 +8,7 @@ import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
 import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 import PaymentSummarySection, {
   type PaymentSummaryData,
 } from "./PaymentSummarySection";
@@ -96,6 +97,7 @@ export default function HotelBookingFields({
   onBack,
   hideGuestDetails = false,
   disabled = false,
+  readOnly = false,
   submitting = false,
 }: {
   value: HotelBookingValue;
@@ -105,6 +107,7 @@ export default function HotelBookingFields({
   onBack?: () => void;
   hideGuestDetails?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   submitting?: boolean;
 }) {
   useEffect(() => {
@@ -173,15 +176,6 @@ export default function HotelBookingFields({
               value={value.transaction_type}
               onChange={(v) => onChange({ ...value, transaction_type: v })}
               placeholder="Select Transaction Type…"
-            />
-          </Field>
-
-          <Field label="Transaction Status">
-            <input
-              value={value.transaction_status ?? ""}
-              onChange={(e) => onChange({ ...value, transaction_status: e.target.value })}
-              className="input text-xs"
-              placeholder="e.g. Completed / Pending"
             />
           </Field>
 
@@ -367,12 +361,12 @@ export default function HotelBookingFields({
         <div className="p-4 sm:p-6 space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Hotel City / Location" required>
-              <input
+              <AddressAutocomplete
                 required
                 value={value.location}
-                onChange={(e) => onChange({ ...value, location: e.target.value })}
-                className="input"
-                placeholder="City, State / Address"
+                onChange={(loc) => onChange({ ...value, location: loc })}
+                placeholder="City, State / Hotel Address…"
+                disabled={disabled}
               />
             </Field>
 
@@ -481,6 +475,7 @@ export default function HotelBookingFields({
         onSave={onSave}
         onSaveAndEmail={onSaveAndEmail}
         onBack={onBack}
+        readOnly={readOnly || disabled}
         submitting={submitting}
       />
     </fieldset>

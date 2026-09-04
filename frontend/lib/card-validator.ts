@@ -159,3 +159,30 @@ export function validateCardDetails(
     cvvError: cvvRes.error,
   };
 }
+
+/**
+ * Masks a card number (PAN) for display in read-only / secure contexts.
+ * Displays only the last 4 digits: e.g. "•••• •••• •••• 8124" or for Amex "•••• •••••• •8124".
+ */
+export function maskCardNumber(raw?: string | null, brand?: CardBrand): string {
+  if (!raw) return "•••• •••• •••• ••••";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 4) return "•••• •••• •••• ••••";
+  const last4 = digits.slice(-4);
+  const detected = brand && brand !== "Unknown" ? brand : detectCardBrand(digits);
+  if (detected === "Amex" || digits.length === 15) {
+    return `•••• •••••• •${last4}`;
+  }
+  return `•••• •••• •••• ${last4}`;
+}
+
+/**
+ * Masks a card expiration date for display in read-only / secure contexts.
+ * Displays masked bullets: e.g. "••/••" or "—" if empty.
+ */
+export function maskCardExpiry(raw?: string | null): string {
+  if (!raw || !raw.trim() || raw === "—" || raw === "MM/YY") return "—";
+  return "••/••";
+}
+
+

@@ -23,6 +23,7 @@ import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
 import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 import PaymentSummarySection, {
   type PaymentSummaryData,
 } from "./PaymentSummarySection";
@@ -182,6 +183,7 @@ export default function FlightBookingFields({
   onBack,
   agentName = "Current Agent",
   disabled = false,
+  readOnly = false,
   submitting = false,
 }: {
   value: FlightBookingValue;
@@ -191,6 +193,7 @@ export default function FlightBookingFields({
   onBack?: () => void;
   agentName?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   submitting?: boolean;
 }) {
   const [flightNumInput, setFlightNumInput] = useState(
@@ -391,15 +394,6 @@ export default function FlightBookingFields({
                 value={value.transaction_type}
                 onChange={(v) => onChange({ ...value, transaction_type: v })}
                 placeholder="Select Transaction Type…"
-              />
-            </Field>
-
-            <Field label="Transaction Status">
-              <input
-                value={value.transaction_status ?? ""}
-                onChange={(e) => onChange({ ...value, transaction_status: e.target.value })}
-                className="input text-xs"
-                placeholder="e.g. Completed / Pending"
               />
             </Field>
 
@@ -606,22 +600,24 @@ export default function FlightBookingFields({
           </Field>
 
           <Field label="Origin Airport" required>
-            <input
+            <AddressAutocomplete
               required
+              uppercase
               value={value.origin}
-              onChange={(e) => onChange({ ...value, origin: e.target.value.toUpperCase() })}
-              className="input font-mono uppercase"
-              placeholder="e.g. JFK / LHR"
+              onChange={(loc) => onChange({ ...value, origin: loc })}
+              placeholder="e.g. JFK / LHR / New York"
+              disabled={disabled}
             />
           </Field>
 
           <Field label="Destination Airport" required>
-            <input
+            <AddressAutocomplete
               required
+              uppercase
               value={value.destination}
-              onChange={(e) => onChange({ ...value, destination: e.target.value.toUpperCase() })}
-              className="input font-mono uppercase"
-              placeholder="e.g. LAX / DXB"
+              onChange={(loc) => onChange({ ...value, destination: loc })}
+              placeholder="e.g. LAX / DXB / Los Angeles"
+              disabled={disabled}
             />
           </Field>
 
@@ -882,6 +878,7 @@ export default function FlightBookingFields({
         onSaveAndEmail={onSaveAndEmail}
         onBack={onBack}
         agentName={agentName}
+        readOnly={readOnly || disabled}
         submitting={submitting}
       />
     </fieldset>

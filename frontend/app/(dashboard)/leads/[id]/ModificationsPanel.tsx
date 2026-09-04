@@ -60,15 +60,20 @@ export default function ModificationsPanel({
     router.refresh();
   }
 
-  if (!canModify && history.length === 0) return null;
-
   return (
     <div className="card text-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="section-label flex items-center gap-1.5">
-          <PencilLine size={13} />
-          Modifications
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="section-label flex items-center gap-1.5">
+            <PencilLine size={13} />
+            Modifications
+          </h2>
+          {!canModify && (
+            <span className="rounded bg-surface-raised border border-hairline px-2 py-0.5 text-[10px] font-mono text-ink-muted uppercase">
+              Read-Only
+            </span>
+          )}
+        </div>
         {canModify && (
           <button onClick={() => setOpen((v) => !v)} className="link-muted text-xs underline">
             {open ? "Cancel" : "Record a change"}

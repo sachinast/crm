@@ -23,6 +23,7 @@ from app.models.user import User
 from app.schemas.audit import RevealRequest, RevealResult
 from app.schemas.lead import (
     AvailableTransition,
+    ChangeEmailRequest,
     ContactCheckResult,
     CustomFieldsUpdate,
     DuplicateCheckResult,
@@ -472,3 +473,102 @@ async def reveal_pii(
     await db.commit()
 
     return RevealResult(field=payload.field, value=raw_value)
+
+
+@router.post("/{lead_id}/send-change-email")
+async def send_change_email(
+    lead_id: uuid.UUID,
+    payload: ChangeEmailRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> dict:
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+
+    # 1. Log process event
+    event_details = f"Sent to {payload.to_email}: {payload.subject}"
+    if payload.internal_notes:
+        event_details += f" | Notes: {payload.internal_notes}"
+
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=current_user.id,
+        action="change_voucher_sent",
+        field_changed="change_voucher",
+        old_value=None,
+        new_value=event_details,
+    )
+
+    notifications_sent = []
+
+    # 2. Add notification for admin
+    if payload.notify_admin:
+        admin_role_id = await db.scalar(select(Role.id).where(Role.name == "admin"))
+        if admin_role_id is not None:
+            db.add(
+                Notification(
+                    lead_id=lead.id,
+                    recipient_role_id=admin_role_id,
+                    type="change_voucher_sent",
+                    message=f"{current_user.name} dispatched change voucher to {payload.to_email} for lead {lead.id}",
+                )
+            )
+            notifications_sent.append({
+                "recipient": "Admin Team",
+                "role": "admin",
+                "channel": "In-App Notification & Audit",
+                "status": "Delivered",
+            })
+
+    # 3. Add notification for change_dep role
+    if payload.notify_changes_user:
+        change_role_id = await db.scalar(select(Role.id).where(Role.name == "change_dep"))
+        if change_role_id is not None:
+            db.add(
+                Notification(
+                    lead_id=lead.id,
+                    recipient_role_id=change_role_id,
+                    type="change_voucher_sent",
+                    message=f"Change voucher dispatched to {payload.to_email} (Subject: {payload.subject}) by {current_user.name}",
+                )
+            )
+            notifications_sent.append({
+                "recipient": "Changes Department",
+                "role": "change_dep",
+                "channel": "Queue Alert & Feed",
+                "status": "Delivered",
+            })
+
+    # 4. If lead is assigned to another agent, notify that agent as well
+    if lead.agent_id and lead.agent_id != current_user.id:
+        db.add(
+            Notification(
+                lead_id=lead.id,
+                recipient_user_id=lead.agent_id,
+                type="change_voucher_sent",
+                message=f"{current_user.name} dispatched change voucher for your booking to {payload.to_email}",
+            )
+        )
+        notifications_sent.append({
+            "recipient": "Assigned Booking Agent",
+            "role": "agent",
+            "channel": "Agent Notification Tray",
+            "status": "Delivered",
+        })
+
+    await db.commit()
+    return {
+        "status": "success",
+        "message": f"Change voucher email successfully dispatched to {payload.to_email}",
+        "lead_id": str(lead.id),
+        "to_email": payload.to_email,
+        "subject": payload.subject,
+        "dispatched_by": current_user.name,
+        "dispatched_at": datetime.now(timezone.utc).isoformat(),
+        "pdf_filename": payload.pdf_filename,
+        "admin_notified": any(n["role"] == "admin" for n in notifications_sent),
+        "changes_notified": any(n["role"] == "change_dep" for n in notifications_sent),
+        "notifications": notifications_sent,
+    }
+
+

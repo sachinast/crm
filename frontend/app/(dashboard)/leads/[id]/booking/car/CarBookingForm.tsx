@@ -22,12 +22,17 @@ function fromIsoUtc(isoValue: string): string {
   return isoValue ? isoValue.slice(0, 16) : "";
 }
 
+import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
+
 export default function CarBookingForm({
   leadId,
   initial,
+  readOnly = false,
 }: {
   leadId: string;
   initial: (CarBookingValue & { total_amount: number }) | null;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const isEdit = initial !== null;
@@ -163,6 +168,34 @@ export default function CarBookingForm({
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     handleSaveBooking(false);
+  }
+
+  if (readOnly) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-500 shadow-xs">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} />
+            <span className="font-bold uppercase tracking-wider">Read-Only Booking Record</span>
+            <span className="text-ink-muted hidden sm:inline">— Department Staff Access</span>
+          </div>
+          <Link href={`/leads/${leadId}`} className="btn-secondary btn-sm font-semibold">
+            Back to Lead Workspace
+          </Link>
+        </div>
+
+        <fieldset disabled className="space-y-4 select-text">
+          <CarBookingFields
+            value={form}
+            onChange={() => {}}
+            onBack={() => router.push(`/leads/${leadId}`)}
+            readOnly={true}
+            disabled={true}
+            submitting={false}
+          />
+        </fieldset>
+      </div>
+    );
   }
 
   return (

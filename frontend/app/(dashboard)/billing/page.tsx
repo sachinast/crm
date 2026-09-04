@@ -9,7 +9,8 @@ async function fetchBillingLeads(): Promise<BillingLeadRow[]> {
   const token = await getAccessToken();
   if (!token) return [];
   try {
-    return await apiFetch<BillingLeadRow[]>("/leads", { token });
+    const data = await apiFetch<BillingLeadRow[]>("/leads?status_=transferred_to_billing", { token });
+    return data.filter((lead) => lead.status === "transferred_to_billing");
   } catch {
     return [];
   }

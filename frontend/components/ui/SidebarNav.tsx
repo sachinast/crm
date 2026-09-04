@@ -29,9 +29,12 @@ import {
   ShieldAlert,
   Flame,
   FileSpreadsheet,
+  Headphones,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { useUnreadMessageCount } from "@/lib/messaging-client";
 
@@ -64,6 +67,10 @@ export const ICONS = {
   attendance: Clock,
   files: FolderOpen,
   notes: StickyNote,
+  cs: Headphones,
+  qc: ShieldCheck,
+  chargeback: AlertTriangle,
+  changes: RefreshCw,
 } as const;
 
 export interface NavItem {
@@ -82,14 +89,28 @@ export interface NavCategory {
   items: NavItem[];
 }
 
-export default function SidebarNav({ categories }: { categories: NavCategory[] }) {
+export default function SidebarNav({
+  categories,
+  topItems = [],
+}: {
+  categories: NavCategory[];
+  topItems?: NavItem[];
+}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const unreadMessages = useUnreadMessageCount();
+
+  const queryString = searchParams?.toString() ?? "";
+  const currentFullPath = queryString ? `${pathname}?${queryString}` : pathname;
 
   // Find category ID containing active path
   const activeCategoryId = categories.find((cat) =>
     cat.items.some((item) =>
-      item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href),
+      item.href.includes("?")
+        ? currentFullPath === item.href
+        : item.href === "/dashboard"
+          ? pathname === item.href
+          : pathname.startsWith(item.href) && !queryString,
     ),
   )?.id;
 
@@ -120,6 +141,40 @@ export default function SidebarNav({ categories }: { categories: NavCategory[] }
 
   return (
     <div className="space-y-3">
+      {/* Standalone Direct Top Items (e.g. Direct Dashboard Link) */}
+      {topItems.length > 0 && (
+        <nav className="flex flex-col gap-1 pb-2 border-b border-sidebar-hairline">
+          {topItems.map((item) => {
+            const Icon = ICONS[item.icon];
+            const isActive = item.href.includes("?")
+              ? currentFullPath === item.href
+              : item.href === "/dashboard"
+                ? pathname === item.href
+                : pathname.startsWith(item.href) && !queryString;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-accent text-white font-bold shadow-md"
+                    : "text-sidebar-ink-muted hover:bg-sidebar-surface hover:text-sidebar-ink"
+                }`}
+              >
+                <Icon
+                  size={17}
+                  strokeWidth={isActive ? 2.4 : 1.8}
+                  className={isActive ? "text-white" : "text-sidebar-ink-faint group-hover:text-sidebar-ink"}
+                />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Collapsible Categories */}
       {categories.map((category) => {
         if (category.items.length === 0) return null;
 
@@ -168,10 +223,11 @@ export default function SidebarNav({ categories }: { categories: NavCategory[] }
               <nav className="flex flex-col gap-0.5 animate-fadeIn">
                 {category.items.map((item) => {
                   const Icon = ICONS[item.icon];
-                  const isActive =
-                    item.href === "/dashboard"
+                  const isActive = item.href.includes("?")
+                    ? currentFullPath === item.href
+                    : item.href === "/dashboard"
                       ? pathname === item.href
-                      : pathname.startsWith(item.href);
+                      : pathname.startsWith(item.href) && !queryString;
                   const unreadBadge =
                     item.icon === "messages" && unreadMessages > 0 ? unreadMessages : null;
 

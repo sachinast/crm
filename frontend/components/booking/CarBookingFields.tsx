@@ -19,6 +19,7 @@ import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
 import MasterSelect from "@/components/shared/MasterSelect";
 import ModernDateTimePicker from "@/components/shared/ModernDateTimePicker";
 import RichTextEditor from "@/components/shared/RichTextEditor";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 import PaymentSummarySection, {
   type PaymentSummaryData,
   type RemarkHistoryItem,
@@ -109,6 +110,7 @@ export default function CarBookingFields({
   onSaveAndEmail,
   onBack,
   disabled = false,
+  readOnly = false,
   submitting = false,
 }: {
   value: CarBookingValue;
@@ -117,6 +119,7 @@ export default function CarBookingFields({
   onSaveAndEmail?: () => void;
   onBack?: () => void;
   disabled?: boolean;
+  readOnly?: boolean;
   submitting?: boolean;
 }) {
   const [sameLocation, setSameLocation] = useState(
@@ -204,15 +207,6 @@ export default function CarBookingFields({
               value={value.transaction_type}
               onChange={(v) => onChange({ ...value, transaction_type: v })}
               placeholder="Select Transaction Type…"
-            />
-          </Field>
-
-          <Field label="Transaction Status">
-            <input
-              value={value.transaction_status ?? ""}
-              onChange={(e) => onChange({ ...value, transaction_status: e.target.value })}
-              className="input text-xs"
-              placeholder="e.g. Completed / Pending / Charged"
             />
           </Field>
 
@@ -389,12 +383,12 @@ export default function CarBookingFields({
                 <span>Pick-up Details</span>
               </div>
               <Field label="Pick-up Location" required>
-                <input
+                <AddressAutocomplete
                   required
                   value={value.pickup_location}
-                  onChange={(e) => handlePickupLocationChange(e.target.value)}
-                  className="input"
+                  onChange={(loc) => handlePickupLocationChange(loc)}
                   placeholder="Airport Terminal / City Hub"
+                  disabled={disabled}
                 />
               </Field>
               <Field label="Pick-up Date & Time" required>
@@ -427,12 +421,12 @@ export default function CarBookingFields({
               </div>
 
               <Field label="Drop-off / Return Location" required>
-                <input
+                <AddressAutocomplete
                   required
                   value={sameLocation ? value.pickup_location : value.return_location}
-                  disabled={sameLocation}
-                  onChange={(e) => onChange({ ...value, return_location: e.target.value })}
-                  className={`input ${sameLocation ? "opacity-75 bg-surface-sunken cursor-not-allowed" : ""}`}
+                  disabled={disabled || sameLocation}
+                  onChange={(loc) => onChange({ ...value, return_location: loc })}
+                  className={sameLocation ? "opacity-75 bg-surface-sunken cursor-not-allowed" : ""}
                   placeholder="Drop-off Return Location"
                 />
               </Field>
@@ -534,6 +528,7 @@ export default function CarBookingFields({
         onSave={onSave}
         onSaveAndEmail={onSaveAndEmail}
         onBack={onBack}
+        readOnly={readOnly || disabled}
         submitting={submitting}
       />
     </fieldset>

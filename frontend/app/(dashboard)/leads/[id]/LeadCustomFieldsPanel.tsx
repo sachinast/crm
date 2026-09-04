@@ -1,15 +1,15 @@
 "use client";
 
 import { ListPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import DynamicFieldsBlock from "@/components/shared/DynamicFieldsBlock";
+import { fetchCustomFields, type CustomFieldDef } from "@/lib/custom-fields-api";
 
 // Post-creation editor for this lead's admin-defined extra fields (Master
-// Admin — Custom Form Fields). Renders nothing itself if this entity type
-// has no custom fields defined — DynamicFieldsBlock handles that — so this
-// whole card just doesn't appear for orgs that haven't defined any yet.
+// Admin — Custom Form Fields). Renders nothing if this entity type has no custom
+// fields defined, so this whole card does not appear when none exist.
 export default function LeadCustomFieldsPanel({
   leadId,
   initialCustomFields,
@@ -21,9 +21,28 @@ export default function LeadCustomFieldsPanel({
 }) {
   const router = useRouter();
   const [values, setValues] = useState(initialCustomFields);
+  const [definitions, setDefinitions] = useState<CustomFieldDef[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dirty = JSON.stringify(values) !== JSON.stringify(initialCustomFields);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCustomFields("lead")
+      .then((defs) => {
+        if (!cancelled) setDefinitions(defs);
+      })
+      .catch(() => {
+        if (!cancelled) setDefinitions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!definitions || definitions.length === 0) {
+    return null;
+  }
 
   async function handleSave() {
     setSaving(true);

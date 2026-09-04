@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Code2, ExternalLink, Plus } from "lucide-react";
@@ -23,26 +24,46 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  // 1. Overview Category (Floating Chat handles in-app messaging)
-  const overviewCategory: NavCategory = {
-    id: "overview",
-    title: "Overview",
-    icon: "overview",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
-    ],
-  };
+  // 1. Direct Top Navigation Items (Dashboard displayed directly without Overview accordion)
+  const topItems: NavItem[] = [
+    { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  ];
 
-  // 2. Booking & Pipeline Category
+  const role = (user.role || "").toLowerCase();
+  const isAdmin = role === "admin" || role === "super_admin" || role === "superadmin";
+  const isAgent = role === "agent";
+  const isBilling = role === "billing";
+  const isCS = role === "cr_booking" || role === "cs" || role === "customer_service";
+  const isChanges = role === "change_dep" || role === "changes";
+  const isQC = role === "auditor" || role === "qc" || role === "quality";
+
+  // Role-gated Bookings & Pipeline menus:
+  // - Billing sees only Billing & Accounts (no Leads Queue)
+  // - CS sees only CS (Customer Service)
+  // - Changes sees only Changes Department
+  // - QR/Auditor sees only QR (Quality Control)
+  // - Agent sees Leads Queue
+  // - Admin sees all pipeline queues
+  const pipelineItems: (NavItem | false)[] = [
+    (isAdmin || isAgent) && { href: "/leads", label: "Leads Queue", icon: "leads" },
+    (isAdmin || isBilling) && { href: "/billing", label: "Billing & Accounts", icon: "billing" },
+    (isAdmin || isCS) && { href: "/leads?status=tag_cr_booking", label: "CS (Customer Service)", icon: "cs" },
+    (isAdmin || isChanges) && { href: "/leads?status=tag_change_dep", label: "Changes Department", icon: "changes" },
+    (isAdmin || isQC) && { href: "/leads?status=tag_auditor", label: "QR (Quality Control)", icon: "qc" },
+  ];
+
+  const filteredPipelineItems = pipelineItems.filter((item): item is NavItem => Boolean(item));
+  const finalPipelineItems =
+    filteredPipelineItems.length > 0
+      ? filteredPipelineItems
+      : [{ href: "/leads", label: "Leads Queue", icon: "leads" as const }];
+
+  // 2. Booking & Pipeline Category (Role-Gated)
   const pipelineCategory: NavCategory = {
     id: "pipeline",
     title: "Bookings & Pipeline",
     icon: "pipeline",
-    items: [
-      { href: "/leads", label: "Leads Queue", icon: "leads" },
-      { href: "/billing", label: "Billing & Accounts", icon: "billing" },
-      { href: "/audit", label: "Audit / QC", icon: "audit" },
-    ],
+    items: finalPipelineItems,
   };
 
   // 3. Workspace & Operations Category
@@ -126,7 +147,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : null;
 
   const categories: NavCategory[] = [
-    overviewCategory,
     pipelineCategory,
     operationsCategory,
     ...(adminCategory ? [adminCategory] : []),
@@ -161,7 +181,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         {/* Scrollable Navigation Categories Section */}
         <div className="flex-1 overflow-y-auto px-3 py-3.5 space-y-2.5 custom-scrollbar">
-          <SidebarNav categories={categories} />
+          <Suspense fallback={null}>
+            <SidebarNav categories={categories} topItems={topItems} />
+          </Suspense>
         </div>
 
         {/* Fixed Bottom Section (NEVER Hidden on Screen) */}
@@ -207,13 +229,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="flex flex-1 flex-col min-w-0">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-header-hairline bg-header-bg/95 backdrop-blur-md px-6 py-2.5">
           <div className="flex items-center gap-3">
-            <Link
-              href="/leads/new"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-accent-hover active:scale-95 transition-all"
-            >
-              <Plus size={14} className="text-white" />
-              <span>New Lead</span>
-            </Link>
+            {(isAdmin || isAgent) && (
+              <Link
+                href="/leads/new"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-accent-hover active:scale-95 transition-all"
+              >
+                <Plus size={14} className="text-white" />
+                <span>New Lead</span>
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

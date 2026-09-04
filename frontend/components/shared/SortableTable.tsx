@@ -10,6 +10,7 @@ export interface UseTableSortAndFilterOptions<T> {
   searchFields?: (keyof T | ((item: T) => string | number | boolean | null | undefined))[];
   initialSortKey?: keyof T | string | null;
   initialSortDirection?: SortDirection;
+  initialFilters?: Record<string, string>;
   filterFn?: (item: T, filters: Record<string, string>) => boolean;
 }
 
@@ -18,12 +19,13 @@ export function useTableSortAndFilter<T>({
   searchFields,
   initialSortKey = null,
   initialSortDirection = null,
+  initialFilters = {},
   filterFn,
 }: UseTableSortAndFilterOptions<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<keyof T | string | null>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Record<string, string>>(initialFilters);
 
   function toggleSort(key: keyof T | string) {
     if (sortKey !== key) {

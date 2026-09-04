@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Hotel, ChevronLeft } from "lucide-react";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
-import { getAccessToken } from "@/lib/auth";
+import { getAccessToken, getCurrentUser } from "@/lib/auth";
 import PageHeader from "@/components/shared/PageHeader";
 import HotelBookingForm from "./HotelBookingForm";
 import type { HotelBookingValue } from "@/components/booking/HotelBookingFields";
@@ -20,6 +20,12 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const token = await getAccessToken();
   if (!token) notFound();
+
+  const currentUser = await getCurrentUser();
+  const role = (currentUser?.role || "").toLowerCase();
+  const isAgentOrAdmin =
+    role === "admin" || role === "super_admin" || role === "superadmin" || role === "agent";
+  const readOnly = !isAgentOrAdmin;
 
   let lead: Lead;
   try {
@@ -61,7 +67,7 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
           </Link>
         }
       />
-      <HotelBookingForm leadId={id} initial={existing} />
+      <HotelBookingForm leadId={id} initial={existing} readOnly={readOnly} />
     </div>
   );
 }

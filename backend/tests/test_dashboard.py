@@ -209,6 +209,44 @@ async def test_admin_sees_system_stats_and_total_revenue(api_client, admin):
     assert body["future_credits_issued_count"] is not None
 
 
+async def test_admin_sees_status_widgets_and_sla_tracking(api_client, admin, agent):
+    admin_token = await _login(api_client, admin["email"], admin["password"])
+    agent_token = await _login(api_client, agent["email"], agent["password"])
+
+    resp = await api_client.post(
+        "/leads",
+        json={"name": "SLA Lead", "phone": _unique_phone(), "email": _unique_email("sla")},
+        headers=_auth(agent_token),
+    )
+    lead_id = resp.json()["id"]
+
+    summary_resp = await api_client.get("/dashboard/summary?timeframe=1D", headers=_auth(admin_token))
+    assert summary_resp.status_code == 200
+    body = summary_resp.json()
+    assert "status_widgets" in body
+    assert body["status_widgets"] is not None
+    # Admin gets all 9 active status widgets
+    assert len(body["status_widgets"]) == 9
+    auth_pending_widget = next(w for w in body["status_widgets"] if w["status"] == "authorization_pending")
+    assert auth_pending_widget["count"] >= 1
+    assert "sla_breached_count" in auth_pending_widget
+    assert len(auth_pending_widget["leads"]) >= 1
+    lead_item = auth_pending_widget["leads"][0]
+    assert "time_diff" in lead_item
+    assert "time_diff_seconds" in lead_item
+    assert "sla_breached" in lead_item
+
+    # Agent gets 5 core status widgets
+    agent_summary_resp = await api_client.get("/dashboard/summary", headers=_auth(agent_token))
+    assert agent_summary_resp.status_code == 200
+    agent_body = agent_summary_resp.json()
+    assert agent_body["status_widgets"] is not None
+    assert len(agent_body["status_widgets"]) == 5
+
+    await _delete_lead(uuid.UUID(lead_id))
+
+
 async def test_dashboard_requires_auth(api_client):
     resp = await api_client.get("/dashboard/summary")
     assert resp.status_code == 401
+

@@ -63,10 +63,12 @@ export default function LeadsTableClient({
   initialLeads,
   initialPage = 1,
   initialPageSize = 10,
+  initialStatus,
 }: {
   initialLeads: LeadRow[];
   initialPage?: number;
   initialPageSize?: number;
+  initialStatus?: string;
 }) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -96,6 +98,7 @@ export default function LeadsTableClient({
     searchFields: ["name", "email", "phone", "service_type", "status", "id"],
     initialSortKey: "created_at",
     initialSortDirection: "desc",
+    initialFilters: initialStatus ? { status: initialStatus } : {},
     filterFn: (lead, activeFilters) => {
       if (activeFilters.status && lead.status.toLowerCase() !== activeFilters.status.toLowerCase()) {
         return false;

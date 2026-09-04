@@ -9,7 +9,32 @@ import uuid
 
 from pydantic import BaseModel
 
+from datetime import datetime
+
 from app.schemas.lead import LeadSummary
+
+
+class StatusLeadItem(BaseModel):
+    id: uuid.UUID
+    name: str
+    phone: str
+    email: str
+    status: str
+    agent_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    status_changed_at: datetime
+    time_diff: str
+    time_diff_seconds: int
+    sla_breached: bool  # > 24 hours in current status
+
+
+class StatusWidget(BaseModel):
+    status: str
+    label: str
+    count: int
+    sla_breached_count: int
+    leads: list[StatusLeadItem] = []
 
 
 class LeaderboardEntry(BaseModel):
@@ -29,6 +54,14 @@ class DashboardSummary(BaseModel):
     total_visible_leads: int
     leads_by_status: dict[str, int]
     recent_leads: list[LeadSummary]
+
+    # Status widgets with SLA tracking (all 9 statuses for Admin, 5 core statuses for Agent)
+    status_widgets: list[StatusWidget] | None = None
+
+    # Focused single department queue for department roles (Billing, CR, Changes, Quality)
+    department_queue_count: int | None = None
+    department_queue_name: str | None = None
+    department_queue_status: str | None = None
 
     # Populated only when relevant to the caller's role; null otherwise
     # rather than omitted, so the frontend can branch on a stable shape.

@@ -41,11 +41,15 @@ export default function BillingQueueClient({ leads }: { leads: BillingLeadRow[] 
     setCurrentTime(Date.now());
   }, []);
 
+  const billingPendingLeads = useMemo(() => {
+    return leads.filter((l) => l.status === "transferred_to_billing");
+  }, [leads]);
+
   const uniqueStatuses = useMemo(() => {
     const set = new Set<string>();
-    leads.forEach((l) => l.status && set.add(l.status));
+    billingPendingLeads.forEach((l) => l.status && set.add(l.status));
     return Array.from(set).sort();
-  }, [leads]);
+  }, [billingPendingLeads]);
 
   const {
     items: filteredLeads,
@@ -61,7 +65,7 @@ export default function BillingQueueClient({ leads }: { leads: BillingLeadRow[] 
     totalCount,
     filteredCount,
   } = useTableSortAndFilter<BillingLeadRow>({
-    data: leads,
+    data: billingPendingLeads,
     searchFields: ["name", "email", "phone", "service_type", "status", "id"],
     initialSortKey: "created_at",
     initialSortDirection: "desc",

@@ -50,14 +50,19 @@ export default function CancellationPanel({
     router.refresh();
   }
 
-  if (!canCancel && !cancellation) return null;
-
   return (
     <div className="card text-sm">
-      <h2 className="section-label mb-3 flex items-center gap-1.5">
-        <Ban size={13} />
-        Cancellation
-      </h2>
+      <div className="mb-3 flex items-center gap-2">
+        <h2 className="section-label flex items-center gap-1.5">
+          <Ban size={13} />
+          Cancellation
+        </h2>
+        {!canCancel && (
+          <span className="rounded bg-surface-raised border border-hairline px-2 py-0.5 text-[10px] font-mono text-ink-muted uppercase">
+            Read-Only
+          </span>
+        )}
+      </div>
 
       {cancellation ? (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -104,7 +109,9 @@ export default function CancellationPanel({
             Cancel this booking
           </button>
         )
-      ) : null}
+      ) : (
+        <p className="text-sm text-ink-faint">No cancellation records on file. Booking reservation is active.</p>
+      )}
     </div>
   );
 }
