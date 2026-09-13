@@ -1,6 +1,6 @@
 "use client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { API_BASE_URL } from "@/lib/config";
 
 export interface FileRecord {
   id: string;

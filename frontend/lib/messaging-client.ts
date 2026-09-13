@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { fetchUnreadCount } from "@/lib/messaging-api";
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
+import { WS_BASE_URL } from "@/lib/config";
 
 export interface ChatMessageEvent {
   type: "chat_message";

@@ -2,8 +2,7 @@
 
 import { CheckCircle2, PhoneCall, Tag, Ticket, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { API_BASE_URL } from "@/lib/config";
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
 const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+1 (877) 362-2838";
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? "E-Booking Desk";

@@ -10,7 +10,7 @@ export interface NotificationMessage {
   conversation_id?: string;
 }
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
+import { WS_BASE_URL } from "@/lib/config";
 
 /**
  * Live notification feed — TECHNICAL_SPEC.md §5 (`WS /ws/notifications`).

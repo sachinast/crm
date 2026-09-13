@@ -2,8 +2,7 @@
 
 import { Check, ChevronDown, ChevronUp, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { API_BASE_URL } from "@/lib/config";
 
 export default function EmbedSnippetButton({ widgetKey }: { widgetKey: string }) {
   const [open, setOpen] = useState(false);
