@@ -53,7 +53,7 @@ def dump():
     
     sql_statements = [
         "-- Master Tables Data Dump from Local Database (Excludes users)",
-        "-- Safe to execute on Railway PostgreSQL",
+        "-- Safe to execute on PostgreSQL",
         "BEGIN;\n"
     ]
     

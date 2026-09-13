@@ -48,8 +48,8 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def _coerce_asyncpg_scheme(cls, v: str) -> str:
-        # Managed Postgres hosts (Railway, Render, Heroku-style) inject
-        # DATABASE_URL as "postgres://" or "postgresql://" (psycopg2
+        # Managed Postgres hosts often inject DATABASE_URL as "postgres://"
+        # or "postgresql://" (psycopg2 convention) — SQLAlchemy's async engine
         # convention) — SQLAlchemy's async engine here needs the
         # "postgresql+asyncpg://" driver scheme, so normalize instead of
         # requiring every host's env var to be hand-edited to match.

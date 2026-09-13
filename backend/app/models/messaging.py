@@ -8,7 +8,7 @@ note in api/v1/websocket.py):
 
 - Attachments are stored as bytes directly in Postgres (`MessageAttachment.data`),
   not an object store (S3/R2/etc). This keeps the feature self-contained across
-  every environment this app runs in (local/CI/Railway) with zero extra infra
+  every environment this app runs in (local/CI/production) with zero extra infra
   or credentials, at the cost of DB size — bounded by
   settings.messaging_max_file_size_mb per file. A move to real object storage
   is a drop-in swap of the attachment read/write path in api/v1/messaging.py,

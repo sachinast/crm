@@ -389,7 +389,7 @@ async def send_customer_email(
             msg = f"Failed to connect to Resend API: {exc}"
             logger.error(f"[Email Service] {msg}")
     # Error if Resend API key is not configured
-    msg = "RESEND_API_KEY environment variable is not configured on the backend server. Please add RESEND_API_KEY and RESEND_FROM_EMAIL to your Railway dashboard variables."
+    msg = "RESEND_API_KEY environment variable is not configured on the backend server. Please add RESEND_API_KEY and RESEND_FROM_EMAIL to your server environment variables."
     logger.error(f"[Email Service] {msg}")
     return False, msg
 

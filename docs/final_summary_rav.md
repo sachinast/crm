@@ -125,7 +125,7 @@ The application sidebar ([`SidebarNav.tsx`](file:///d:/Ravendra/Personal/Sachin/
 ## 7. Database Restoration & Environment Hardening
 
 * **Database Restoration:**
-  - Restored [`backups/railway_backup.sql`](file:///d:/Ravendra/Personal/Sachin/crm/backups/railway_backup.sql) into PostgreSQL (`crm-postgres-1`).
+  - Restored database backup into PostgreSQL (`crm-postgres-1`).
   - Restored 12 leads, 3 car bookings, 85 master options, 10 roles, 22 permissions, embed widgets, files, notes, and attendance records.
   - Executed Alembic migrations up to the latest revision.
 * **User Accounts & Test Credentials:**

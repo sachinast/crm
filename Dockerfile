@@ -1,5 +1,5 @@
 # Root-level Dockerfile — builds the Next.js frontend.
-# Used by deployment platforms (e.g. Railway) that build from the repo root.
+# Used by deployment platforms that build from the repo root.
 
 FROM node:20-alpine AS deps
 WORKDIR /app

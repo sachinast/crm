@@ -29,7 +29,7 @@ _WIDGET_JS_PATH = Path(__file__).resolve().parent.parent.parent / "static" / "em
 
 def _client_ip(request: Request) -> str | None:
     # Same precedence as messaging's/files' download-link IP capture and
-    # every reverse-proxied deployment (Railway/Vercel sit in front of this
+    # every reverse-proxied deployment (Vercel/Hostinger sit in front of this
     # API) — X-Forwarded-For's first hop is the actual visitor.
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
