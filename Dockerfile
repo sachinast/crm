@@ -4,7 +4,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci
+RUN npm ci || npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
