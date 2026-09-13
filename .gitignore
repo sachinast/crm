@@ -4,8 +4,15 @@ __pycache__/
 *.pyc
 .env
 .env.local
+.env.docker
+.env.*.local
 .venv/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 .DS_Store
+
+# Only track .env.example and .env.*.example files — never real secrets
+!.env.example
+!.env.*.example
+!*.env.example
