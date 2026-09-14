@@ -1,7 +1,7 @@
 import { UserCog } from "lucide-react";
 
 import { apiFetch } from "@/lib/api-client";
-import { getAccessToken } from "@/lib/auth";
+import { getAccessToken, getCurrentUser } from "@/lib/auth";
 import type { RoleDef } from "@/lib/roles-api";
 import PageHeader from "@/components/shared/PageHeader";
 import CreateUserForm from "./CreateUserForm";
@@ -28,7 +28,14 @@ async function fetchRoles(): Promise<RoleDef[]> {
 }
 
 export default async function AdminUsersPage() {
-  const [users, roles] = await Promise.all([fetchUsers(), fetchRoles()]);
+  const [users, roles, currentUser] = await Promise.all([
+    fetchUsers(),
+    fetchRoles(),
+    getCurrentUser(),
+  ]);
+
+  const roleName = (currentUser?.role || "").toLowerCase().replace(/[\s_-]+/g, "");
+  const isSuperAdmin = roleName === "superadmin";
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
@@ -61,7 +68,11 @@ export default async function AdminUsersPage() {
 
         {/* Right Column: Symmetrical Users Data Table */}
         <div className="lg:col-span-7">
-          <UsersTableClient users={users} />
+          <UsersTableClient
+            users={users}
+            isSuperAdmin={isSuperAdmin}
+            currentUserId={currentUser?.id}
+          />
         </div>
       </div>
     </div>

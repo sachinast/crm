@@ -1,14 +1,17 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import require_ip_whitelisted, require_permission
+from app.api.deps import require_ip_whitelisted, require_permission, require_role
 from app.core.security import hash_password
 from app.db.session import get_db
 from app.domain.activity_log import log_activity
+from app.models.audit import Notification
+from app.models.lead import Lead
 from app.models.rbac import Role
 from app.models.user import User, UserWhitelistedIP
 from app.schemas.user import MeRead, UserCreate, UserRead, UserUpdate, WhitelistedIPCreate, WhitelistedIPRead
@@ -163,7 +166,132 @@ async def remove_whitelisted_ip(
     await db.delete(entry)
     await db.commit()
 
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: uuid.UUID,
+    reassign_leads_to: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("super_admin", "superadmin", "Super Admin")),
+) -> dict:
+    """Removes a user account. Exclusively available to Super Admin.
+
+    - Protects against self-deletion.
+    - Prevents removing the last active Super Admin account.
+    - Optionally reassigns leads if `reassign_leads_to` is provided.
+    - Attempts permanent hard deletion.
+    - If the user has immutable audit/compliance records (leads, bookings, audit logs),
+      gracefully falls back to deactivating the account (`is_active = False`) to preserve
+      regulatory audit trails.
+    """
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own account.",
+        )
+
+    stmt = select(User).options(selectinload(User.role)).where(User.id == user_id)
+    target_user = (await db.execute(stmt)).scalar_one_or_none()
+    if target_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    target_role_name = (target_user.role.name if target_user.role else "").lower().replace(" ", "_")
+    if target_role_name in ("super_admin", "superadmin"):
+        superadmin_count = await db.scalar(
+            select(func.count(User.id))
+            .join(Role, User.role_id == Role.id)
+            .where(
+                func.lower(Role.name).in_(["super_admin", "superadmin"]),
+                User.is_active.is_(True),
+            )
+        )
+        if (superadmin_count or 0) <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete the last active Super Admin account.",
+            )
+
+    if reassign_leads_to is not None:
+        reassign_target = await db.get(User, reassign_leads_to)
+        if reassign_target is None or not reassign_target.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reassignment target user not found or is inactive.",
+            )
+        await db.execute(
+            update(Lead).where(Lead.agent_id == user_id).values(agent_id=reassign_leads_to)
+        )
+
+    target_user_email = target_user.email
+    target_user_name = target_user.name
+    target_role = target_user.role.name if target_user.role else "unknown"
+
+    # Safely nullify users.created_by references pointing to this user
+    await db.execute(update(User).where(User.created_by == user_id).values(created_by=None))
+
+    # Clean up notifications recipient references
+    await db.execute(delete(Notification).where(Notification.recipient_user_id == user_id))
+
+    # Clean up whitelisted IPs
+    await db.execute(delete(UserWhitelistedIP).where(UserWhitelistedIP.user_id == user_id))
+
+    deleted_permanently = False
+    try:
+        async with db.begin_nested():
+            await db.delete(target_user)
+            await db.flush()
+        deleted_permanently = True
+    except IntegrityError:
+        # User is referenced in immutable audit or booking tables (e.g., booking_process_log, status_history, leads)
+        target_user.is_active = False
+
+    if deleted_permanently:
+        log_activity(
+            db,
+            actor_id=current_user.id,
+            action="user_deleted",
+            category="admin",
+            target_type="user",
+            target_id=user_id,
+            metadata={
+                "email": target_user_email,
+                "name": target_user_name,
+                "role": target_role,
+                "deletion_type": "permanent",
+            },
+        )
+        await db.commit()
+        return {
+            "message": f"User '{target_user_name}' ({target_user_email}) was permanently removed.",
+            "deleted": True,
+            "user_id": str(user_id),
+        }
+    else:
+        log_activity(
+            db,
+            actor_id=current_user.id,
+            action="user_deactivated",
+            category="admin",
+            target_type="user",
+            target_id=user_id,
+            metadata={
+                "email": target_user_email,
+                "name": target_user_name,
+                "role": target_role,
+                "deletion_type": "deactivated_for_compliance",
+            },
+        )
+        await db.commit()
+        return {
+            "message": f"User '{target_user_name}' ({target_user_email}) has historical records and was deactivated to preserve compliance records.",
+            "deleted": False,
+            "deactivated": True,
+            "user_id": str(user_id),
+        }
+
+
 # GET/PATCH /system-settings (the old single-boolean registration_enabled
 # toggle) removed in migration 0009 — replaced by the generic app_settings
 # store: GET/POST/PATCH/DELETE /admin/settings (app/api/v1/admin_settings.py),
 # still gated on the same admin.view_settings/admin.manage_settings codes.
+
