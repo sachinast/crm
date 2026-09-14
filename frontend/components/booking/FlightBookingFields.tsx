@@ -185,6 +185,7 @@ export default function FlightBookingFields({
   disabled = false,
   readOnly = false,
   submitting = false,
+  canViewUnmaskedCard = false,
 }: {
   value: FlightBookingValue;
   onChange: (next: FlightBookingValue) => void;
@@ -195,6 +196,7 @@ export default function FlightBookingFields({
   disabled?: boolean;
   readOnly?: boolean;
   submitting?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   const [flightNumInput, setFlightNumInput] = useState(
     value.flight_numbers.join(", "),
@@ -880,6 +882,7 @@ export default function FlightBookingFields({
         agentName={agentName}
         readOnly={readOnly || disabled}
         submitting={submitting}
+        canViewUnmaskedCard={canViewUnmaskedCard}
       />
     </fieldset>
   );

@@ -6,7 +6,22 @@ interface FormattedPlace {
   secondary: string;
 }
 
-function formatPhotonPlace(p: Record<string, any>): FormattedPlace {
+interface PhotonProperties {
+  name?: string;
+  housenumber?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}
+
+interface NominatimItem {
+  name?: string;
+  display_name?: string;
+}
+
+function formatPhotonPlace(p: PhotonProperties): FormattedPlace {
   const { name, housenumber, street, city, state, postcode, country } = p;
 
   let streetPart = "";
@@ -32,7 +47,7 @@ function formatPhotonPlace(p: Record<string, any>): FormattedPlace {
   return { description, primary, secondary };
 }
 
-function formatNominatimPlace(item: Record<string, any>): FormattedPlace {
+function formatNominatimPlace(item: NominatimItem): FormattedPlace {
   const name = item.name || item.display_name?.split(",")?.[0]?.trim() || "";
   const displayName = item.display_name || "";
   const secondary = displayName.startsWith(name)

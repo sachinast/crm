@@ -46,6 +46,8 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
     if (!(err instanceof ApiError && err.status === 404)) throw err;
   }
 
+  const canViewUnmaskedCard = ["billing", "admin", "super_admin", "superadmin"].includes(role);
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <PageHeader
@@ -67,7 +69,12 @@ export default async function HotelBookingPage({ params }: { params: Promise<{ i
           </Link>
         }
       />
-      <HotelBookingForm leadId={id} initial={existing} readOnly={readOnly} />
+      <HotelBookingForm
+        leadId={id}
+        initial={existing}
+        readOnly={readOnly}
+        canViewUnmaskedCard={canViewUnmaskedCard}
+      />
     </div>
   );
 }

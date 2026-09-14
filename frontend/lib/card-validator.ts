@@ -14,6 +14,32 @@ export interface CardValidationResult {
   expiryError?: string;
   isCvvValid: boolean;
   cvvError?: string;
+  isMaskedNumber?: boolean;
+  isMaskedExpiry?: boolean;
+  isMaskedCvv?: boolean;
+}
+
+/**
+ * Checks if a card number is masked (e.g. "**** **** **** 4242" or "•••• •••• •••• 6186").
+ */
+export function isMaskedCard(raw?: string | null): boolean {
+  if (!raw || !raw.trim()) return false;
+  return /[\*•]/.test(raw) || /^\*{4}/.test(raw.trim()) || /^•{4}/.test(raw.trim());
+}
+
+// Checks if an expiry date is masked (e.g. "** / **" or "••/••").
+export function isMaskedExpiry(raw?: string | null): boolean {
+  if (!raw || !raw.trim()) return false;
+  return /[\*•]/.test(raw) || raw.trim() === "**/**" || raw.trim() === "••/••";
+}
+
+/**
+ * Checks if a CVV is masked (e.g. "•••", "••••", "***", "...", "....").
+ */
+export function isMaskedCVV(raw?: string | null): boolean {
+  if (!raw || !raw.trim()) return false;
+  const trimmed = raw.trim();
+  return /[\*•]/.test(trimmed) || trimmed === "..." || trimmed === "....";
 }
 
 /**
@@ -73,6 +99,10 @@ export function detectCardBrand(rawNumber: string): CardBrand {
  * Validates Expiry Date (MM/YY or MM/YYYY)
  */
 export function validateExpiry(expiryStr: string): { isValid: boolean; isExpired: boolean; error?: string } {
+  if (isMaskedExpiry(expiryStr)) {
+    return { isValid: true, isExpired: false };
+  }
+
   const clean = expiryStr.replace(/\D/g, "").slice(0, 4);
   if (!clean || clean.length < 4) {
     return { isValid: false, isExpired: false, error: clean.length > 0 ? "Incomplete date (MM/YY)" : undefined };
@@ -110,6 +140,10 @@ export function validateExpiry(expiryStr: string): { isValid: boolean; isExpired
  * Validates CVV / CVC code
  */
 export function validateCVV(cvv: string, brand: CardBrand = "Unknown"): { isValid: boolean; error?: string } {
+  if (isMaskedCVV(cvv)) {
+    return { isValid: true };
+  }
+
   const clean = cvv.replace(/\D/g, "");
   if (!clean) return { isValid: false };
 
@@ -127,16 +161,34 @@ export function validateCVV(cvv: string, brand: CardBrand = "Unknown"): { isVali
 export function validateCardDetails(
   cardNumber: string,
   cardExpiry: string,
-  cvv: string
+  cvv: string,
+  existingBrand?: string | null
 ): CardValidationResult {
+  const isMaskedNum = isMaskedCard(cardNumber);
+  const isMaskedExp = isMaskedExpiry(cardExpiry);
+  const isMaskedCvvVal = isMaskedCVV(cvv);
+
   const cleanNum = cardNumber.replace(/\D/g, "").slice(0, 16);
-  const brand = detectCardBrand(cleanNum);
+  let brand: CardBrand = "Unknown";
+  const validBrands: CardBrand[] = ["Visa", "Mastercard", "Amex", "Discover", "JCB", "Diners"];
+  if (existingBrand && validBrands.some((b) => b.toLowerCase() === existingBrand.toLowerCase())) {
+    brand = validBrands.find((b) => b.toLowerCase() === existingBrand.toLowerCase()) || "Unknown";
+  } else if (!isMaskedNum) {
+    brand = detectCardBrand(cleanNum);
+  } else if (cleanNum.length >= 1) {
+    brand = detectCardBrand(cleanNum);
+  }
+
   const expectedLen = brand === "Amex" ? 15 : 16;
 
   let isValidNumber = false;
   let numberError: string | undefined;
 
-  if (cleanNum.length === expectedLen || (brand === "Unknown" && cleanNum.length >= 13 && cleanNum.length <= 16)) {
+  if (isMaskedNum) {
+    // Masked card on file is already verified & stored securely
+    isValidNumber = true;
+    numberError = undefined;
+  } else if (cleanNum.length === expectedLen || (brand === "Unknown" && cleanNum.length >= 13 && cleanNum.length <= 16)) {
     isValidNumber = validateLuhn(cleanNum);
     if (!isValidNumber) {
       numberError = "Invalid card number (Luhn checksum failed)";
@@ -157,6 +209,9 @@ export function validateCardDetails(
     expiryError: expiryRes.error,
     isCvvValid: cvvRes.isValid,
     cvvError: cvvRes.error,
+    isMaskedNumber: isMaskedNum,
+    isMaskedExpiry: isMaskedExp,
+    isMaskedCvv: isMaskedCvvVal,
   };
 }
 

@@ -112,6 +112,7 @@ export default function CarBookingFields({
   disabled = false,
   readOnly = false,
   submitting = false,
+  canViewUnmaskedCard = false,
 }: {
   value: CarBookingValue;
   onChange: (next: CarBookingValue) => void;
@@ -121,6 +122,7 @@ export default function CarBookingFields({
   disabled?: boolean;
   readOnly?: boolean;
   submitting?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   const [sameLocation, setSameLocation] = useState(
     !value.return_location || value.return_location === value.pickup_location,
@@ -530,6 +532,7 @@ export default function CarBookingFields({
         onBack={onBack}
         readOnly={readOnly || disabled}
         submitting={submitting}
+        canViewUnmaskedCard={canViewUnmaskedCard}
       />
     </fieldset>
   );

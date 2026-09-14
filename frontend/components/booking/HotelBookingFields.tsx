@@ -99,6 +99,7 @@ export default function HotelBookingFields({
   disabled = false,
   readOnly = false,
   submitting = false,
+  canViewUnmaskedCard = false,
 }: {
   value: HotelBookingValue;
   onChange: (next: HotelBookingValue) => void;
@@ -109,6 +110,7 @@ export default function HotelBookingFields({
   disabled?: boolean;
   readOnly?: boolean;
   submitting?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   useEffect(() => {
     const updates: Partial<HotelBookingValue> = {};
@@ -477,6 +479,7 @@ export default function HotelBookingFields({
         onBack={onBack}
         readOnly={readOnly || disabled}
         submitting={submitting}
+        canViewUnmaskedCard={canViewUnmaskedCard}
       />
     </fieldset>
   );

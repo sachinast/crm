@@ -70,10 +70,10 @@ export default function PaymentSummarySection({
   const cardExpiry = data.card_expiry ?? "";
   const cardCvv = data.cvv ?? "";
 
-  // Real-time card validation
+  // Real-time card validation (handles both raw cards and masked cards on file)
   const validation = useMemo(() => {
-    return validateCardDetails(cardNumber, cardExpiry, cardCvv);
-  }, [cardNumber, cardExpiry, cardCvv]);
+    return validateCardDetails(cardNumber, cardExpiry, cardCvv, data.card_type);
+  }, [cardNumber, cardExpiry, cardCvv, data.card_type]);
 
   const rawCardDigits = cardNumber.replace(/\D/g, "");
   const brandStyle = BRAND_COLORS[validation.brand];
@@ -190,7 +190,30 @@ export default function PaymentSummarySection({
                     value={displayCardNumber}
                     onChange={(e) => {
                       if (readOnly) return;
-                      const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+                      const inputVal = e.target.value;
+
+                      // If card was previously masked and user is typing into it
+                      if (validation.isMaskedNumber && (inputVal.includes("*") || inputVal.includes("•"))) {
+                        const oldLast4 = cardNumber.replace(/\D/g, "").slice(-4);
+                        const nonMaskDigits = inputVal.replace(/[\*\•\s\-]/g, "");
+                        if (nonMaskDigits && nonMaskDigits !== oldLast4) {
+                          const newOnly = nonMaskDigits.replace(new RegExp(`${oldLast4}$`), "");
+                          const cleanNew = (newOnly || nonMaskDigits).slice(0, 16);
+                          const brand = detectCardBrand(cleanNew);
+                          let formatted = cleanNew;
+                          if (brand === "Amex") {
+                            formatted = cleanNew.replace(/^(\d{4})(\d{0,6})(\d{0,5})$/, (_, g1, g2, g3) =>
+                              [g1, g2, g3].filter(Boolean).join(" ")
+                            );
+                          } else {
+                            formatted = cleanNew.replace(/(\d{4})(?=\d)/g, "$1 ");
+                          }
+                          onChange({ card_number: formatted, card_type: brand !== "Unknown" ? brand : data.card_type });
+                          return;
+                        }
+                      }
+
+                      const raw = inputVal.replace(/\D/g, "").slice(0, 16);
                       const brand = detectCardBrand(raw);
                       
                       // Amex format (4-6-5), others (4-4-4-4)
@@ -208,11 +231,13 @@ export default function PaymentSummarySection({
                     className={`input font-mono font-medium pr-32 ${
                       readOnly
                         ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline select-all"
-                        : rawCardDigits.length >= 13
-                          ? validation.isValidNumber
-                            ? "border-emerald-500/50 focus:border-emerald-500"
-                            : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
-                          : ""
+                        : validation.isMaskedNumber
+                          ? "border-emerald-500/40 focus:border-emerald-500"
+                          : rawCardDigits.length >= 13
+                            ? validation.isValidNumber
+                              ? "border-emerald-500/50 focus:border-emerald-500"
+                              : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
+                            : ""
                     }`}
                     placeholder="•••• •••• •••• ••••"
                     maxLength={19}
@@ -225,14 +250,20 @@ export default function PaymentSummarySection({
                         {validation.brand}
                       </span>
                     )}
-                    {!readOnly && rawCardDigits.length >= 13 && (
-                      validation.isValidNumber ? (
-                        <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <AlertCircle size={16} className="text-rose-600 dark:text-rose-400" />
-                      )
+                    {!readOnly && (
+                      validation.isMaskedNumber ? (
+                        <span title="Card on file is verified & encrypted">
+                          <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        </span>
+                      ) : rawCardDigits.length >= 13 ? (
+                        validation.isValidNumber ? (
+                          <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <AlertCircle size={16} className="text-rose-600 dark:text-rose-400" />
+                        )
+                      ) : null
                     )}
-                    {readOnly && rawCardDigits.length >= 4 && (
+                    {readOnly && (rawCardDigits.length >= 4 || validation.isMaskedNumber) && (
                       <span title="Card masked for security">
                         <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
                       </span>
@@ -248,6 +279,21 @@ export default function PaymentSummarySection({
                     <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
                     <span>Encrypted & masked in read-only mode</span>
                   </p>
+                ) : validation.isMaskedNumber ? (
+                  <div className="flex items-center gap-2">
+                    <p className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 animate-fadeIn">
+                      <ShieldCheck size={13} className="text-emerald-500" />
+                      <span>Card verified on file (encrypted & masked)</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ card_number: "", card_expiry: "", cvv: "" })}
+                      className="text-[11px] font-semibold text-accent hover:underline cursor-pointer"
+                      title="Clear masked card to enter a new card"
+                    >
+                      Change Card
+                    </button>
+                  </div>
                 ) : validation.numberError && rawCardDigits.length > 0 ? (
                   <p className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                     <AlertCircle size={13} />
@@ -262,8 +308,10 @@ export default function PaymentSummarySection({
                   <span className="text-ink-muted">Max 16 digits allowed</span>
                 )}
                 {!readOnly && (
-                  <span className="font-mono text-ink-muted text-[11px] ml-auto">
-                    {rawCardDigits.length} / {validation.brand === "Amex" ? 15 : 16} digits
+                  <span className={`font-mono text-[11px] ml-auto ${validation.isMaskedNumber ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-ink-muted"}`}>
+                    {validation.isMaskedNumber
+                      ? "Masked on file"
+                      : `${rawCardDigits.length} / ${validation.brand === "Amex" ? 15 : 16} digits`}
                   </span>
                 )}
               </div>
@@ -291,27 +339,33 @@ export default function PaymentSummarySection({
                     className={`input font-mono ${
                       readOnly
                         ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline"
-                        : cardExpiry.length >= 4
-                          ? validation.isExpiryValid
-                            ? "border-emerald-500/50 focus:border-emerald-500"
-                            : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
-                          : ""
+                        : validation.isMaskedExpiry
+                          ? "border-emerald-500/40 focus:border-emerald-500"
+                          : cardExpiry.length >= 4
+                            ? validation.isExpiryValid
+                              ? "border-emerald-500/50 focus:border-emerald-500"
+                              : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
+                            : ""
                     }`}
                     placeholder="MM/YY"
                     maxLength={5}
                   />
-                  {!readOnly && cardExpiry.length >= 4 && (
+                  {!readOnly && (
                     <div className="absolute right-2.5 pointer-events-none">
-                      {validation.isExpiryValid ? (
-                        <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <AlertCircle size={15} className="text-rose-600 dark:text-rose-400" />
-                      )}
+                      {validation.isMaskedExpiry ? (
+                        <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400" />
+                      ) : cardExpiry.length >= 4 ? (
+                        validation.isExpiryValid ? (
+                          <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <AlertCircle size={15} className="text-rose-600 dark:text-rose-400" />
+                        )
+                      ) : null}
                     </div>
                   )}
                 </div>
               </Field>
-              {!readOnly && validation.expiryError && cardExpiry.length > 0 && (
+              {!readOnly && !validation.isMaskedExpiry && validation.expiryError && cardExpiry.length > 0 && (
                 <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                   <AlertCircle size={13} />
                   <span>{validation.expiryError}</span>
@@ -338,20 +392,32 @@ export default function PaymentSummarySection({
                     className={`input font-mono ${
                       readOnly
                         ? "bg-surface-sunken cursor-not-allowed text-ink border-hairline"
-                        : cardCvv.length >= (validation.brand === "Amex" ? 4 : 3)
-                          ? "border-emerald-500/50 focus:border-emerald-500"
-                          : ""
+                        : validation.isMaskedCvv
+                          ? "border-emerald-500/40 focus:border-emerald-500"
+                          : cardCvv.length >= (validation.brand === "Amex" ? 4 : 3)
+                            ? validation.isCvvValid
+                              ? "border-emerald-500/50 focus:border-emerald-500"
+                              : "border-rose-500/50 focus:border-rose-500 bg-rose-500/[0.03]"
+                            : ""
                     }`}
                     placeholder={validation.brand === "Amex" ? "••••" : "•••"}
                   />
-                  {!readOnly && validation.isCvvValid && (
+                  {!readOnly && (
                     <div className="absolute right-2.5 pointer-events-none">
-                      <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+                      {validation.isMaskedCvv ? (
+                        <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400" />
+                      ) : cardCvv.length >= (validation.brand === "Amex" ? 4 : 3) ? (
+                        validation.isCvvValid ? (
+                          <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <AlertCircle size={15} className="text-rose-600 dark:text-rose-400" />
+                        )
+                      ) : null}
                     </div>
                   )}
                 </div>
               </Field>
-              {!readOnly && validation.cvvError && cardCvv.length > 0 && (
+              {!readOnly && !validation.isMaskedCvv && validation.cvvError && cardCvv.length > 0 && (
                 <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 animate-fadeIn">
                   <AlertCircle size={13} />
                   <span>{validation.cvvError}</span>

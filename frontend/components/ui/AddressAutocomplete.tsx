@@ -22,10 +22,20 @@ interface AddressAutocompleteProps {
   uppercase?: boolean;
 }
 
+interface PhotonProperties {
+  name?: string;
+  housenumber?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}
+
 /**
  * Formats raw Photon GeoJSON properties into clean primary and secondary strings
  */
-function formatPhotonProperties(p: Record<string, any>): PlaceSuggestion {
+function formatPhotonProperties(p: PhotonProperties): PlaceSuggestion {
   const { name, housenumber, street, city, state, postcode, country } = p;
 
   let streetPart = "";
@@ -249,6 +259,7 @@ export default function AddressAutocomplete({
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}
+          aria-controls="address-autocomplete-list"
           aria-autocomplete="list"
           className={`input pl-8 pr-14 w-full ${uppercase ? "uppercase font-mono" : ""} ${className}`}
         />
@@ -282,7 +293,7 @@ export default function AddressAutocomplete({
             <span className="text-ink-faint font-normal lowercase text-[9px]">OpenStreetMap</span>
           </div>
 
-          <ul className="divide-y divide-hairline/40">
+          <ul id="address-autocomplete-list" role="listbox" className="divide-y divide-hairline/40">
             {suggestions.map((suggestion, idx) => {
               const isHighlighted = idx === highlightedIndex;
               return (

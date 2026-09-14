@@ -29,10 +29,12 @@ export default function CarBookingForm({
   leadId,
   initial,
   readOnly = false,
+  canViewUnmaskedCard = false,
 }: {
   leadId: string;
   initial: (CarBookingValue & { total_amount: number }) | null;
   readOnly?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   const router = useRouter();
   const isEdit = initial !== null;
@@ -192,6 +194,7 @@ export default function CarBookingForm({
             readOnly={true}
             disabled={true}
             submitting={false}
+            canViewUnmaskedCard={canViewUnmaskedCard}
           />
         </fieldset>
       </div>
@@ -207,6 +210,7 @@ export default function CarBookingForm({
         onSaveAndEmail={() => handleSaveBooking(true)}
         onBack={() => router.push(`/leads/${leadId}`)}
         submitting={submitting}
+        canViewUnmaskedCard={canViewUnmaskedCard}
       />
 
       {error && (

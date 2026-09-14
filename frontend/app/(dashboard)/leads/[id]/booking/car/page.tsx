@@ -46,6 +46,8 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
     if (!(err instanceof ApiError && err.status === 404)) throw err;
   }
 
+  const canViewUnmaskedCard = ["billing", "admin", "super_admin", "superadmin"].includes(role);
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <PageHeader
@@ -67,7 +69,12 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
           </Link>
         }
       />
-      <CarBookingForm leadId={id} initial={existing} readOnly={readOnly} />
+      <CarBookingForm
+        leadId={id}
+        initial={existing}
+        readOnly={readOnly}
+        canViewUnmaskedCard={canViewUnmaskedCard}
+      />
     </div>
   );
 }

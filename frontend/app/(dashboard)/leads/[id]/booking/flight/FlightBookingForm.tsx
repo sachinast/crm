@@ -15,10 +15,12 @@ export default function FlightBookingForm({
   leadId,
   initial,
   readOnly = false,
+  canViewUnmaskedCard = false,
 }: {
   leadId: string;
   initial: (FlightBookingValue & { total_amount: number }) | null;
   readOnly?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   const router = useRouter();
   const isEdit = initial !== null;
@@ -119,6 +121,7 @@ export default function FlightBookingForm({
             readOnly={true}
             disabled={true}
             submitting={false}
+            canViewUnmaskedCard={canViewUnmaskedCard}
           />
         </fieldset>
       </div>
@@ -134,6 +137,7 @@ export default function FlightBookingForm({
         onSaveAndEmail={() => handleSaveBooking(true)}
         onBack={() => router.push(`/leads/${leadId}`)}
         submitting={submitting}
+        canViewUnmaskedCard={canViewUnmaskedCard}
       />
 
       {error && (
