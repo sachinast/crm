@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL } from "./config.ts";
 
 export interface FileRecord {
   id: string;
