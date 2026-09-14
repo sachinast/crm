@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 class UserCreate(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     password: str = Field(min_length=8)
     role_name: str
     ip_whitelist_enabled: bool = False
@@ -24,7 +24,7 @@ class UserRead(BaseModel):
 
     id: uuid.UUID
     name: str
-    email: EmailStr
+    email: str
     role: str
     ip_whitelist_enabled: bool
     is_active: bool

@@ -20,30 +20,62 @@ from app.models.rbac import Permission, Role, role_permissions
 from app.models.user import User
 
 DEPARTMENT_ACCOUNTS = [
+    # CR BOOKING
     {
         "role_name": "cr_booking",
-        "email": "crbooking@crm.local",
+        "email": "crbooking@crm.com",
         "name": "CR Booking Specialist",
         "password": "Password@123",
         "department": "CR BOOKING",
     },
     {
+        "role_name": "cr_booking",
+        "email": "crbooking@webflowby.online",
+        "name": "CR Booking Specialist",
+        "password": "Password@123",
+        "department": "CR BOOKING",
+    },
+    # AUDIT
+    {
         "role_name": "auditor",
-        "email": "audit@crm.local",
+        "email": "audit@crm.com",
         "name": "Audit Specialist",
         "password": "Password@123",
         "department": "AUDIT",
     },
     {
+        "role_name": "auditor",
+        "email": "audit@webflowby.online",
+        "name": "Audit Specialist",
+        "password": "Password@123",
+        "department": "AUDIT",
+    },
+    # CUSTOMER SERVICE
+    {
         "role_name": "cs",
-        "email": "cs@crm.local",
+        "email": "cs@crm.com",
         "name": "Customer Service Agent",
         "password": "Password@123",
         "department": "CUSTOMER SERVICE",
     },
     {
+        "role_name": "cs",
+        "email": "cs@webflowby.online",
+        "name": "Customer Service Agent",
+        "password": "Password@123",
+        "department": "CUSTOMER SERVICE",
+    },
+    # Changes
+    {
         "role_name": "change_dep",
-        "email": "changes@crm.local",
+        "email": "changes@crm.com",
+        "name": "Changes Specialist",
+        "password": "Password@123",
+        "department": "Changes",
+    },
+    {
+        "role_name": "change_dep",
+        "email": "changes@webflowby.online",
         "name": "Changes Specialist",
         "password": "Password@123",
         "department": "Changes",

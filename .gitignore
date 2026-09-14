@@ -16,4 +16,5 @@ __pycache__/
 !.env.example
 !.env.*.example
 !*.env.example
-my_database_backup.sql
+*.sql
+
