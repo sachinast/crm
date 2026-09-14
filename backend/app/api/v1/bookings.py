@@ -109,7 +109,24 @@ def _register_booking_routes(
         current_user: User = Depends(require_ip_whitelisted),
     ) -> Any:
         await get_visible_lead_or_404(db, current_user, lead_id)
-        return await _get_booking_or_404(db, model, lead_id)
+        booking = await _get_booking_or_404(db, model, lead_id)
+
+        user_role = (current_user.role.name if current_user.role else "").lower()
+        can_view_unmasked = user_role in {"billing", "admin", "super_admin", "superadmin"}
+        if can_view_unmasked:
+            return booking
+
+        data = read_schema.model_validate(booking).model_dump()
+        raw_card = getattr(booking, "card_number", None) or ""
+        digits_only = "".join(ch for ch in raw_card if ch.isdigit())
+        last4 = digits_only[-4:] if len(digits_only) >= 4 else digits_only
+        if raw_card:
+            data["card_number"] = f"**** **** **** {last4}" if last4 else "**** **** **** ****"
+        if getattr(booking, "cvv", None):
+            data["cvv"] = "•••"
+        if getattr(booking, "card_expiry", None):
+            data["card_expiry"] = "**/**"
+        return data
 
     async def update(
         lead_id: uuid.UUID,
@@ -120,6 +137,10 @@ def _register_booking_routes(
         await get_visible_lead_or_404(db, current_user, lead_id)
         booking = await _get_booking_or_404(db, model, lead_id)
         updates = payload.model_dump(exclude_unset=True)
+        # Protect against saving masked placeholders back to database
+        for fld in ("card_number", "cvv", "card_expiry"):
+            if fld in updates and isinstance(updates[fld], str) and ("*" in updates[fld] or "•" in updates[fld]):
+                del updates[fld]
         if "custom_fields" in updates and updates["custom_fields"] is not None:
             updates["custom_fields"] = await validate_custom_fields(db, entity_type, updates["custom_fields"])
         updates["modified_by"] = current_user.id

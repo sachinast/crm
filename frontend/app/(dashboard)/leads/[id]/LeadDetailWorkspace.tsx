@@ -41,6 +41,7 @@ import CancellationPanel from "./CancellationPanel";
 import StatusActions from "./StatusActions";
 import PaymentActions from "./PaymentActions";
 import ChangesEmailModal from "@/components/leads/ChangesEmailModal";
+import FinalConfirmationEmailModal from "@/components/leads/FinalConfirmationEmailModal";
 
 interface LeadDetail {
   id: string;
@@ -626,71 +627,81 @@ function SMSDispatchModal({
   );
 }
 
-const BOOKING_SUMMARY_FIELDS: Record<string, { key: string; label: string; format?: (v: unknown) => string }[]> = {
-  car: [
-    { key: "car_provider", label: "Car Provider" },
-    { key: "car_model", label: "Car Model" },
-    { key: "vehicle_type", label: "Vehicle Type" },
-    { key: "transmission", label: "Transmission" },
-    { key: "fuel_policy", label: "Fuel Policy" },
-    { key: "booking_confirmation", label: "Confirmation #" },
-    { key: "pickup_datetime", label: "Pickup Date & Time", format: (v) => formatDate(String(v)) },
-    { key: "pickup_location", label: "Pickup Location" },
-    { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
-    { key: "return_location", label: "Return Location" },
-    { key: "driver_name", label: "Driver Name" },
-    { key: "driver_phone", label: "Driver Phone" },
-    { key: "driver_license", label: "Driver License" },
-    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "card_holder_name", label: "Card Holder" },
-    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
-    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
-    { key: "billing_address", label: "Billing Address" },
-    { key: "remarks", label: "Remarks / Notes" },
-  ],
-  hotel: [
-    { key: "hotel_name", label: "Hotel Name" },
-    { key: "room_type", label: "Room Category" },
-    { key: "location", label: "Location" },
-    { key: "itinerary_number", label: "Itinerary #" },
-    { key: "call_type", label: "Call Type" },
-    { key: "check_in_date", label: "Check-in Date", format: (v) => formatDate(String(v)) },
-    { key: "check_out_date", label: "Check-out Date", format: (v) => formatDate(String(v)) },
-    { key: "num_rooms", label: "Rooms" },
-    { key: "num_guests", label: "Guests" },
-    { key: "bed_type", label: "Bed Type" },
-    { key: "primary_guest_name", label: "Primary Guest" },
-    { key: "guest_email", label: "Guest Email" },
-    { key: "guest_phone", label: "Guest Phone" },
-    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "card_holder_name", label: "Card Holder" },
-    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
-    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
-    { key: "billing_address", label: "Billing Address" },
-    { key: "remarks", label: "Special Requests / Remarks" },
-  ],
-  flight: [
-    { key: "airline", label: "Airline Carrier" },
-    { key: "flight_number", label: "Flight Number" },
-    { key: "pnr", label: "PNR Code" },
-    { key: "trip_type", label: "Trip Type" },
-    { key: "class_of_service", label: "Cabin Class" },
-    { key: "origin", label: "Origin Airport" },
-    { key: "destination", label: "Destination Airport" },
-    { key: "departure_datetime", label: "Departure Date & Time", format: (v) => formatDate(String(v)) },
-    { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
-    { key: "passengers", label: "Passengers / Travelers" },
-    { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
-    { key: "card_holder_name", label: "Card Holder" },
-    { key: "card_number", label: "Card Number", format: (v) => maskCardNumber(String(v ?? "")) },
-    { key: "card_expiry", label: "Card Expiry", format: (v) => maskCardExpiry(String(v ?? "")) },
-    { key: "billing_address", label: "Billing Address" },
-    { key: "remarks", label: "Ticket Notes / Remarks" },
-  ],
-};
+function getBookingSummaryFields(canViewUnmaskedCard: boolean): Record<string, { key: string; label: string; format?: (v: unknown) => string }[]> {
+  const cardFormat = (v: unknown) =>
+    canViewUnmaskedCard ? (v ? String(v) : "—") : maskCardNumber(String(v ?? ""));
+  const expiryFormat = (v: unknown) =>
+    canViewUnmaskedCard ? (v ? String(v) : "—") : maskCardExpiry(String(v ?? ""));
+
+  return {
+    car: [
+      { key: "car_provider", label: "Car Provider" },
+      { key: "car_model", label: "Car Model" },
+      { key: "vehicle_type", label: "Vehicle Type" },
+      { key: "transmission", label: "Transmission" },
+      { key: "fuel_policy", label: "Fuel Policy" },
+      { key: "booking_confirmation", label: "Confirmation #" },
+      { key: "pickup_datetime", label: "Pickup Date & Time", format: (v) => formatDate(String(v)) },
+      { key: "pickup_location", label: "Pickup Location" },
+      { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
+      { key: "return_location", label: "Return Location" },
+      { key: "driver_name", label: "Driver Name" },
+      { key: "driver_phone", label: "Driver Phone" },
+      { key: "driver_license", label: "Driver License" },
+      { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "card_holder_name", label: "Card Holder" },
+      { key: "card_number", label: "Card Number", format: cardFormat },
+      { key: "card_expiry", label: "Card Expiry", format: expiryFormat },
+      ...(canViewUnmaskedCard ? [{ key: "cvv", label: "CVV", format: (v: unknown) => v ? String(v) : "—" }] : []),
+      { key: "billing_address", label: "Billing Address" },
+      { key: "remarks", label: "Remarks / Notes" },
+    ],
+    hotel: [
+      { key: "hotel_name", label: "Hotel Name" },
+      { key: "room_type", label: "Room Category" },
+      { key: "location", label: "Location" },
+      { key: "itinerary_number", label: "Itinerary #" },
+      { key: "call_type", label: "Call Type" },
+      { key: "check_in_date", label: "Check-in Date", format: (v) => formatDate(String(v)) },
+      { key: "check_out_date", label: "Check-out Date", format: (v) => formatDate(String(v)) },
+      { key: "num_rooms", label: "Rooms" },
+      { key: "num_guests", label: "Guests" },
+      { key: "bed_type", label: "Bed Type" },
+      { key: "primary_guest_name", label: "Primary Guest" },
+      { key: "guest_email", label: "Guest Email" },
+      { key: "guest_phone", label: "Guest Phone" },
+      { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "card_holder_name", label: "Card Holder" },
+      { key: "card_number", label: "Card Number", format: cardFormat },
+      { key: "card_expiry", label: "Card Expiry", format: expiryFormat },
+      ...(canViewUnmaskedCard ? [{ key: "cvv", label: "CVV", format: (v: unknown) => v ? String(v) : "—" }] : []),
+      { key: "billing_address", label: "Billing Address" },
+      { key: "remarks", label: "Special Requests / Remarks" },
+    ],
+    flight: [
+      { key: "airline", label: "Airline Carrier" },
+      { key: "flight_number", label: "Flight Number" },
+      { key: "pnr", label: "PNR Code" },
+      { key: "trip_type", label: "Trip Type" },
+      { key: "class_of_service", label: "Cabin Class" },
+      { key: "origin", label: "Origin Airport" },
+      { key: "destination", label: "Destination Airport" },
+      { key: "departure_datetime", label: "Departure Date & Time", format: (v) => formatDate(String(v)) },
+      { key: "return_datetime", label: "Return Date & Time", format: (v) => formatDate(String(v)) },
+      { key: "passengers", label: "Passengers / Travelers" },
+      { key: "prepaid_amount", label: "Prepaid Amount", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "pay_at_counter_amount", label: "Pay At Counter", format: (v) => typeof v === "number" ? `$${v.toFixed(2)}` : String(v ?? "—") },
+      { key: "card_holder_name", label: "Card Holder" },
+      { key: "card_number", label: "Card Number", format: cardFormat },
+      { key: "card_expiry", label: "Card Expiry", format: expiryFormat },
+      ...(canViewUnmaskedCard ? [{ key: "cvv", label: "CVV", format: (v: unknown) => v ? String(v) : "—" }] : []),
+      { key: "billing_address", label: "Billing Address" },
+      { key: "remarks", label: "Ticket Notes / Remarks" },
+    ],
+  };
+}
 
 const SERVICE_ICON: Record<string, typeof Car> = { car: Car, hotel: Hotel, flight: Plane };
 
@@ -733,6 +744,15 @@ export default function LeadDetailWorkspace({
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
   const roleNormalized = (currentUser?.role || "").toLowerCase();
+  const canViewUnmaskedCard = ["billing", "admin", "super_admin", "superadmin"].includes(roleNormalized);
+  const canSendConfirmationEmail =
+    ["agent", "cr_booking", "cs", "change_dep", "admin", "super_admin", "superadmin"].includes(roleNormalized) &&
+    (leadState.status === "card_charged" ||
+      ["tag_cr_booking", "tag_change_dep", "tag_auditor", "qc_done"].includes(leadState.status) ||
+      payments.some((p) => p.outcome === "charged"));
+  const [showConfirmationEmailModal, setShowConfirmationEmailModal] = useState(false);
+  const bookingSummaryFields = getBookingSummaryFields(canViewUnmaskedCard);
+
   const isAgentOrAdmin =
     Boolean(currentUser) &&
     (roleNormalized === "admin" ||
@@ -870,6 +890,17 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
+          {canSendConfirmationEmail && leadState.email && (
+            <button
+              onClick={() => setShowConfirmationEmailModal(true)}
+              className="btn-secondary btn-sm flex items-center gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-xs"
+              title="Send official booking and payment confirmation email to customer"
+            >
+              <CheckCircle2 size={13} className="text-emerald-500" />
+              <span>Send Final Confirmation</span>
+            </button>
+          )}
+
           <a
             href={`/authorize/${leadState.id}`}
             target="_blank"
@@ -942,6 +973,20 @@ export default function LeadDetailWorkspace({
         }}
       />
 
+      <FinalConfirmationEmailModal
+        isOpen={showConfirmationEmailModal}
+        onClose={() => setShowConfirmationEmailModal(false)}
+        leadId={leadState.id}
+        customerEmail={leadState.email}
+        customerName={leadState.name}
+        crmId={crmId}
+        serviceType={leadState.service_type || "car"}
+        totalAmount={typeof booking?.total_amount === "number" ? booking.total_amount : booking?.total_amount}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
+
       {/* Main 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* LEFT COLUMN: Main Booking Highlights & Operational Tabs (lg:col-span-7) */}
@@ -992,7 +1037,7 @@ export default function LeadDetailWorkspace({
 
               {/* Booking Key Metrics Grid */}
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-                {BOOKING_SUMMARY_FIELDS[leadState.service_type]?.map((f) => {
+                {bookingSummaryFields[leadState.service_type]?.map((f) => {
                   const rawVal = booking[f.key];
                   if (rawVal === undefined || rawVal === null || rawVal === "") return null;
                   const displayVal = f.format ? f.format(rawVal) : String(rawVal);
@@ -1312,7 +1357,19 @@ export default function LeadDetailWorkspace({
                 <div className="rounded-xl border border-hairline bg-surface-raised p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-ink">Payment Summary & Status</span>
-                    <StatusBadge status={lead.status} />
+                    <div className="flex items-center gap-2">
+                      {canSendConfirmationEmail && leadState.email && (
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmationEmailModal(true)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        >
+                          <Mail size={12} />
+                          <span>Send Confirmation</span>
+                        </button>
+                      )}
+                      <StatusBadge status={lead.status} />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
@@ -1330,15 +1387,27 @@ export default function LeadDetailWorkspace({
                     <div>
                       <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Display</span>
                       <p className="font-mono font-medium text-ink">
-                        {maskCardNumber((booking?.card_number as string) || "")}
+                        {canViewUnmaskedCard
+                          ? ((booking?.card_number as string) || "—")
+                          : maskCardNumber((booking?.card_number as string) || "")}
                       </p>
                     </div>
                     <div>
                       <span className="text-[10px] text-ink-faint uppercase font-semibold">Card Expiry</span>
                       <p className="font-mono text-ink">
-                        {maskCardExpiry((booking?.card_expiry as string) || "")}
+                        {canViewUnmaskedCard
+                          ? ((booking?.card_expiry as string) || "—")
+                          : maskCardExpiry((booking?.card_expiry as string) || "")}
                       </p>
                     </div>
+                    {canViewUnmaskedCard && (
+                      <div>
+                        <span className="text-[10px] text-ink-faint uppercase font-semibold">CVV</span>
+                        <p className="font-mono font-bold text-accent">
+                          {(booking?.cvv as string) || "—"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

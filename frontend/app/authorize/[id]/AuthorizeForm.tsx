@@ -260,7 +260,7 @@ export default function AuthorizeForm({
     );
   }
 
-  // Template matching New_Booking_Car_Rental_Payment_Authorization_Template (1).docx
+  // Template matching New_Booking_Car_Rental_Payment_Authorization_Template.docx
   return (
     <div className="bg-white">
       {/* Top Header Bar */}

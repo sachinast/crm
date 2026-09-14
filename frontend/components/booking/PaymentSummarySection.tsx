@@ -46,6 +46,7 @@ export default function PaymentSummarySection({
   agentName = "Current Agent",
   submitting = false,
   readOnly = false,
+  canViewUnmaskedCard = false,
 }: {
   data: PaymentSummaryData;
   onChange: (updated: Partial<PaymentSummaryData>) => void;
@@ -55,6 +56,7 @@ export default function PaymentSummarySection({
   agentName?: string;
   submitting?: boolean;
   readOnly?: boolean;
+  canViewUnmaskedCard?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [newRemark, setNewRemark] = useState("");
@@ -76,10 +78,26 @@ export default function PaymentSummarySection({
   const rawCardDigits = cardNumber.replace(/\D/g, "");
   const brandStyle = BRAND_COLORS[validation.brand];
 
-  // Masked values for read-only view
-  const displayCardNumber = readOnly ? maskCardNumber(cardNumber, validation.brand) : cardNumber;
-  const displayCardExpiry = readOnly ? maskCardExpiry(cardExpiry) : cardExpiry;
-  const displayCvv = readOnly ? (cardCvv ? (validation.brand === "Amex" ? "••••" : "•••") : "—") : cardCvv;
+  // Masked values for read-only view (unmasked for billing/admin if permitted)
+  const displayCardNumber = readOnly
+    ? canViewUnmaskedCard
+      ? cardNumber || "—"
+      : maskCardNumber(cardNumber, validation.brand)
+    : cardNumber;
+  const displayCardExpiry = readOnly
+    ? canViewUnmaskedCard
+      ? cardExpiry || "—"
+      : maskCardExpiry(cardExpiry)
+    : cardExpiry;
+  const displayCvv = readOnly
+    ? canViewUnmaskedCard
+      ? cardCvv || "—"
+      : cardCvv
+      ? validation.brand === "Amex"
+        ? "••••"
+        : "•••"
+      : "—"
+    : cardCvv;
 
   function handleAddRemark() {
     if (!newRemark.trim()) return;

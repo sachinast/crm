@@ -27,6 +27,7 @@ from app.schemas.lead import (
     ContactCheckResult,
     CustomFieldsUpdate,
     DuplicateCheckResult,
+    FinalConfirmationEmailRequest,
     LeadConfirm,
     LeadCreate,
     LeadRead,
@@ -36,6 +37,9 @@ from app.schemas.lead import (
     StatusHistoryEntry,
     StatusUpdate,
 )
+from app.core.config import get_settings
+from app.domain.booking_lookup import get_booking_for_lead
+from app.services.email_service import generate_final_booking_confirmation_email_html, send_customer_email
 from app.services.status_transitions import apply_status_transition
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -570,5 +574,162 @@ async def send_change_email(
         "changes_notified": any(n["role"] == "change_dep" for n in notifications_sent),
         "notifications": notifications_sent,
     }
+
+
+@router.post("/{lead_id}/send-confirmation-email")
+async def send_confirmation_email(
+    lead_id: uuid.UUID,
+    payload: FinalConfirmationEmailRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> dict:
+    """Dispatches the official final booking & payment confirmation email to the customer once card is charged.
+    Accessible to: agent, cr_booking, cs, change_dep, and admin.
+    """
+    lead = await get_visible_lead_or_404(db, current_user, lead_id)
+
+    caller_role = (current_user.role.name if current_user.role else "").lower()
+    allowed_roles = {"agent", "cr_booking", "cs", "change_dep", "admin", "super_admin", "superadmin"}
+    if caller_role not in allowed_roles:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"Role '{caller_role}' is not authorized to send final confirmation emails. Allowed roles: agent, cr_booking, cs, changes, admin.",
+        )
+
+    # Allowed once card has been charged
+    charged_statuses = {
+        BookingStatus.card_charged,
+        BookingStatus.tag_cr_booking,
+        BookingStatus.tag_change_dep,
+        BookingStatus.tag_auditor,
+        BookingStatus.qc_done,
+    }
+    is_charged_status = lead.status in charged_statuses
+
+    has_charged_payment = False
+    pmt_result = await db.execute(
+        select(PaymentTransaction)
+        .where(PaymentTransaction.lead_id == lead.id, PaymentTransaction.outcome == "charged")
+        .limit(1)
+    )
+    if pmt_result.scalar_one_or_none() is not None:
+        has_charged_payment = True
+
+    if not (is_charged_status or has_charged_payment):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Final confirmation email can only be sent once the card has been charged.",
+        )
+
+    booking = await get_booking_for_lead(db, lead)
+    recipient = (payload.to_email or lead.email or "").strip()
+    if not recipient:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No recipient email address available for this lead.")
+
+    brand_name = get_settings().resend_from_name or "E-Booking Desk"
+    booking_ref = (getattr(booking, "booking_reference", None) if booking else None) or f"CRM-{str(lead.id)[:6].upper()}"
+    confirmation_number = (getattr(booking, "booking_confirmation", None) if booking else None) or booking_ref
+    subject = payload.subject or f"Booking & Payment Confirmation - {booking_ref} - {brand_name}"
+
+    # Extract service specifics
+    svc_type = lead.service_type.value if lead.service_type else "car"
+    provider = ""
+    model_or_details = ""
+    pickup_dt = None
+    pickup_loc = ""
+    return_dt = None
+    return_loc = ""
+    driver_guest = lead.name or "Valued Customer"
+    prepaid = 0.0
+    pay_counter = 0.0
+    total = 0.0
+
+    if booking:
+        prepaid = float(getattr(booking, "prepaid_amount", 0) or 0)
+        pay_counter = float(getattr(booking, "pay_at_counter_amount", 0) or 0)
+        total = float(getattr(booking, "total_amount", 0) or (prepaid + pay_counter))
+
+        if svc_type == "car":
+            provider = getattr(booking, "car_provider", "") or ""
+            v_type = (getattr(booking, "vehicle_type", "") or "").replace("_", " ").title()
+            c_model = getattr(booking, "car_model", "") or ""
+            model_or_details = f"{c_model} ({v_type})" if c_model else v_type
+            pickup_dt = getattr(booking, "pickup_datetime", None)
+            pickup_loc = getattr(booking, "pickup_location", "") or ""
+            return_dt = getattr(booking, "return_datetime", None)
+            return_loc = getattr(booking, "return_location", "") or ""
+            driver_guest = getattr(booking, "driver_name", "") or lead.name
+        elif svc_type == "hotel":
+            provider = getattr(booking, "hotel_name", "") or ""
+            model_or_details = getattr(booking, "room_type", "") or ""
+            pickup_dt = getattr(booking, "check_in_date", None)
+            pickup_loc = getattr(booking, "location", "") or ""
+            return_dt = getattr(booking, "check_out_date", None)
+            driver_guest = getattr(booking, "primary_guest_name", "") or lead.name
+        elif svc_type == "flight":
+            provider = getattr(booking, "airline", "") or ""
+            model_or_details = getattr(booking, "flight_numbers", "") or ""
+            pickup_dt = getattr(booking, "departure_datetime", None)
+            pickup_loc = getattr(booking, "origin", "") or ""
+            return_dt = getattr(booking, "return_datetime", None)
+            return_loc = getattr(booking, "destination", "") or ""
+            driver_guest = getattr(booking, "passengers", "") or lead.name
+
+    html_content = generate_final_booking_confirmation_email_html(
+        customer_name=lead.name or "Customer",
+        customer_email=recipient,
+        lead_id=str(lead.id),
+        booking_reference=booking_ref,
+        service_type=svc_type,
+        provider=provider,
+        model_or_details=model_or_details,
+        confirmation_number=confirmation_number,
+        pickup_datetime=pickup_dt,
+        pickup_location=pickup_loc,
+        return_datetime=return_dt,
+        return_location=return_loc,
+        driver_or_guest_name=driver_guest,
+        amount_charged=prepaid if prepaid > 0 else total,
+        pay_at_counter_amount=pay_counter,
+        total_amount=total,
+        agent_name=current_user.name,
+        custom_message=payload.custom_message,
+    )
+
+    email_sent, msg = await send_customer_email(to_email=recipient, subject=subject, html_content=html_content)
+    if not email_sent:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Failed to send confirmation email: {msg}")
+
+    log_process_event(
+        db,
+        lead_id=lead.id,
+        actor_id=current_user.id,
+        action="final_confirmation_sent",
+        field_changed="confirmation_email",
+        old_value=None,
+        new_value=f"Dispatched by {current_user.name} ({caller_role}) to {recipient}: {subject}",
+    )
+
+    if lead.agent_id and lead.agent_id != current_user.id:
+        db.add(
+            Notification(
+                lead_id=lead.id,
+                recipient_user_id=lead.agent_id,
+                type="final_confirmation_sent",
+                message=f"{current_user.name} dispatched final confirmation email to {recipient} for your lead {lead.id}",
+            )
+        )
+
+    await db.commit()
+    return {
+        "status": "success",
+        "message": f"Final confirmation email successfully dispatched to {recipient}",
+        "lead_id": str(lead.id),
+        "to_email": recipient,
+        "subject": subject,
+        "dispatched_by": current_user.name,
+        "dispatched_at": datetime.now(timezone.utc).isoformat(),
+    }
+
 
 

@@ -178,3 +178,10 @@ class ChangeEmailRequest(BaseModel):
     internal_notes: str | None = None
 
 
+class FinalConfirmationEmailRequest(BaseModel):
+    to_email: EmailStr | None = None
+    subject: str | None = None
+    custom_message: str | None = None
+
+
+

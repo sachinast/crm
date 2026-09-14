@@ -69,6 +69,34 @@ def test_generate_confirmation_email_html():
     assert "USD 250.00" in html
 
 
+def test_generate_final_booking_confirmation_email_html():
+    from app.services.email_service import generate_final_booking_confirmation_email_html
+
+    html = generate_final_booking_confirmation_email_html(
+        lead_id="7fcd2a07-ac81-416d-91cc-8de1490f3272",
+        customer_name="Alice Smith",
+        customer_email="alice@example.com",
+        booking_reference="EC12345",
+        confirmation_number="CONF-9988",
+        service_type="car",
+        provider="Avis",
+        model_or_details="Ford Mustang or Similar",
+        amount_charged=250.0,
+        pay_at_counter_amount=50.0,
+        total_amount=300.0,
+        pickup_location="SFO Airport",
+        return_location="SFO Airport",
+        agent_name="John Agent",
+        custom_message="Enjoy your trip!",
+    )
+    assert "Alice Smith" in html
+    assert "CONF-9988" in html
+    assert "CHARGED &amp; CONFIRMED" in html or "CHARGED & CONFIRMED" in html
+    assert "Ford Mustang" in html
+    assert "Enjoy your trip!" in html
+
+
+
 @pytest.mark.asyncio
 async def test_send_customer_email_empty_recipient():
     success, msg = await send_customer_email("", "Test Subject", "<html>Test</html>")

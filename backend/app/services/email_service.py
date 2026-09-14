@@ -87,7 +87,7 @@ def generate_authorization_email_html(
     support_email: str | None = None,
     template_type: str = "new_booking",  # "new_booking" | "modification" | "cancellation"
 ) -> str:
-    """Generates email matching New_Booking_Car_Rental_Payment_Authorization_Template (1).docx."""
+    """Generates email matching New_Booking_Car_Rental_Payment_Authorization_Template.docx."""
     settings = get_settings()
     brand_name = settings.resend_from_name or "E-Booking Desk"
     active_support_email = support_email or settings.resend_from_email
@@ -320,6 +320,137 @@ def generate_confirmation_email_html(
       <p style="font-size: 11.5px; color: #64748b; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 14px;">
         Important: You have authorized {brand_name} to charge USD {prepaid_amount:.2f} for the prepaid portion of your reservation. The USD {pay_at_counter_amount:.2f} balance is payable directly to the rental company at vehicle pickup.
       </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+def generate_final_booking_confirmation_email_html(
+    *,
+    customer_name: str,
+    customer_email: str,
+    lead_id: str,
+    booking_reference: str = "",
+    service_type: str = "car",
+    provider: str = "",
+    model_or_details: str = "",
+    confirmation_number: str = "",
+    pickup_datetime: Any = None,
+    pickup_location: str = "",
+    return_datetime: Any = None,
+    return_location: str = "",
+    driver_or_guest_name: str = "",
+    amount_charged: float = 0.0,
+    pay_at_counter_amount: float = 0.0,
+    total_amount: float = 0.0,
+    agent_name: str = "Operations Team",
+    custom_message: str | None = None,
+) -> str:
+    """Generates official Final Booking & Payment Confirmation email sent after card is charged."""
+    settings = get_settings()
+    brand_name = settings.resend_from_name or "E-Booking Desk"
+    support_phone = settings.support_phone or "+1 (877) 362-2838"
+    support_email = settings.resend_from_email or "support@chaudharytechblog.co.in"
+
+    now_utc = datetime.now(timezone.utc)
+    date_str = now_utc.strftime("%d-%b-%Y")
+    time_str = now_utc.strftime("%H:%M:%S UTC")
+
+    ref_display = booking_reference or f"CRM-{lead_id[:6].upper()}"
+    conf_display = confirmation_number or ref_display
+    svc_title = service_type.replace("_", " ").title()
+
+    pickup_str = _format_datetime(pickup_datetime) if pickup_datetime else ""
+    return_str = _format_datetime(return_datetime) if return_datetime else ""
+
+    calc_total = total_amount if total_amount > 0 else (amount_charged + pay_at_counter_amount)
+
+    custom_note_html = ""
+    if custom_message and custom_message.strip():
+        custom_note_html = f"""
+        <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 18px 0; border-radius: 4px;">
+          <p style="margin: 0; font-size: 13px; color: #1e40af; font-weight: 600;">Message from your Booking Specialist:</p>
+          <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #1e3a8a; line-height: 1.5;">{custom_message.strip()}</p>
+        </div>"""
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }}
+    .container {{ max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }}
+    .header-bar {{ background: #0f4c81; color: #ffffff; padding: 18px 24px; display: table; width: 100%; box-sizing: border-box; }}
+    .header-title {{ font-size: 16px; font-weight: 800; letter-spacing: 0.5px; text-align: left; vertical-align: middle; display: table-cell; text-transform: uppercase; }}
+    .header-brand {{ font-size: 16px; font-weight: 700; color: #f59e0b; text-align: right; vertical-align: middle; display: table-cell; }}
+    .content {{ padding: 28px 24px; }}
+    .success-banner {{ background: #ecfdf5; border: 1px solid #10b981; border-left: 5px solid #059669; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; }}
+    .success-title {{ font-size: 14px; font-weight: 700; color: #065f46; margin: 0 0 4px 0; }}
+    .success-sub {{ font-size: 12px; color: #047857; margin: 0; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 16px 0 20px 0; border: 1px solid #e2e8f0; }}
+    th {{ background: #f8fafc; text-align: left; padding: 10px 14px; font-size: 12px; color: #0f4c81; font-weight: 700; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }}
+    td {{ padding: 9px 14px; font-size: 12.5px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }}
+    .label-col {{ width: 38%; font-weight: 600; color: #475569; background: #fafbfc; }}
+    .footer-box {{ margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div class="header-title">Booking & Payment Confirmation</div>
+      <div class="header-brand">{brand_name}</div>
+    </div>
+    <div class="content">
+      <div class="success-banner">
+        <p class="success-title">&#10004; Payment Processed & Reservation Confirmed</p>
+        <p class="success-sub">Confirmation / Reference Number: <strong>{conf_display}</strong></p>
+      </div>
+
+      <p style="font-size: 13.5px; line-height: 1.6; margin-top: 0;">
+        Dear <strong>{customer_name}</strong>,<br>
+        We are pleased to inform you that your payment has been successfully processed and your <strong>{svc_title}</strong> reservation is now fully confirmed with <strong>{brand_name}</strong>.
+      </p>
+
+      {custom_note_html}
+
+      <table>
+        <thead><tr><th colspan="2">Confirmed Reservation Details</th></tr></thead>
+        <tbody>
+          <tr><td class="label-col">Booking Reference</td><td><strong>{ref_display}</strong></td></tr>
+          <tr><td class="label-col">Confirmation Number</td><td><strong>{conf_display}</strong></td></tr>
+          <tr><td class="label-col">Service Type</td><td>{svc_title}</td></tr>
+          {f"<tr><td class='label-col'>Provider / Carrier</td><td>{provider}</td></tr>" if provider else ""}
+          {f"<tr><td class='label-col'>Vehicle / Room / Details</td><td>{model_or_details}</td></tr>" if model_or_details else ""}
+          {f"<tr><td class='label-col'>Primary Traveler / Driver</td><td>{driver_or_guest_name}</td></tr>" if driver_or_guest_name else ""}
+          {f"<tr><td class='label-col'>Pickup / Check-in</td><td>{pickup_str} {('— ' + pickup_location) if pickup_location else ''}</td></tr>" if pickup_str or pickup_location else ""}
+          {f"<tr><td class='label-col'>Return / Check-out</td><td>{return_str} {('— ' + return_location) if return_location else ''}</td></tr>" if return_str or return_location else ""}
+        </tbody>
+      </table>
+
+      <table>
+        <thead><tr><th colspan="2">Payment & Billing Summary</th></tr></thead>
+        <tbody>
+          <tr><td class="label-col">Payment Status</td><td><strong style="color: #047857; text-transform: uppercase;">CHARGED & CONFIRMED</strong></td></tr>
+          <tr><td class="label-col">Transaction Date & Time</td><td>{date_str} at {time_str}</td></tr>
+          <tr><td class="label-col">Amount Charged</td><td><strong style="color: #0f4c81; font-size: 13px;">USD {amount_charged:.2f}</strong></td></tr>
+          {f"<tr><td class='label-col'>Pay at Counter / Property</td><td>USD {pay_at_counter_amount:.2f}</td></tr>" if pay_at_counter_amount > 0 else ""}
+          <tr><td class="label-col">Total Booking Value</td><td><strong>USD {calc_total:.2f}</strong></td></tr>
+          <tr><td class="label-col">Customer Email</td><td>{customer_email}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer-box">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #1e293b;">Need help or have questions regarding your booking?</p>
+        <p style="margin: 0;">Our Customer Service and Booking Operations team is available to assist you:</p>
+        <p style="margin: 4px 0 0 0;">
+          📞 <strong>Phone:</strong> {support_phone} &nbsp;|&nbsp; ✉️ <strong>Email:</strong> {support_email}
+        </p>
+        <p style="margin: 12px 0 0 0; font-size: 11px; color: #94a3b8;">
+          Processed by: {agent_name} &bull; Confirmation issued on {date_str}
+        </p>
+      </div>
     </div>
   </div>
 </body>
