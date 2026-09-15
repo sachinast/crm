@@ -84,13 +84,15 @@ async def run_async_migrations() -> None:
     )
 
     # In PostgreSQL, ALTER TYPE ... ADD VALUE cannot run inside a transaction block.
-    # We ensure new enum values exist in an AUTOCOMMIT connection before Alembic migrations run.
+    # We execute it on the raw driver connection (outside any transaction).
     try:
-        async with connectable.connect() as autocommit_conn:
-            await autocommit_conn.execution_options(isolation_level="AUTOCOMMIT")
-            await autocommit_conn.execute(
-                sa.text("ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'")
-            )
+        async with connectable.connect() as raw_wrapper:
+            raw_conn = await raw_wrapper.get_raw_connection()
+            driver = getattr(raw_conn, "driver_connection", None)
+            if driver is not None:
+                await driver.execute(
+                    "ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'"
+                )
     except Exception:
         pass
 

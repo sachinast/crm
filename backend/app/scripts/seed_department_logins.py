@@ -139,7 +139,7 @@ async def seed_department_logins() -> None:
                 existing_user.is_active = True
                 existing_user.name = dept["name"]
                 await db.commit()
-                print(f"[✓] Updated {dept['department']}: {dept['email']} (Role: {role_name})")
+                print(f"[OK] Updated {dept['department']}: {dept['email']} (Role: {role_name})")
             else:
                 user = User(
                     name=dept["name"],
@@ -151,7 +151,7 @@ async def seed_department_logins() -> None:
                 db.add(user)
                 await db.commit()
                 await db.refresh(user)
-                print(f"[✓] Created {dept['department']}: {dept['email']} (Role: {role_name}, ID: {user.id})")
+                print(f"[OK] Created {dept['department']}: {dept['email']} (Role: {role_name}, ID: {user.id})")
 
         print("=== Department Logins Provisioned Successfully ===")
 
