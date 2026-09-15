@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from sqlalchemy import pool
+import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -81,6 +82,17 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
+    # In PostgreSQL, ALTER TYPE ... ADD VALUE cannot run inside a transaction block.
+    # We ensure new enum values exist in an AUTOCOMMIT connection before Alembic migrations run.
+    try:
+        async with connectable.connect() as autocommit_conn:
+            await autocommit_conn.execution_options(isolation_level="AUTOCOMMIT")
+            await autocommit_conn.execute(
+                sa.text("ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'")
+            )
+    except Exception:
+        pass
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

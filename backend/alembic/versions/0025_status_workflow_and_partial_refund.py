@@ -17,14 +17,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # 1. Add tag_partial_refund to booking_status enum in postgres if not exists
-    # In PostgreSQL, ALTER TYPE ... ADD VALUE cannot run inside a transaction block.
-    # We execute it inside autocommit_block so it runs outside any active transaction.
-    try:
-        with op.get_context().autocommit_block():
-            op.execute(sa.text("ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'"))
-    except Exception:
-        pass
+    # Enum tag_partial_refund is added on an autocommit connection in env.py prior to migrations.
 
     # 2. Add to status_lookup
     try:
