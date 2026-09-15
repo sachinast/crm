@@ -18,10 +18,11 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     # 1. Add tag_partial_refund to booking_status enum in postgres if not exists
-    # Note: ALTER TYPE ... ADD VALUE cannot run inside a multi-statement transaction in some postgres versions,
-    # so we execute it safely or via autocommit if needed.
+    # In PostgreSQL, ALTER TYPE ... ADD VALUE cannot run inside a transaction block.
+    # We execute it inside autocommit_block so it runs outside any active transaction.
     try:
-        conn.execute(sa.text("ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'"))
+        with op.get_context().autocommit_block():
+            op.execute(sa.text("ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'"))
     except Exception:
         pass
 
