@@ -16,11 +16,20 @@ from app.db.session import get_db
 from app.domain.masking import mask_email, mask_phone
 from app.models.audit import StatusHistory
 from app.models.booking import FutureCredit
+from app.models.enums import BookingStatus
 from app.models.integration import ApiKey
 from app.models.lead import Lead
 from app.models.payment import PaymentTransaction
+from app.models.rbac import Role
 from app.models.user import User
-from app.schemas.dashboard import DashboardSummary, LeaderboardEntry, StatusLeadItem, StatusWidget
+from app.schemas.dashboard import (
+    AgentPerformanceItem,
+    DashboardSummary,
+    LeaderboardEntry,
+    QueueMetric,
+    StatusLeadItem,
+    StatusWidget,
+)
 from app.schemas.lead import LeadSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -252,4 +261,200 @@ async def get_dashboard_summary(
         )
         summary.future_credits_total_value = float(raw)
 
+    # Daily charged booking cards (PRD Point 17)
+    if is_admin or current_user.role.has_permission("dashboard.revenue_stats"):
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_charged_cnt = await db.scalar(
+            select(func.count(PaymentTransaction.id)).where(
+                PaymentTransaction.outcome == "charged",
+                PaymentTransaction.created_at >= today_start,
+            )
+        )
+        daily_charged_tot = await db.scalar(
+            select(func.coalesce(func.sum(PaymentTransaction.total_amount), 0)).where(
+                PaymentTransaction.outcome == "charged",
+                PaymentTransaction.created_at >= today_start,
+            )
+        )
+        summary.daily_charged_bookings_count = int(daily_charged_cnt or 0)
+        summary.daily_charged_amount = float(daily_charged_tot or 0.0)
+
     return summary
+
+
+@router.get("/queue-metrics", response_model=list[QueueMetric])
+async def get_queue_metrics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> list[QueueMetric]:
+    """PRD Point 14: Check each queue pendency (active leads waiting in queue)
+    and completed count (leads resolved or successfully moved forward from queue)."""
+    # 1. Billing Queue
+    billing_pending = await db.scalar(
+        select(func.count(Lead.id)).where(Lead.status == BookingStatus.transferred_to_billing)
+    ) or 0
+    billing_completed = await db.scalar(
+        select(func.count(func.distinct(StatusHistory.lead_id))).where(
+            StatusHistory.from_status == BookingStatus.transferred_to_billing,
+            StatusHistory.to_status.in_([BookingStatus.card_charged, BookingStatus.card_declined]),
+        )
+    ) or 0
+
+    # 2. CR Booking Queue
+    cr_pending = await db.scalar(
+        select(func.count(Lead.id)).where(Lead.status == BookingStatus.tag_cr_booking)
+    ) or 0
+    cr_completed = await db.scalar(
+        select(func.count(func.distinct(StatusHistory.lead_id))).where(
+            StatusHistory.from_status == BookingStatus.tag_cr_booking,
+            StatusHistory.to_status == BookingStatus.tag_auditor,
+        )
+    ) or 0
+
+    # 3. Changes Queue
+    changes_pending = await db.scalar(
+        select(func.count(Lead.id)).where(Lead.status == BookingStatus.tag_change_dep)
+    ) or 0
+    changes_completed = await db.scalar(
+        select(func.count(func.distinct(StatusHistory.lead_id))).where(
+            StatusHistory.from_status == BookingStatus.tag_change_dep,
+            StatusHistory.to_status.in_([BookingStatus.transferred_to_billing, BookingStatus.tag_auditor]),
+        )
+    ) or 0
+
+    # 4. QC / Quality Queue
+    qc_pending = await db.scalar(
+        select(func.count(Lead.id)).where(Lead.status == BookingStatus.tag_auditor)
+    ) or 0
+    qc_completed = await db.scalar(
+        select(func.count(func.distinct(StatusHistory.lead_id))).where(
+            StatusHistory.to_status == BookingStatus.qc_done,
+        )
+    ) or 0
+
+    # 5. Chargeback Queue
+    cb_pending = await db.scalar(
+        select(func.count(Lead.id)).where(Lead.status == BookingStatus.tag_chargeback)
+    ) or 0
+    cb_completed = await db.scalar(
+        select(func.count(func.distinct(StatusHistory.lead_id))).where(
+            StatusHistory.from_status == BookingStatus.tag_chargeback,
+        )
+    ) or 0
+
+    return [
+        QueueMetric(
+            queue_key="billing",
+            queue_name="Billing Queue",
+            pending_count=int(billing_pending),
+            completed_count=int(billing_completed),
+            total_count=int(billing_pending + billing_completed),
+        ),
+        QueueMetric(
+            queue_key="cr_booking",
+            queue_name="CR Queue",
+            pending_count=int(cr_pending),
+            completed_count=int(cr_completed),
+            total_count=int(cr_pending + cr_completed),
+        ),
+        QueueMetric(
+            queue_key="change_dep",
+            queue_name="Changes Queue",
+            pending_count=int(changes_pending),
+            completed_count=int(changes_completed),
+            total_count=int(changes_pending + changes_completed),
+        ),
+        QueueMetric(
+            queue_key="auditor",
+            queue_name="QC / Audit Queue",
+            pending_count=int(qc_pending),
+            completed_count=int(qc_completed),
+            total_count=int(qc_pending + qc_completed),
+        ),
+        QueueMetric(
+            queue_key="chargeback_dep",
+            queue_name="Chargeback Queue",
+            pending_count=int(cb_pending),
+            completed_count=int(cb_completed),
+            total_count=int(cb_pending + cb_completed),
+        ),
+    ]
+
+
+@router.get("/agent-performance", response_model=list[AgentPerformanceItem])
+async def get_agent_performance(
+    start_date: str | None = Query(None, description="Start date in YYYY-MM-DD format"),
+    end_date: str | None = Query(None, description="End date in YYYY-MM-DD format"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> list[AgentPerformanceItem]:
+    """PRD Point 16: Agent performance report with booking counts and revenue,
+    filterable by date range."""
+    # Find all agents
+    agent_roles = await db.execute(select(Role.id).where(Role.name.in_(["agent", "cr_booking"])))
+    agent_role_ids = list(agent_roles.scalars().all())
+
+    agents = (
+        await db.execute(
+            select(User).where(User.role_id.in_(agent_role_ids), User.is_active.is_(True)).order_by(User.name)
+        )
+    ).scalars().all()
+
+    results: list[AgentPerformanceItem] = []
+
+    for ag in agents:
+        lead_query = select(func.count(Lead.id)).where(Lead.agent_id == ag.id)
+        if start_date:
+            try:
+                s_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                lead_query = lead_query.where(Lead.created_at >= s_dt)
+            except Exception:
+                pass
+        if end_date:
+            try:
+                e_dt = datetime.fromisoformat(end_date + "T23:59:59.999999").replace(tzinfo=timezone.utc)
+                lead_query = lead_query.where(Lead.created_at <= e_dt)
+            except Exception:
+                pass
+
+        total_bookings = await db.scalar(lead_query) or 0
+
+        # Charged transactions for this agent's leads
+        charged_query = (
+            select(
+                func.count(func.distinct(Lead.id)).label("charged_count"),
+                func.coalesce(func.sum(PaymentTransaction.total_amount), 0).label("revenue"),
+            )
+            .join(PaymentTransaction, PaymentTransaction.lead_id == Lead.id)
+            .where(Lead.agent_id == ag.id, PaymentTransaction.outcome == "charged")
+        )
+        if start_date:
+            try:
+                s_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                charged_query = charged_query.where(PaymentTransaction.created_at >= s_dt)
+            except Exception:
+                pass
+        if end_date:
+            try:
+                e_dt = datetime.fromisoformat(end_date + "T23:59:59.999999").replace(tzinfo=timezone.utc)
+                charged_query = charged_query.where(PaymentTransaction.created_at <= e_dt)
+            except Exception:
+                pass
+
+        charged_row = (await db.execute(charged_query)).first()
+        charged_count = charged_row[0] if charged_row else 0
+        total_rev = charged_row[1] if charged_row else 0.0
+
+        results.append(
+            AgentPerformanceItem(
+                agent_id=ag.id,
+                agent_name=ag.name,
+                agent_email=ag.email,
+                bookings_count=int(total_bookings),
+                charged_bookings_count=int(charged_count),
+                total_revenue=float(total_rev),
+            )
+        )
+
+    results.sort(key=lambda x: (x.bookings_count, x.total_revenue), reverse=True)
+    return results

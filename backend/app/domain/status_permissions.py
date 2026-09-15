@@ -43,19 +43,45 @@ async def get_settable_statuses(db: AsyncSession, role_id: uuid.UUID) -> set[Boo
             BookingStatus.tag_auditor,
         })
     elif role and role.name in ("cr_booking", "cs"):
+        # Point 2: authorization_pending removed
         result.update({
             BookingStatus.tag_auditor,
-            BookingStatus.authorization_pending,
         })
-    elif role and role.name == "change_dep":
+    elif role and role.name in ("change_dep", "changes"):
+        # Point 7: replace tag to cr with tag to billing
         result.update({
             BookingStatus.tag_auditor,
-            BookingStatus.tag_cr_booking,
+            BookingStatus.transferred_to_billing,
         })
-    elif role and role.name in ("auditor", "qc"):
+    elif role and role.name in ("auditor", "qc", "quality"):
+        # Point 5: Auditor in workflow can set all tags
         result.update({
             BookingStatus.qc_done,
             BookingStatus.tag_change_dep,
+            BookingStatus.tag_cr_booking,
+            BookingStatus.transferred_to_billing,
+            BookingStatus.tag_refund,
+            BookingStatus.tag_rdr,
+            BookingStatus.tag_chargeback,
+            BookingStatus.tag_partial_refund,
+        })
+    elif role and role.name == "billing":
+        # Point 11: billing can mark chargeback, rdr, partial refund or refund in any lead
+        result.update({
+            BookingStatus.card_charged,
+            BookingStatus.card_declined,
+            BookingStatus.tag_refund,
+            BookingStatus.tag_rdr,
+            BookingStatus.tag_chargeback,
+            BookingStatus.tag_partial_refund,
+        })
+    elif role and role.name in ("chargeback_dep", "chargeback"):
+        # Point 10: chargeback dep user can mark lead as chargeback, rdr, refund, or partial refund
+        result.update({
+            BookingStatus.tag_chargeback,
+            BookingStatus.tag_rdr,
+            BookingStatus.tag_refund,
+            BookingStatus.tag_partial_refund,
         })
     return result
 
@@ -88,7 +114,16 @@ async def get_relevant_statuses(db: AsyncSession, role_id: uuid.UUID) -> set[Boo
             StatusRolePermission.role_id == role_id, StatusRolePermission.kind == "relevant"
         )
     )
-    return set(rows.scalars().all())
+    result = set(rows.scalars().all())
+    role = await db.get(Role, role_id)
+    if role and role.name in ("chargeback_dep", "chargeback"):
+        result.update({
+            BookingStatus.tag_chargeback,
+            BookingStatus.tag_rdr,
+            BookingStatus.tag_refund,
+            BookingStatus.tag_partial_refund,
+        })
+    return result
 
 
 async def get_full_matrix(db: AsyncSession) -> dict[BookingStatus, dict[str, list[uuid.UUID]]]:

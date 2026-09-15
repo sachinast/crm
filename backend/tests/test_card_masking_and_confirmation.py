@@ -218,4 +218,66 @@ async def test_send_confirmation_email_success_flow():
             assert call_kwargs["to_email"] == "alice@example.com"
             assert "Alice Wonderland" in call_kwargs["html_content"]
             assert "Safe travels!" in call_kwargs["html_content"]
+            assert "AUTHORIZATION STATUS: CONFIRMED" in call_kwargs["html_content"]
             mock_log.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_send_confirmation_email_with_docx_and_custom_attachments():
+    from unittest.mock import MagicMock
+    from app.api.v1.leads import send_confirmation_email
+    from app.schemas.lead import EmailAttachmentPayload
+
+    mock_user = User(id=uuid.uuid4(), name="Agent Smith", email="agent@test.com")
+    mock_user.role = Role(id=uuid.uuid4(), name="agent")
+    lead_id = uuid.uuid4()
+    mock_lead = Lead(id=lead_id, name="Bob Builder", status=BookingStatus.card_charged, email="bob@example.com")
+    payload = FinalConfirmationEmailRequest(
+        to_email="bob@example.com",
+        attach_confirmation_doc=True,
+        custom_attachments=[
+            EmailAttachmentPayload(filename="extra_voucher.pdf", content="YmFzZTY0ZGF0YQ=="),
+        ],
+    )
+
+    mock_db = AsyncMock()
+    mock_exec_result = MagicMock()
+    mock_exec_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_exec_result)
+
+    with patch("app.api.v1.leads.get_visible_lead_or_404", return_value=mock_lead), \
+         patch("app.api.v1.leads.get_booking_for_lead", return_value=MockCarBooking()), \
+         patch("app.api.v1.leads.send_customer_email", return_value=(True, "OK")) as mock_send, \
+         patch("app.api.v1.leads.log_process_event"):
+
+        res = await send_confirmation_email(lead_id=lead_id, payload=payload, db=mock_db, current_user=mock_user)
+        assert res["status"] == "success"
+        assert res["attachments_count"] == 2
+        assert any("extra_voucher.pdf" in n for n in res["attachment_names"])
+        assert any("Car_Rental_Payment_Authorization_Confirmation" in n for n in res["attachment_names"])
+
+        mock_send.assert_called_once()
+        call_kwargs = mock_send.call_args.kwargs
+        attachments = call_kwargs["attachments"]
+        assert len(attachments) == 2
+        assert attachments[0]["filename"].endswith(".docx")
+        assert attachments[1]["filename"] == "extra_voucher.pdf"
+
+
+def test_generate_confirmation_docx_populates_template():
+    from app.services.document_service import generate_confirmation_docx
+
+    filename, b64_data = generate_confirmation_docx(
+        lead_id="00000000-0000-0000-0000-000000000001",
+        customer_name="Test Customer",
+        customer_email="test@example.com",
+        booking_reference="EC9999",
+        confirmation_number="CONF-9999",
+        car_provider="Hertz",
+        prepaid_amount=150.0,
+        pay_at_counter_amount=30.0,
+        total_amount=180.0,
+    )
+    assert filename == "Car_Rental_Payment_Authorization_Confirmation_EC9999.docx"
+    assert len(b64_data) > 1000
+

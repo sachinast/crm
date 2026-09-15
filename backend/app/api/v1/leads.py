@@ -14,6 +14,7 @@ from app.domain.process_log import log_process_event
 from app.domain.status_machine import can_transition
 from app.domain.status_permissions import get_settable_statuses
 from app.models.audit import AccessNotificationLog, Notification, PiiRevealAuditLog, StatusHistory
+from app.models.booking import CarBooking
 from app.models.enums import BookingStatus, PiiField, ServiceType
 from app.models.lead import Lead
 from app.models.payment import PaymentTransaction
@@ -31,6 +32,7 @@ from app.schemas.lead import (
     LeadConfirm,
     LeadCreate,
     LeadRead,
+    LeadRemarkCreate,
     LeadSummary,
     LeadUpdate,
     ServiceTypeUpdate,
@@ -38,9 +40,12 @@ from app.schemas.lead import (
     StatusUpdate,
 )
 from app.core.config import get_settings
+from app.api.v1.websocket import connection_manager
 from app.domain.booking_lookup import get_booking_for_lead
+from app.services.document_service import generate_confirmation_docx
 from app.services.email_service import generate_final_booking_confirmation_email_html, send_customer_email
 from app.services.status_transitions import apply_status_transition
+
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -332,10 +337,102 @@ async def update_status(
     the row-lock/validate/history/notify/push mechanics, shared with
     POST /payments (Billing charging/declining is the same kind of transition).
     """
-    lead = await apply_status_transition(db, lead_id=lead_id, target=payload.new_status, actor=current_user)
+    lead = await apply_status_transition(
+        db,
+        lead_id=lead_id,
+        target=payload.new_status,
+        actor=current_user,
+        refunded_amount=payload.refunded_amount,
+    )
     await db.commit()
     await db.refresh(lead)
     return lead
+
+
+@router.post("/{lead_id}/remarks")
+async def add_lead_remark(
+    lead_id: uuid.UUID,
+    payload: LeadRemarkCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+):
+    """Universal remarks endpoint (PRD Points 6, 8, 13) — allows any authenticated
+    staff user to append a remark on any booking. Pushes real-time notifications
+    with the actor's username to the assigned agent and admin team."""
+    lead = await db.get(Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found")
+
+    # Get associated booking (car/hotel/flight)
+    booking = await get_booking_for_lead(db, lead)
+    if booking is None:
+        result = await db.execute(select(CarBooking).where(CarBooking.lead_id == lead.id))
+        booking = result.scalar_one_or_none()
+        if booking is None:
+            booking = CarBooking(
+                lead_id=lead.id,
+                booking_reference=f"CRM-{str(lead.id).replace('-', '')[:7].upper()}",
+                booking_platform="CRM Portal",
+                pickup_location="TBD",
+                dropoff_location="TBD",
+                pickup_datetime=datetime.now(timezone.utc),
+                dropoff_datetime=datetime.now(timezone.utc),
+                remarks_history=[],
+            )
+            db.add(booking)
+            await db.flush()
+
+    existing_remarks = list(booking.remarks_history or [])
+    remark_text = payload.remark.strip()
+    actor_name = current_user.name or current_user.email
+    new_entry = {
+        "s_no": len(existing_remarks) + 1,
+        "remark": remark_text,
+        "entered_by": actor_name,
+        "entered_on": datetime.now(timezone.utc).isoformat(),
+    }
+    booking.remarks_history = existing_remarks + [new_entry]
+
+    # Create notifications with actor's name (Point 13)
+    remark_msg = f"{actor_name} added a remark on lead #{lead.id}: {remark_text}"
+
+    # Notify assigned agent if not the actor
+    if lead.agent_id and lead.agent_id != current_user.id:
+        db.add(
+            Notification(
+                lead_id=lead.id,
+                recipient_user_id=lead.agent_id,
+                type="lead_remark",
+                message=remark_msg,
+            )
+        )
+        await connection_manager.send_to_user(
+            lead.agent_id,
+            {"type": "lead_remark", "lead_id": str(lead.id), "message": remark_msg},
+        )
+
+    # Notify admins
+    admin_roles = (
+        await db.execute(
+            select(Role.id).where(Role.name.in_(["admin", "super_admin", "superadmin"]))
+        )
+    ).scalars().all()
+    for r_id in admin_roles:
+        db.add(
+            Notification(
+                lead_id=lead.id,
+                recipient_role_id=r_id,
+                type="lead_remark",
+                message=remark_msg,
+            )
+        )
+        await connection_manager.send_to_role(
+            r_id,
+            {"type": "lead_remark", "lead_id": str(lead.id), "message": remark_msg},
+        )
+
+    await db.commit()
+    return {"message": "Remark added successfully", "remark": new_entry}
 
 
 @router.patch("/{lead_id}", response_model=LeadRead)
@@ -635,6 +732,9 @@ async def send_confirmation_email(
     svc_type = lead.service_type.value if lead.service_type else "car"
     provider = ""
     model_or_details = ""
+    booking_platform = "Direct"
+    vehicle_type_raw = ""
+    car_model_raw = ""
     pickup_dt = None
     pickup_loc = ""
     return_dt = None
@@ -648,12 +748,14 @@ async def send_confirmation_email(
         prepaid = float(getattr(booking, "prepaid_amount", 0) or 0)
         pay_counter = float(getattr(booking, "pay_at_counter_amount", 0) or 0)
         total = float(getattr(booking, "total_amount", 0) or (prepaid + pay_counter))
+        booking_platform = getattr(booking, "booking_platform", "Direct") or "Direct"
 
         if svc_type == "car":
             provider = getattr(booking, "car_provider", "") or ""
-            v_type = (getattr(booking, "vehicle_type", "") or "").replace("_", " ").title()
-            c_model = getattr(booking, "car_model", "") or ""
-            model_or_details = f"{c_model} ({v_type})" if c_model else v_type
+            vehicle_type_raw = getattr(booking, "vehicle_type", "") or ""
+            v_type = vehicle_type_raw.replace("_", " ").title()
+            car_model_raw = getattr(booking, "car_model", "") or ""
+            model_or_details = f"{car_model_raw} ({v_type})" if car_model_raw else v_type
             pickup_dt = getattr(booking, "pickup_datetime", None)
             pickup_loc = getattr(booking, "pickup_location", "") or ""
             return_dt = getattr(booking, "return_datetime", None)
@@ -675,6 +777,8 @@ async def send_confirmation_email(
             return_loc = getattr(booking, "destination", "") or ""
             driver_guest = getattr(booking, "passengers", "") or lead.name
 
+    charged_amount = prepaid if prepaid > 0 else total
+
     html_content = generate_final_booking_confirmation_email_html(
         customer_name=lead.name or "Customer",
         customer_email=recipient,
@@ -689,17 +793,75 @@ async def send_confirmation_email(
         return_datetime=return_dt,
         return_location=return_loc,
         driver_or_guest_name=driver_guest,
-        amount_charged=prepaid if prepaid > 0 else total,
+        amount_charged=charged_amount,
         pay_at_counter_amount=pay_counter,
         total_amount=total,
         agent_name=current_user.name,
         custom_message=payload.custom_message,
+        booking_platform=booking_platform,
+        vehicle_type=vehicle_type_raw,
     )
 
-    email_sent, msg = await send_customer_email(to_email=recipient, subject=subject, html_content=html_content)
+    # Prepare attachments list
+    email_attachments: list[dict[str, str]] = []
+
+    # 1. Attach Official Confirmation Document (.docx) populated from template if requested
+    if payload.attach_confirmation_doc:
+        try:
+            pickup_str = pickup_dt.strftime("%d-%b-%Y %I:%M %p") if isinstance(pickup_dt, datetime) else str(pickup_dt or "")
+            return_str = return_dt.strftime("%d-%b-%Y %I:%M %p") if isinstance(return_dt, datetime) else str(return_dt or "")
+            duration_str = "1 Day"
+            if pickup_dt and return_dt and isinstance(pickup_dt, datetime) and isinstance(return_dt, datetime):
+                days = max(1, int(round((return_dt - pickup_dt).total_seconds() / 86400)))
+                duration_str = f"{days} {'Day' if days == 1 else 'Days'}"
+
+            docx_filename, docx_b64 = generate_confirmation_docx(
+                lead_id=str(lead.id),
+                customer_name=lead.name or "Customer",
+                customer_email=recipient,
+                booking_reference=booking_ref,
+                confirmation_number=confirmation_number,
+                service_type=svc_type,
+                car_provider=provider,
+                booking_platform=booking_platform,
+                vehicle_type=vehicle_type_raw or svc_type,
+                car_model=car_model_raw,
+                driver_name=driver_guest,
+                pickup_datetime_str=pickup_str,
+                pickup_location=pickup_loc,
+                return_datetime_str=return_str,
+                return_location=return_loc,
+                duration_str=duration_str,
+                prepaid_amount=charged_amount,
+                pay_at_counter_amount=pay_counter,
+                total_amount=total,
+            )
+            email_attachments.append({
+                "filename": docx_filename,
+                "content": docx_b64,
+            })
+        except Exception as docx_err:
+            logger.warning(f"[Final Confirmation] Could not generate docx confirmation attachment: {docx_err}")
+
+    # 2. Append custom user-provided attachments if any
+    if payload.custom_attachments:
+        for custom_att in payload.custom_attachments:
+            if custom_att.filename and custom_att.content:
+                email_attachments.append({
+                    "filename": custom_att.filename,
+                    "content": custom_att.content,
+                })
+
+    email_sent, msg = await send_customer_email(
+        to_email=recipient,
+        subject=subject,
+        html_content=html_content,
+        attachments=email_attachments if email_attachments else None,
+    )
     if not email_sent:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Failed to send confirmation email: {msg}")
 
+    att_summary = f" with {len(email_attachments)} attachment(s)" if email_attachments else ""
     log_process_event(
         db,
         lead_id=lead.id,
@@ -707,7 +869,7 @@ async def send_confirmation_email(
         action="final_confirmation_sent",
         field_changed="confirmation_email",
         old_value=None,
-        new_value=f"Dispatched by {current_user.name} ({caller_role}) to {recipient}: {subject}",
+        new_value=f"Dispatched by {current_user.name} ({caller_role}) to {recipient}{att_summary}: {subject}",
     )
 
     if lead.agent_id and lead.agent_id != current_user.id:
@@ -729,6 +891,8 @@ async def send_confirmation_email(
         "subject": subject,
         "dispatched_by": current_user.name,
         "dispatched_at": datetime.now(timezone.utc).isoformat(),
+        "attachments_count": len(email_attachments),
+        "attachment_names": [a["filename"] for a in email_attachments],
     }
 
 

@@ -46,9 +46,11 @@ export default async function LeadsPage({
   const isAdmin = role === "admin" || role === "super_admin" || role === "superadmin";
   const isAgent = role === "agent";
   const isBilling = role === "billing";
-  const isCS = role === "cr_booking" || role === "cs" || role === "customer_service";
+  const isCR = role === "cr_booking";
+  const isCS = role === "cs" || role === "customer_service";
   const isChanges = role === "change_dep" || role === "changes";
   const isQC = role === "auditor" || role === "qc" || role === "quality";
+  const isChargeback = role === "chargeback_dep" || role === "chargeback";
 
   // Billing users belong in /billing
   if (isBilling && !isAdmin) {
@@ -59,12 +61,14 @@ export default async function LeadsPage({
 
   // Enforce department queue filtering
   let targetStatus = params.status;
-  if (isCS && !isAdmin) {
+  if (isCR && !isAdmin) {
     targetStatus = "tag_cr_booking";
   } else if (isChanges && !isAdmin) {
     targetStatus = "tag_change_dep";
   } else if (isQC && !isAdmin) {
     targetStatus = "tag_auditor";
+  } else if (isChargeback && !isAdmin) {
+    targetStatus = "tag_chargeback";
   }
 
   const queryParams: SearchParams = {
@@ -76,12 +80,14 @@ export default async function LeadsPage({
 
   // Strict role filter
   let leads = rawLeads;
-  if (isCS && !isAdmin) {
+  if (isCR && !isAdmin) {
     leads = rawLeads.filter((l) => l.status === "tag_cr_booking");
   } else if (isChanges && !isAdmin) {
     leads = rawLeads.filter((l) => l.status === "tag_change_dep");
   } else if (isQC && !isAdmin) {
     leads = rawLeads.filter((l) => l.status === "tag_auditor");
+  } else if (isChargeback && !isAdmin) {
+    leads = rawLeads.filter((l) => l.status === "tag_chargeback");
   }
 
   const page = Math.max(Number(params.page) || 1, 1);
@@ -92,21 +98,29 @@ export default async function LeadsPage({
   const canCreate = isAdmin || isAgent;
 
   const pageTitle =
-    isCS && !isAdmin
-      ? "CS (Customer Service) Queue"
+    isCR && !isAdmin
+      ? "CR Queue"
+      : isCS && !isAdmin
+      ? "Customer Service - All Leads"
       : isChanges && !isAdmin
       ? "Changes Department Queue"
       : isQC && !isAdmin
-      ? "QR (Quality Control) Queue"
+      ? "QC (Quality Control) Queue"
+      : isChargeback && !isAdmin
+      ? "Chargeback Queue"
       : "Leads";
 
   const pageSubtitle =
-    isCS && !isAdmin
-      ? "Manage and review customer service requests, inquiries, and customer care workflows."
+    isCR && !isAdmin
+      ? "Manage and review CR bookings, voucher requests, and workflows."
+      : isCS && !isAdmin
+      ? "View-only access to customer leads and history with remark additions."
       : isChanges && !isAdmin
       ? "Manage and review schedule changes, modifications, and voucher dispatches."
       : isQC && !isAdmin
       ? "Inspect verified bookings, audit records, and ensure quality compliance."
+      : isChargeback && !isAdmin
+      ? "Manage chargebacks, RDR dispute resolution, and refunds."
       : "Manage inbound customer pipelines, duplicate checks, and booking workflows.";
 
   return (

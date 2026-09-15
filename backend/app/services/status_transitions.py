@@ -13,6 +13,7 @@ be visibility-filtered the same way, and it writes its own (simpler) inline
 transition for the one edge it ever fires (authorization_pending -> client_approved).
 """
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -26,6 +27,8 @@ from app.domain.status_permissions import can_set, roles_to_notify
 from app.models.audit import Notification, StatusHistory
 from app.models.enums import BookingStatus
 from app.models.lead import Lead
+from app.models.payment import PaymentTransaction
+from app.models.rbac import Role
 from app.models.user import User
 
 
@@ -35,6 +38,7 @@ async def apply_status_transition(
     lead_id: uuid.UUID,
     target: BookingStatus,
     actor: User,
+    refunded_amount: float | None = None,
 ) -> Lead:
     """Row-locks the lead, validates the transition + the actor's role, and
     writes status_history/notifications in the caller's transaction (flush,
@@ -53,6 +57,23 @@ async def apply_status_transition(
     if not await can_set(db, target, actor.role_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, f"Your role cannot set status to '{target.value}'")
 
+    if target == BookingStatus.tag_partial_refund:
+        if refunded_amount is None or refunded_amount <= 0:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Refunded amount is required and must be greater than 0 for a partial refund",
+            )
+        db.add(
+            PaymentTransaction(
+                lead_id=lead.id,
+                prepaid_amount=-abs(refunded_amount),
+                pay_at_counter_amount=0,
+                outcome="refunded",
+                processed_by=actor.id,
+                processed_at=datetime.now(timezone.utc),
+            )
+        )
+
     previous_status = lead.status
     lead.status = target
     db.add(StatusHistory(lead_id=lead.id, from_status=previous_status, to_status=target, changed_by=actor.id))
@@ -66,14 +87,29 @@ async def apply_status_transition(
         new_value=target.value,
     )
 
+    actor_name = actor.name or actor.email
+    if target == BookingStatus.tag_partial_refund and refunded_amount:
+        message = f"{actor_name} updated lead #{lead.id} status from {previous_status.value} to {target.value} (Refunded: ${refunded_amount:.2f})"
+    else:
+        message = f"{actor_name} updated lead #{lead.id} status from {previous_status.value} to {target.value}"
+
     notify_role_ids = await roles_to_notify(db, target)
-    message = f"Lead {lead.id} moved from {previous_status.value} to {target.value}"
-    for role_id in notify_role_ids:
+    admin_role_rows = await db.execute(
+        select(Role.id).where(Role.name.in_(["admin", "super_admin", "superadmin"]))
+    )
+    admin_role_ids = list(admin_role_rows.scalars().all())
+    all_role_ids = list(set(notify_role_ids).union(admin_role_ids))
+
+    for role_id in all_role_ids:
         db.add(Notification(lead_id=lead.id, recipient_role_id=role_id, type="status_change", message=message))
+
+    # Also notify assigned agent if not the actor
+    if lead.agent_id and lead.agent_id != actor.id:
+        db.add(Notification(lead_id=lead.id, recipient_user_id=lead.agent_id, type="status_change", message=message))
 
     await db.flush()
 
-    await _push_notifications(notify_role_ids, target, lead.id, message)
+    await _push_notifications(all_role_ids, target, lead.id, message, agent_id=lead.agent_id if lead.agent_id != actor.id else None)
     return lead
 
 
@@ -82,7 +118,10 @@ async def _push_notifications(
     target: BookingStatus,
     lead_id: uuid.UUID,
     message: str,
+    agent_id: uuid.UUID | None = None,
 ) -> None:
     payload = {"type": "status_change", "lead_id": str(lead_id), "status": target.value, "message": message}
     for role_id in notify_role_ids:
         await connection_manager.send_to_role(role_id, payload)
+    if agent_id:
+        await connection_manager.send_to_user(agent_id, payload)

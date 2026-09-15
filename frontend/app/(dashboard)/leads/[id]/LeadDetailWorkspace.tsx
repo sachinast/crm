@@ -29,6 +29,7 @@ import {
   Eye,
   X,
   Send,
+  Plus,
 } from "lucide-react";
 
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -42,6 +43,7 @@ import StatusActions from "./StatusActions";
 import PaymentActions from "./PaymentActions";
 import ChangesEmailModal from "@/components/leads/ChangesEmailModal";
 import FinalConfirmationEmailModal from "@/components/leads/FinalConfirmationEmailModal";
+import AddRemarkModal from "@/components/leads/AddRemarkModal";
 
 interface LeadDetail {
   id: string;
@@ -68,6 +70,12 @@ interface LeadDetail {
 interface BookingSummary {
   booking_reference: string;
   total_amount: number;
+  remarks_history?: Array<{
+    s_no: number;
+    remark: string;
+    entered_by: string;
+    entered_on: string;
+  }> | null;
   [key: string]: unknown;
 }
 
@@ -736,7 +744,11 @@ export default function LeadDetailWorkspace({
   const [showEditLeadModal, setShowEditLeadModal] = useState(false);
   const [confirmRedirectService, setConfirmRedirectService] = useState<string | null>(null);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "history">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "modifications" | "cancellation" | "remarks" | "history">("overview");
+  const [remarksList, setRemarksList] = useState<Array<{ s_no: number; remark: string; entered_by: string; entered_on: string }>>(
+    () => (Array.isArray(booking?.remarks_history) ? (booking.remarks_history as any) : [])
+  );
+  const [showAddRemarkModal, setShowAddRemarkModal] = useState(false);
   const [copiedAuthLink, setCopiedAuthLink] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showChangesEmailModal, setShowChangesEmailModal] = useState(false);
@@ -901,6 +913,17 @@ export default function LeadDetailWorkspace({
             </button>
           )}
 
+          {/* Universal Add Remark Button (Point 6 & Point 8) */}
+          <button
+            type="button"
+            onClick={() => setShowAddRemarkModal(true)}
+            className="btn-secondary btn-sm flex items-center gap-1.5 border-accent/40 text-accent hover:bg-accent-soft font-semibold shadow-xs"
+            title="Add a booking note or customer service remark"
+          >
+            <MessageSquare size={13} className="text-accent" />
+            <span>Add Remark</span>
+          </button>
+
           <a
             href={`/authorize/${leadState.id}`}
             target="_blank"
@@ -984,6 +1007,15 @@ export default function LeadDetailWorkspace({
         totalAmount={typeof booking?.total_amount === "number" ? booking.total_amount : booking?.total_amount}
         onSuccess={() => {
           router.refresh();
+        }}
+      />
+
+      <AddRemarkModal
+        leadId={leadState.id}
+        isOpen={showAddRemarkModal}
+        onClose={() => setShowAddRemarkModal(false)}
+        onRemarkAdded={(newRemark) => {
+          setRemarksList((prev) => [...prev, newRemark]);
         }}
       />
 
@@ -1231,6 +1263,21 @@ export default function LeadDetailWorkspace({
                     Cancelled
                   </span>
                 )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("remarks")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "remarks"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                }`}
+              >
+                <MessageSquare size={13} />
+                <span>Remarks &amp; Notes</span>
+                <span className="rounded-full bg-accent/20 px-1.5 py-0.2 text-[10px] font-mono font-bold text-accent">
+                  {remarksList.length}
+                </span>
               </button>
 
               <button
@@ -1498,6 +1545,73 @@ export default function LeadDetailWorkspace({
                     </span>
                   </li>
                 </ul>
+              </div>
+            )}
+
+            {/* Tab 6: Remarks & Department Notes (PRD Points 6, 8, 13) */}
+            {activeTab === "remarks" && (
+              <div className="mt-4 space-y-4 text-xs">
+                <div className="flex items-center justify-between border-b border-hairline pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
+                      <MessageSquare size={14} className="text-accent" />
+                      <span>Booking Remarks &amp; Notes</span>
+                    </h3>
+                    <p className="text-[11px] text-ink-muted mt-0.5">
+                      All departments can add remarks here. Assigned agent and admin team are notified instantly.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRemarkModal(true)}
+                    className="btn-primary btn-sm flex items-center gap-1.5 text-xs py-1 px-3 shadow-xs"
+                  >
+                    <Plus size={13} />
+                    <span>Add Remark</span>
+                  </button>
+                </div>
+
+                {remarksList.length === 0 ? (
+                  <div className="rounded-xl border border-hairline bg-surface-raised p-8 text-center space-y-2">
+                    <MessageSquare size={28} className="text-ink-muted mx-auto opacity-60" />
+                    <p className="font-bold text-ink text-sm">No Remarks Logged</p>
+                    <p className="text-ink-muted text-xs max-w-sm mx-auto">
+                      Any user can add notes, special instructions, customer service history, or compliance remarks to this booking.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddRemarkModal(true)}
+                      className="btn-secondary btn-sm inline-flex items-center gap-1.5 text-xs mt-3"
+                    >
+                      <Plus size={12} />
+                      <span>Post First Remark</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {remarksList.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-hairline bg-surface-raised/60 p-3.5 space-y-1.5 hover:border-accent/40 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-soft text-accent text-[10px] font-bold font-mono">
+                              {item.s_no || idx + 1}
+                            </span>
+                            <span className="font-bold text-ink text-xs">{item.entered_by}</span>
+                          </div>
+                          <span className="text-[11px] text-ink-faint font-mono">
+                            {formatDate(item.entered_on)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-ink whitespace-pre-wrap pl-7 leading-relaxed">
+                          {item.remark}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

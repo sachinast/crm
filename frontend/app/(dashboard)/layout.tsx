@@ -33,23 +33,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isAdmin = role === "admin" || role === "super_admin" || role === "superadmin";
   const isAgent = role === "agent";
   const isBilling = role === "billing";
-  const isCS = role === "cr_booking" || role === "cs" || role === "customer_service";
+  const isCR = role === "cr_booking";
+  const isCS = role === "cs" || role === "customer_service";
   const isChanges = role === "change_dep" || role === "changes";
   const isQC = role === "auditor" || role === "qc" || role === "quality";
+  const isChargeback = role === "chargeback_dep" || role === "chargeback";
 
   // Role-gated Bookings & Pipeline menus:
   // - Billing sees only Billing & Accounts (no Leads Queue)
-  // - CS sees only CS (Customer Service)
+  // - CR sees only CR Queue
+  // - CS sees Customer Service (all leads read-only)
   // - Changes sees only Changes Department
-  // - QR/Auditor sees only QR (Quality Control)
+  // - QC/Auditor sees only QC (Quality Control)
+  // - Chargeback sees Chargeback Queue
   // - Agent sees Leads Queue
   // - Admin sees all pipeline queues
   const pipelineItems: (NavItem | false)[] = [
     (isAdmin || isAgent) && { href: "/leads", label: "Leads Queue", icon: "leads" },
     (isAdmin || isBilling) && { href: "/billing", label: "Billing & Accounts", icon: "billing" },
-    (isAdmin || isCS) && { href: "/leads?status=tag_cr_booking", label: "CS (Customer Service)", icon: "cs" },
+    (isAdmin || isCR) && { href: "/leads?status=tag_cr_booking", label: "CR Queue", icon: "cs" },
+    (isAdmin || isCS) && { href: "/leads", label: "Customer Service", icon: "cs" },
     (isAdmin || isChanges) && { href: "/leads?status=tag_change_dep", label: "Changes Department", icon: "changes" },
-    (isAdmin || isQC) && { href: "/leads?status=tag_auditor", label: "QR (Quality Control)", icon: "qc" },
+    (isAdmin || isQC) && { href: "/leads?status=tag_auditor", label: "QC (Quality Control)", icon: "qc" },
+    (isAdmin || isChargeback) && { href: "/leads?status=tag_chargeback", label: "Chargeback Queue", icon: "billing" },
   ];
 
   const filteredPipelineItems = pipelineItems.filter((item): item is NavItem => Boolean(item));

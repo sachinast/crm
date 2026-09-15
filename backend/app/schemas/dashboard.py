@@ -74,3 +74,24 @@ class DashboardSummary(BaseModel):
     future_credits_issued_count: int | None = None
     future_credits_total_value: float | None = None
     leaderboard: list[LeaderboardEntry] | None = None
+
+    # Daily charged booking cards (PRD Point 17)
+    daily_charged_bookings_count: int | None = None
+    daily_charged_amount: float | None = None
+
+
+class QueueMetric(BaseModel):
+    queue_key: str
+    queue_name: str
+    pending_count: int
+    completed_count: int
+    total_count: int
+
+
+class AgentPerformanceItem(BaseModel):
+    agent_id: uuid.UUID
+    agent_name: str
+    agent_email: str
+    bookings_count: int
+    charged_bookings_count: int
+    total_revenue: float

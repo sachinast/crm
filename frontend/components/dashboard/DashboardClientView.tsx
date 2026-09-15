@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Banknote,
@@ -98,6 +98,16 @@ export interface DashboardSummary {
   future_credits_issued_count: number | null;
   future_credits_total_value: number | null;
   leaderboard: LeaderboardEntry[] | null;
+  daily_charged_bookings_count?: number | null;
+  daily_charged_amount?: number | null;
+}
+
+export interface QueueMetricItem {
+  queue_key: string;
+  queue_name: string;
+  pending_count: number;
+  completed_count: number;
+  total_count: number;
 }
 
 export interface FullLeadItem {
@@ -294,6 +304,14 @@ export default function DashboardClientView({
   const [timeframe, setTimeframe] = useState<TimeframeRange>("1W");
   const [selectedWidgetModal, setSelectedWidgetModal] = useState<StatusWidget | null>(null);
   const [widgetModalFilter, setWidgetModalFilter] = useState<"all" | "breached">("all");
+  const [queueMetrics, setQueueMetrics] = useState<QueueMetricItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dashboard/queue-metrics")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setQueueMetrics(data))
+      .catch(() => setQueueMetrics([]));
+  }, []);
 
   const roleNormalized = (user.role || "").toLowerCase();
   const isSuperAdminOrAdmin =
@@ -537,9 +555,15 @@ export default function DashboardClientView({
                 <ChevronRight size={14} />
               </Link>
             )}
-            {(roleNormalized === "cr_booking" || roleNormalized === "cs") && (
+            {roleNormalized === "cr_booking" && (
               <Link href="/leads?status=tag_cr_booking" className="btn-secondary">
-                <span>CS Queue</span>
+                <span>CR Queue</span>
+                <ChevronRight size={14} />
+              </Link>
+            )}
+            {(roleNormalized === "cs" || roleNormalized === "customer_service") && (
+              <Link href="/leads" className="btn-secondary">
+                <span>Customer Service</span>
                 <ChevronRight size={14} />
               </Link>
             )}
@@ -551,7 +575,13 @@ export default function DashboardClientView({
             )}
             {(roleNormalized === "auditor" || roleNormalized === "qc") && (
               <Link href="/leads?status=tag_auditor" className="btn-secondary">
-                <span>QR Queue</span>
+                <span>QC Queue</span>
+                <ChevronRight size={14} />
+              </Link>
+            )}
+            {(roleNormalized === "chargeback_dep" || roleNormalized === "chargeback") && (
+              <Link href="/leads?status=tag_chargeback" className="btn-secondary">
+                <span>Chargeback Queue</span>
                 <ChevronRight size={14} />
               </Link>
             )}
@@ -832,7 +862,7 @@ export default function DashboardClientView({
       {/* 4. EXECUTIVE & ROLE-SPECIFIC METRICS GRID                                 */}
       {/* ========================================================================= */}
       {isSuperAdminOrAdmin && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {/* Card 1: Total Realized Revenue */}
           <div className="card flex flex-col justify-between p-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -912,6 +942,139 @@ export default function DashboardClientView({
                 GDS, Stripe, Twilio, Amadeus
               </p>
             </div>
+          </div>
+
+          {/* Card 5: Daily Bookings Charged (PRD Point 17) */}
+          <div className="card flex flex-col justify-between p-5 space-y-3 border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Daily Bookings Charged
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                <CheckCheck size={16} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
+                {summary.daily_charged_bookings_count ?? 0}{" "}
+                <span className="text-sm font-normal text-ink-muted">charged</span>
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Completed today
+              </p>
+            </div>
+          </div>
+
+          {/* Card 6: Daily Charged Amount (PRD Point 17) */}
+          <div className="card flex flex-col justify-between p-5 space-y-3 border-emerald-500/30 bg-emerald-500/5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Daily Charged Amount
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <CreditCard size={16} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
+                {currency(summary.daily_charged_amount ?? 0)}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Total charged today
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4b. DEPARTMENT QUEUE PENDENCY & THROUGHPUT (PRD Point 14)                  */}
+      {/* ========================================================================= */}
+      {isSuperAdminOrAdmin && queueMetrics.length > 0 && (
+        <div className="rounded-2xl border border-hairline bg-surface p-5 shadow-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-ink font-mono flex items-center gap-2">
+                  <Clock size={16} className="text-accent" />
+                  Department Queue Pendency &amp; Completion Metrics
+                </h2>
+                <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold text-accent border border-accent/20">
+                  Live Operations
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted mt-0.5">
+                Real-time monitor of in-flight pending tasks and completed throughput per department queue.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {queueMetrics.map((qm) => {
+              const queueUrl =
+                qm.queue_key === "billing"
+                  ? "/billing"
+                  : qm.queue_key === "cr_booking"
+                  ? "/leads?status=tag_cr_booking"
+                  : qm.queue_key === "change_dep"
+                  ? "/leads?status=tag_change_dep"
+                  : qm.queue_key === "auditor"
+                  ? "/leads?status=tag_auditor"
+                  : "/leads?status=tag_chargeback";
+
+              const completionRate =
+                qm.total_count > 0 ? Math.round((qm.completed_count / qm.total_count) * 100) : 100;
+
+              return (
+                <div
+                  key={qm.queue_key}
+                  className="rounded-xl border border-hairline bg-surface-raised/40 p-3.5 flex flex-col justify-between space-y-3 hover:border-accent/40 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-ink truncate">{qm.queue_name}</span>
+                    <Link
+                      href={queueUrl}
+                      className="text-[11px] font-semibold text-accent hover:underline flex items-center gap-0.5"
+                    >
+                      Open &rarr;
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-hairline text-center">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg py-1.5 px-2">
+                      <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">
+                        Pending
+                      </span>
+                      <span className="font-mono text-base font-extrabold text-amber-600 dark:text-amber-400">
+                        {qm.pending_count}
+                      </span>
+                    </div>
+
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg py-1.5 px-2">
+                      <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">
+                        Completed
+                      </span>
+                      <span className="font-mono text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {qm.completed_count}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-ink-muted">
+                      <span>Completion Rate</span>
+                      <span className="font-mono font-bold text-ink">{completionRate}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-surface-sunken overflow-hidden">
+                      <div
+                        className="h-full bg-accent rounded-full transition-all duration-500"
+                        style={{ width: `${completionRate}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

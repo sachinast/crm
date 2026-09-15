@@ -166,6 +166,11 @@ async def require_ip_whitelisted(
 
 async def apply_lead_visibility(db: AsyncSession, stmt: Select, user: User) -> Select:
     """Row-level visibility filter — TECHNICAL_SPEC.md §4.1 layer 2."""
+    role_name = (user.role.name if user.role else "").lower()
+    # Point 6: Customer service can view all leads (read-only)
+    if role_name in ("cs", "customer_service"):
+        return stmt
+
     if user.role.has_permission("leads.view_all"):
         return stmt
     if user.role.has_permission("leads.view_own"):

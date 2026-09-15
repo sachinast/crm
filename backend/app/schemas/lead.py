@@ -143,6 +143,11 @@ class StatusUpdate(BaseModel):
     status_machine transition table, not just any enum value."""
 
     new_status: BookingStatus
+    refunded_amount: float | None = None
+
+
+class LeadRemarkCreate(BaseModel):
+    remark: str = Field(..., min_length=1)
 
 
 class AvailableTransition(BaseModel):
@@ -178,10 +183,19 @@ class ChangeEmailRequest(BaseModel):
     internal_notes: str | None = None
 
 
+class EmailAttachmentPayload(BaseModel):
+    filename: str
+    content: str  # base64 encoded content
+    content_type: str | None = None
+
+
 class FinalConfirmationEmailRequest(BaseModel):
     to_email: EmailStr | None = None
     subject: str | None = None
     custom_message: str | None = None
+    attach_confirmation_doc: bool = True
+    custom_attachments: list[EmailAttachmentPayload] | None = None
+
 
 
 

@@ -80,6 +80,21 @@ DEPARTMENT_ACCOUNTS = [
         "password": "Password@123",
         "department": "Changes",
     },
+    # CHARGEBACK
+    {
+        "role_name": "chargeback_dep",
+        "email": "chargeback@crm.com",
+        "name": "Chargeback Specialist",
+        "password": "Password@123",
+        "department": "CHARGEBACK",
+    },
+    {
+        "role_name": "chargeback_dep",
+        "email": "chargeback@webflowby.online",
+        "name": "Chargeback Specialist",
+        "password": "Password@123",
+        "department": "CHARGEBACK",
+    },
 ]
 
 

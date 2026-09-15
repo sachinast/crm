@@ -42,7 +42,16 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
         ),
     ),
     BookingStatus.transferred_to_billing: Transition(
-        next=frozenset({BookingStatus.card_charged, BookingStatus.card_declined}),
+        next=frozenset(
+            {
+                BookingStatus.card_charged,
+                BookingStatus.card_declined,
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
     ),
     BookingStatus.card_charged: Transition(
         next=frozenset(
@@ -53,6 +62,7 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
                 BookingStatus.tag_refund,
                 BookingStatus.tag_rdr,
                 BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
             }
         ),
     ),
@@ -60,16 +70,61 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
         next=frozenset({BookingStatus.transferred_to_billing}),  # retry
     ),
     BookingStatus.tag_change_dep: Transition(
-        next=frozenset({BookingStatus.tag_auditor, BookingStatus.tag_cr_booking}),
+        next=frozenset(
+            {
+                BookingStatus.tag_auditor,
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
     ),
     BookingStatus.tag_cr_booking: Transition(
-        next=frozenset({BookingStatus.tag_auditor, BookingStatus.authorization_pending}),
+        next=frozenset(
+            {
+                BookingStatus.tag_auditor,
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
     ),
     BookingStatus.tag_auditor: Transition(
-        next=frozenset({BookingStatus.qc_done, BookingStatus.tag_change_dep}),
+        next=frozenset(
+            {
+                BookingStatus.qc_done,
+                BookingStatus.tag_change_dep,
+                BookingStatus.tag_cr_booking,
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
     ),
     BookingStatus.qc_done: Transition(
-        next=frozenset(),
+        next=frozenset(
+            {
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
+    ),
+    BookingStatus.tag_partial_refund: Transition(
+        next=frozenset(
+            {
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
     ),
     BookingStatus.tag_refund: Transition(
         next=frozenset(),

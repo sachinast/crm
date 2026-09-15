@@ -346,8 +346,13 @@ def generate_final_booking_confirmation_email_html(
     total_amount: float = 0.0,
     agent_name: str = "Operations Team",
     custom_message: str | None = None,
+    booking_platform: str = "Direct",
+    vehicle_type: str = "",
+    rental_duration: str = "",
+    client_ip: str = "127.0.0.1",
+    user_agent: str = "Authorized System",
 ) -> str:
-    """Generates official Final Booking & Payment Confirmation email sent after card is charged."""
+    """Generates official Final Booking & Payment Confirmation email formatted like the Authorization Request."""
     settings = get_settings()
     brand_name = settings.resend_from_name or "E-Booking Desk"
     support_phone = settings.support_phone or "+1 (877) 362-2838"
@@ -361,9 +366,17 @@ def generate_final_booking_confirmation_email_html(
     conf_display = confirmation_number or ref_display
     svc_title = service_type.replace("_", " ").title()
 
-    pickup_str = _format_datetime(pickup_datetime) if pickup_datetime else ""
-    return_str = _format_datetime(return_datetime) if return_datetime else ""
+    lead_driver = driver_or_guest_name or customer_name or "Lead Driver"
+    provider_display = provider or "Car Rental"
+    v_type = vehicle_type.replace("_", " ").title() if vehicle_type else (svc_title if svc_title != "Car" else "Standard")
+    v_model = model_or_details or f"{v_type} or Similar"
 
+    pickup_str = _format_datetime(pickup_datetime) if pickup_datetime else ""
+    pickup_display = f"{pickup_str} – {pickup_location}" if (pickup_str and pickup_location) else (pickup_str or pickup_location or "Confirmed")
+    return_str = _format_datetime(return_datetime) if return_datetime else ""
+    return_display = f"{return_str} – {return_location}" if (return_str and return_location) else (return_str or return_location or "Confirmed")
+
+    duration_display = rental_duration or _calculate_duration(pickup_datetime, return_datetime)
     calc_total = total_amount if total_amount > 0 else (amount_charged + pay_at_counter_amount)
 
     custom_note_html = ""
@@ -374,8 +387,10 @@ def generate_final_booking_confirmation_email_html(
           <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #1e3a8a; line-height: 1.5;">{custom_message.strip()}</p>
         </div>"""
 
+    header_title = f"{svc_title.upper()} PAYMENT AUTHORIZATION CONFIRMATION" if svc_title != "Car" else "CAR RENTAL PAYMENT AUTHORIZATION CONFIRMATION"
+
     return f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -383,74 +398,146 @@ def generate_final_booking_confirmation_email_html(
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }}
     .container {{ max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }}
     .header-bar {{ background: #0f4c81; color: #ffffff; padding: 18px 24px; display: table; width: 100%; box-sizing: border-box; }}
-    .header-title {{ font-size: 16px; font-weight: 800; letter-spacing: 0.5px; text-align: left; vertical-align: middle; display: table-cell; text-transform: uppercase; }}
+    .header-title {{ font-size: 16px; font-weight: 800; letter-spacing: 0.5px; text-align: left; vertical-align: middle; display: table-cell; }}
     .header-brand {{ font-size: 16px; font-weight: 700; color: #f59e0b; text-align: right; vertical-align: middle; display: table-cell; }}
     .content {{ padding: 28px 24px; }}
-    .success-banner {{ background: #ecfdf5; border: 1px solid #10b981; border-left: 5px solid #059669; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; }}
-    .success-title {{ font-size: 14px; font-weight: 700; color: #065f46; margin: 0 0 4px 0; }}
-    .success-sub {{ font-size: 12px; color: #047857; margin: 0; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 16px 0 20px 0; border: 1px solid #e2e8f0; }}
-    th {{ background: #f8fafc; text-align: left; padding: 10px 14px; font-size: 12px; color: #0f4c81; font-weight: 700; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }}
-    td {{ padding: 9px 14px; font-size: 12.5px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }}
-    .label-col {{ width: 38%; font-weight: 600; color: #475569; background: #fafbfc; }}
-    .footer-box {{ margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6; }}
+    .status-confirmed-banner {{ background: #ecfdf5; border: 1px solid #10b981; border-left: 5px solid #059669; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; }}
+    .status-confirmed-title {{ font-size: 14px; font-weight: 700; color: #065f46; margin: 0 0 4px 0; }}
+    .status-confirmed-sub {{ font-size: 12px; color: #047857; margin: 0; }}
+    .salutation {{ font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }}
+    .intro {{ font-size: 13px; line-height: 1.65; color: #334155; margin-bottom: 16px; }}
+    .section-title {{ font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #0f4c81; margin: 22px 0 8px 0; }}
+    .section-table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #cbd5e1; }}
+    .section-table th {{ background: #f8fafc; color: #0f4c81; font-size: 12.5px; font-weight: 700; text-align: left; padding: 9px 14px; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .section-table td {{ padding: 8.5px 14px; font-size: 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }}
+    .section-table tr td:first-child {{ width: 38%; font-weight: 600; color: #475569; background: #fafbfc; }}
+    .important-box {{ background: #fffbeb; border: 1px solid #fef08a; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 12px 14px; font-size: 12px; line-height: 1.6; color: #78350f; margin-bottom: 22px; }}
+    .auth-terms-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px 18px; margin-bottom: 24px; }}
+    .auth-terms-title {{ font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .auth-list {{ margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.7; color: #334155; }}
+    .auth-confirmed-statement {{ margin-top: 14px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 13px; font-weight: 800; color: #059669; display: flex; align-items: center; gap: 8px; }}
+    .footer {{ background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.5; }}
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Header Bar -->
     <div class="header-bar">
-      <div class="header-title">Booking & Payment Confirmation</div>
+      <div class="header-title">{header_title}</div>
       <div class="header-brand">{brand_name}</div>
     </div>
+
     <div class="content">
-      <div class="success-banner">
-        <p class="success-title">&#10004; Payment Processed & Reservation Confirmed</p>
-        <p class="success-sub">Confirmation / Reference Number: <strong>{conf_display}</strong></p>
+      <!-- Status Confirmed Banner -->
+      <div class="status-confirmed-banner">
+        <p class="status-confirmed-title">&#10004; AUTHORIZATION STATUS: CONFIRMED</p>
+        <p class="status-confirmed-sub">Payment Processed &bull; Official Reference: <strong>{ref_display}</strong></p>
       </div>
 
-      <p style="font-size: 13.5px; line-height: 1.6; margin-top: 0;">
-        Dear <strong>{customer_name}</strong>,<br>
-        We are pleased to inform you that your payment has been successfully processed and your <strong>{svc_title}</strong> reservation is now fully confirmed with <strong>{brand_name}</strong>.
-      </p>
+      <div class="salutation">Dear {customer_name},</div>
+      <div class="intro">
+        Thank you for confirming your authorization for your {svc_title.lower()} reservation with <strong>{brand_name}</strong>. This email confirms that your payment authorization was successfully recorded and processed for the reservation described below.
+      </div>
 
       {custom_note_html}
 
-      <table>
-        <thead><tr><th colspan="2">Confirmed Reservation Details</th></tr></thead>
+      <!-- RESERVATION DETAILS Table -->
+      <div class="section-title">Reservation Details</div>
+      <table class="section-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Details</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td class="label-col">Booking Reference</td><td><strong>{ref_display}</strong></td></tr>
-          <tr><td class="label-col">Confirmation Number</td><td><strong>{conf_display}</strong></td></tr>
-          <tr><td class="label-col">Service Type</td><td>{svc_title}</td></tr>
-          {f"<tr><td class='label-col'>Provider / Carrier</td><td>{provider}</td></tr>" if provider else ""}
-          {f"<tr><td class='label-col'>Vehicle / Room / Details</td><td>{model_or_details}</td></tr>" if model_or_details else ""}
-          {f"<tr><td class='label-col'>Primary Traveler / Driver</td><td>{driver_or_guest_name}</td></tr>" if driver_or_guest_name else ""}
-          {f"<tr><td class='label-col'>Pickup / Check-in</td><td>{pickup_str} {('— ' + pickup_location) if pickup_location else ''}</td></tr>" if pickup_str or pickup_location else ""}
-          {f"<tr><td class='label-col'>Return / Check-out</td><td>{return_str} {('— ' + return_location) if return_location else ''}</td></tr>" if return_str or return_location else ""}
+          <tr><td>Authorization Reference</td><td><strong>{ref_display}</strong></td></tr>
+          <tr><td>Booking Reference</td><td><strong>{conf_display}</strong></td></tr>
+          <tr><td>Rental Company / Provider</td><td>{provider_display}</td></tr>
+          <tr><td>Booking Platform</td><td>{booking_platform}</td></tr>
+          <tr><td>Lead Driver / Traveler</td><td>{lead_driver}</td></tr>
+          <tr><td>Vehicle Type / Modality</td><td>{v_type}</td></tr>
+          <tr><td>Vehicle Model / Details</td><td>{v_model}</td></tr>
+          <tr><td>Pick-up</td><td>{pickup_display}</td></tr>
+          <tr><td>Return</td><td>{return_display}</td></tr>
+          <tr><td>Rental Duration</td><td><strong>{duration_display}</strong></td></tr>
         </tbody>
       </table>
 
-      <table>
-        <thead><tr><th colspan="2">Payment & Billing Summary</th></tr></thead>
+      <!-- PAYMENT AUTHORIZATION Table -->
+      <div class="section-title">Payment Authorization Breakdown</div>
+      <table class="section-table">
+        <thead>
+          <tr>
+            <th>Payment Component</th>
+            <th>Amount</th>
+            <th>Payment Method / Details</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td class="label-col">Payment Status</td><td><strong style="color: #047857; text-transform: uppercase;">CHARGED & CONFIRMED</strong></td></tr>
-          <tr><td class="label-col">Transaction Date & Time</td><td>{date_str} at {time_str}</td></tr>
-          <tr><td class="label-col">Amount Charged</td><td><strong style="color: #0f4c81; font-size: 13px;">USD {amount_charged:.2f}</strong></td></tr>
-          {f"<tr><td class='label-col'>Pay at Counter / Property</td><td>USD {pay_at_counter_amount:.2f}</td></tr>" if pay_at_counter_amount > 0 else ""}
-          <tr><td class="label-col">Total Booking Value</td><td><strong>USD {calc_total:.2f}</strong></td></tr>
-          <tr><td class="label-col">Customer Email</td><td>{customer_email}</td></tr>
+          <tr>
+            <td>Prepaid Amount</td>
+            <td><strong>USD ${amount_charged:.2f}</strong></td>
+            <td><strong style="color: #059669;">Charged by {brand_name}</strong></td>
+          </tr>
+          <tr>
+            <td>Pay at Counter</td>
+            <td>USD ${pay_at_counter_amount:.2f}</td>
+            <td>Payable directly to {provider_display}</td>
+          </tr>
+          <tr>
+            <td>Total Reservation Value</td>
+            <td colspan="2"><strong style="color: #0f4c81; font-size: 13.5px;">USD ${calc_total:.2f}</strong></td>
+          </tr>
         </tbody>
       </table>
 
-      <div class="footer-box">
-        <p style="margin: 0 0 8px 0; font-weight: 600; color: #1e293b;">Need help or have questions regarding your booking?</p>
-        <p style="margin: 0;">Our Customer Service and Booking Operations team is available to assist you:</p>
-        <p style="margin: 4px 0 0 0;">
-          📞 <strong>Phone:</strong> {support_phone} &nbsp;|&nbsp; ✉️ <strong>Email:</strong> {support_email}
-        </p>
-        <p style="margin: 12px 0 0 0; font-size: 11px; color: #94a3b8;">
-          Processed by: {agent_name} &bull; Confirmation issued on {date_str}
-        </p>
+      <!-- Important Notice Box -->
+      <div class="important-box">
+        <strong>Important:</strong> You have authorized {brand_name} to charge USD ${amount_charged:.2f} for the prepaid portion of your reservation. The USD ${pay_at_counter_amount:.2f} balance is payable directly to the rental company at vehicle pickup and is not included in the charge processed by {brand_name}. Any security deposit, optional services, taxes, fuel charges, additional driver fees, insurance products, or other applicable charges imposed by the rental company may be payable separately according to the rental company's terms.
       </div>
+
+      <!-- AUTHORIZATION RECORD Table -->
+      <div class="section-title">Authorization Record</div>
+      <table class="section-table">
+        <thead>
+          <tr>
+            <th>Audit Field</th>
+            <th>Record Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Authorization Date</td><td>{date_str}</td></tr>
+          <tr><td>Authorization Time</td><td>{time_str}</td></tr>
+          <tr><td>Authorization Reference</td><td>{ref_display}</td></tr>
+          <tr><td>Customer Email</td><td>{customer_email}</td></tr>
+          <tr><td>Client IP Address</td><td>{client_ip}</td></tr>
+          <tr><td>Device / System</td><td>{user_agent}</td></tr>
+          <tr><td>Consent Status</td><td><strong style="color: #059669;">AUTHORIZED (CONFIRMED)</strong></td></tr>
+        </tbody>
+      </table>
+
+      <!-- CUSTOMER ACKNOWLEDGMENT Box -->
+      <div class="auth-terms-box">
+        <div class="auth-terms-title">Customer Acknowledgment</div>
+        <ul class="auth-list">
+          <li>I confirm that I have reviewed the reservation details and payment breakdown above.</li>
+          <li>I confirm that I am authorized to use the payment method provided for this transaction.</li>
+          <li>I authorize {brand_name} to charge USD ${amount_charged:.2f} for the prepaid portion of my reservation.</li>
+          <li>I understand that the Pay at Counter amount is payable directly to the rental company at pickup.</li>
+          <li>I acknowledge that the reservation is subject to the applicable rental, cancellation, modification, and refund terms provided to me at the time of booking.</li>
+        </ul>
+        <div class="auth-confirmed-statement">
+          &#9745; &#10004; AUTHORIZATION STATUS: CONFIRMED
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p style="margin: 0 0 6px 0;"><strong>Need Help?</strong> Booking Specialist: {agent_name} | 24/7 Customer Support: <strong>{support_phone}</strong></p>
+      <p style="margin: 0 0 6px 0;"><a href="mailto:{support_email}" style="color: #0f4c81; text-decoration: none;">{support_email}</a></p>
+      <p style="margin: 0;">Thank you for choosing {brand_name}. &copy; {datetime.now().year} {brand_name}. All rights reserved. <em>Official Payment Authorization Confirmation.</em></p>
     </div>
   </div>
 </body>
@@ -461,8 +548,10 @@ async def send_customer_email(
     to_email: str,
     subject: str,
     html_content: str,
+    attachments: list[dict[str, Any]] | None = None,
 ) -> tuple[bool, str]:
     """Dispatches email via Resend API (HTTP) using RESEND_API_KEY and RESEND_FROM_EMAIL from env.
+    Supports optional attachments: list of dicts with 'filename' and 'content' (base64 string).
     Returns (success: bool, detail_message: str).
     """
     if not to_email or not to_email.strip():
@@ -484,6 +573,15 @@ async def send_customer_email(
         from_header = f"{from_name} <{from_email}>" if from_name else from_email
 
         try:
+            req_json: dict[str, Any] = {
+                "from": from_header,
+                "to": [to_email.strip()],
+                "subject": subject,
+                "html": html_content,
+            }
+            if attachments:
+                req_json["attachments"] = attachments
+
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
                     "https://api.resend.com/emails",
@@ -491,12 +589,7 @@ async def send_customer_email(
                         "Authorization": f"Bearer {settings.resend_api_key.strip()}",
                         "Content-Type": "application/json",
                     },
-                    json={
-                        "from": from_header,
-                        "to": [to_email.strip()],
-                        "subject": subject,
-                        "html": html_content,
-                    },
+                    json=req_json,
                 )
 
                 if response.status_code in (200, 201):
@@ -519,9 +612,8 @@ async def send_customer_email(
         except Exception as exc:
             msg = f"Failed to connect to Resend API: {exc}"
             logger.error(f"[Email Service] {msg}")
+            return False, msg
     # Error if Resend API key is not configured
     msg = "RESEND_API_KEY environment variable is not configured on the backend server. Please add RESEND_API_KEY and RESEND_FROM_EMAIL to your server environment variables."
     logger.error(f"[Email Service] {msg}")
     return False, msg
-
-

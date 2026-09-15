@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Car,
   TrendingUp,
@@ -9,6 +9,12 @@ import {
   Calendar,
   Filter,
   Hash,
+  RefreshCw,
+  UserCheck,
+  Award,
+  CreditCard,
+  CheckCheck,
+  Loader2,
 } from "lucide-react";
 import DataTableCard from "@/components/shared/DataTableCard";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -30,9 +36,20 @@ export interface ReportLeadItem {
   custom_fields?: Record<string, unknown> | null;
 }
 
+export interface AgentPerformanceItem {
+  agent_id: string;
+  agent_name: string;
+  agent_email: string;
+  bookings_count: number;
+  charged_bookings_count: number;
+  total_revenue: number;
+}
+
 export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
-  const [activeTab, setActiveTab] = useState<"pickups" | "bookings" | "cancellations">("pickups");
-  
+  const [activeTab, setActiveTab] = useState<
+    "pickups" | "bookings" | "cancellations" | "changes" | "agent_performance"
+  >("pickups");
+
   // Date Range Defaults: Past 7 days to today
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -42,11 +59,29 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [serviceFilter, setServiceFilter] = useState("all");
 
-  const isWithinDateRange = useCallback((dateStr: string) => {
-    if (!dateStr) return false;
-    const itemDate = dateStr.slice(0, 10);
-    return itemDate >= startDate && itemDate <= endDate;
-  }, [startDate, endDate]);
+  // Agent Performance live query state (PRD Point 16)
+  const [agentPerformance, setAgentPerformance] = useState<AgentPerformanceItem[]>([]);
+  const [loadingAgentPerf, setLoadingAgentPerf] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "agent_performance") {
+      setLoadingAgentPerf(true);
+      fetch(`/api/dashboard/agent-performance?start_date=${startDate}&end_date=${endDate}`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setAgentPerformance(data))
+        .catch(() => setAgentPerformance([]))
+        .finally(() => setLoadingAgentPerf(false));
+    }
+  }, [activeTab, startDate, endDate]);
+
+  const isWithinDateRange = useCallback(
+    (dateStr: string) => {
+      if (!dateStr) return false;
+      const itemDate = dateStr.slice(0, 10);
+      return itemDate >= startDate && itemDate <= endDate;
+    },
+    [startDate, endDate]
+  );
 
   const pickupsList = useMemo(() => {
     return leads.filter((l) => {
@@ -76,7 +111,25 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
     });
   }, [leads, serviceFilter, isWithinDateRange]);
 
-  const currentDataset = activeTab === "pickups" ? pickupsList : activeTab === "bookings" ? newBookingsList : cancellationsList;
+  // Changes Department Operational Report (PRD Point 15)
+  const changesList = useMemo(() => {
+    return leads.filter((l) => {
+      const isChange =
+        l.status === "tag_change_dep" ||
+        l.status.toLowerCase().includes("change");
+      const matchService = serviceFilter === "all" || l.service_type === serviceFilter;
+      return isChange && matchService && isWithinDateRange(l.created_at);
+    });
+  }, [leads, serviceFilter, isWithinDateRange]);
+
+  const currentDataset =
+    activeTab === "pickups"
+      ? pickupsList
+      : activeTab === "bookings"
+      ? newBookingsList
+      : activeTab === "changes"
+      ? changesList
+      : cancellationsList;
 
   function getBookingRef(lead: ReportLeadItem): string {
     if (lead.booking_reference) return lead.booking_reference;
@@ -87,6 +140,28 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
   }
 
   function exportCSV() {
+    if (activeTab === "agent_performance") {
+      const headers = ["#", "Agent Name", "Agent Email", "Total Bookings", "Charged Bookings", "Total Revenue ($)"];
+      const rows = agentPerformance.map((item, idx) => [
+        idx + 1,
+        `"${item.agent_name.replace(/"/g, '""')}"`,
+        `"${item.agent_email}"`,
+        item.bookings_count,
+        item.charged_bookings_count,
+        item.total_revenue.toFixed(2),
+      ]);
+      const csvContent =
+        "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `agent_performance_${startDate}_to_${endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const headers = ["#", "Booking Ref #", "Customer Name", "Phone", "Email", "Service Type", "Status", "Date & Time"];
     const rows = currentDataset.map((item, idx) => [
       idx + 1,
@@ -114,13 +189,13 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
       {/* Main Report Table & Redesigned Symmetrical Filter Bar */}
       <DataTableCard
         headerContent={
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 w-full py-1">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 w-full py-1">
             {/* Left: Tab Navigation */}
-            <div className="flex items-center gap-1 p-1 rounded-xl border border-hairline bg-surface-raised shrink-0">
+            <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl border border-hairline bg-surface-raised shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab("pickups")}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                   activeTab === "pickups"
                     ? "bg-accent text-white shadow-xs"
                     : "text-ink-muted hover:text-ink"
@@ -131,7 +206,7 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
               <button
                 type="button"
                 onClick={() => setActiveTab("bookings")}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                   activeTab === "bookings"
                     ? "bg-accent text-white shadow-xs"
                     : "text-ink-muted hover:text-ink"
@@ -141,14 +216,38 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("changes")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 ${
+                  activeTab === "changes"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <RefreshCw size={12} />
+                <span>Changes</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("cancellations")}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                   activeTab === "cancellations"
                     ? "bg-accent text-white shadow-xs"
                     : "text-ink-muted hover:text-ink"
                 }`}
               >
                 Cancellations
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("agent_performance")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1 ${
+                  activeTab === "agent_performance"
+                    ? "bg-accent text-white shadow-xs"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <Award size={12} />
+                <span>Agent Performance</span>
               </button>
             </div>
 
@@ -164,19 +263,21 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
                 }}
               />
 
-              {/* Service Type Dropdown Filter */}
-              <div className="w-36">
-                <select
-                  value={serviceFilter}
-                  onChange={(e) => setServiceFilter(e.target.value)}
-                  className="select py-1.5 px-3 text-xs font-semibold"
-                >
-                  <option value="all">All Services</option>
-                  <option value="car">Car Rental</option>
-                  <option value="hotel">Hotel</option>
-                  <option value="flight">Flight</option>
-                </select>
-              </div>
+              {/* Service Type Dropdown Filter (hidden on agent performance tab) */}
+              {activeTab !== "agent_performance" && (
+                <div className="w-36">
+                  <select
+                    value={serviceFilter}
+                    onChange={(e) => setServiceFilter(e.target.value)}
+                    className="select py-1.5 px-3 text-xs font-semibold"
+                  >
+                    <option value="all">All Services</option>
+                    <option value="car">Car Rental</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="flight">Flight</option>
+                  </select>
+                </div>
+              )}
 
               {/* Action: Export CSV */}
               <button
@@ -192,81 +293,166 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
           </div>
         }
       >
-        <table className="table-modern w-full">
-          <thead>
-            <tr>
-              <th className="w-12 px-3 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
-                #
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Booking Ref #
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Customer Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Service Type
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Contact
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
-                Date & Time
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-hairline">
-            {currentDataset.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center text-sm text-ink-muted">
-                  No records found for the selected date range and filters.
-                </td>
-              </tr>
+        {activeTab === "agent_performance" ? (
+          /* Agent Performance Table (Point 16) */
+          <div className="space-y-4">
+            {loadingAgentPerf ? (
+              <div className="py-16 text-center text-sm text-ink-muted flex items-center justify-center gap-2">
+                <Loader2 size={18} className="animate-spin text-accent" />
+                <span>Aggregating agent performance across date range...</span>
+              </div>
+            ) : agentPerformance.length === 0 ? (
+              <div className="py-16 text-center text-sm text-ink-muted">
+                No performance data found for the selected date range.
+              </div>
             ) : (
-              currentDataset.map((lead, index) => {
-                const bookingRef = getBookingRef(lead);
-                return (
-                  <tr key={lead.id} className="transition-colors hover:bg-surface-raised">
-                    <td className="w-12 px-3 py-3.5 text-center font-mono text-xs font-bold text-ink-faint">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent bg-accent-soft px-2 py-0.5 rounded-md border border-accent/20">
-                        {bookingRef}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 font-semibold text-sm text-ink">
-                      {lead.name || "Customer"}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-hairline bg-surface px-2 py-0.5 text-xs capitalize font-medium text-ink">
-                        {lead.service_type === "car"
-                          ? "Car Rental"
-                          : lead.service_type === "hotel"
-                            ? "Hotel"
-                            : lead.service_type === "flight"
-                              ? "Flight"
-                              : "General"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
-                      {lead.phone || lead.email || "—"}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <StatusBadge status={lead.status} />
-                    </td>
-                    <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
-                      {formatDate(lead.created_at)}
-                    </td>
+              <table className="table-modern w-full">
+                <thead>
+                  <tr>
+                    <th className="w-12 px-3 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      # Rank
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Agent Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Total Bookings
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Charged Bookings
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Conversion
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
+                      Charged Revenue
+                    </th>
                   </tr>
-                );
-              })
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {agentPerformance.map((item, index) => {
+                    const convRate =
+                      item.bookings_count > 0
+                        ? Math.round((item.charged_bookings_count / item.bookings_count) * 100)
+                        : 0;
+
+                    return (
+                      <tr key={item.agent_id} className="transition-colors hover:bg-surface-raised">
+                        <td className="w-12 px-3 py-3.5 text-center font-mono text-xs font-bold text-ink-faint">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-3.5 font-bold text-sm text-ink">
+                          {item.agent_name}
+                        </td>
+                        <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
+                          {item.agent_email}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="font-mono text-xs font-bold text-ink bg-surface-raised px-2.5 py-1 rounded-md border border-hairline">
+                            {item.bookings_count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                            {item.charged_bookings_count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="font-mono text-xs font-semibold text-accent">
+                            {convRate}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-mono text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                          ${item.total_revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          /* Operational Leads Table (Pickups, Bookings, Changes, Cancellations) */
+          <table className="table-modern w-full">
+            <thead>
+              <tr>
+                <th className="w-12 px-3 py-3 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  #
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Booking Ref #
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Customer Name
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Service Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Contact
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                  Date &amp; Time
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hairline">
+              {currentDataset.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-sm text-ink-muted">
+                    No records found for the selected date range and filters.
+                  </td>
+                </tr>
+              ) : (
+                currentDataset.map((lead, index) => {
+                  const bookingRef = getBookingRef(lead);
+                  return (
+                    <tr key={lead.id} className="transition-colors hover:bg-surface-raised">
+                      <td className="w-12 px-3 py-3.5 text-center font-mono text-xs font-bold text-ink-faint">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent bg-accent-soft px-2 py-0.5 rounded-md border border-accent/20">
+                          {bookingRef}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-sm text-ink">
+                        {lead.name || "Customer"}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-hairline bg-surface px-2 py-0.5 text-xs capitalize font-medium text-ink">
+                          {lead.service_type === "car"
+                            ? "Car Rental"
+                            : lead.service_type === "hotel"
+                              ? "Hotel"
+                              : lead.service_type === "flight"
+                                ? "Flight"
+                                : "General"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
+                        {lead.phone || lead.email || "—"}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <StatusBadge status={lead.status} />
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-ink-muted">
+                        {formatDate(lead.created_at)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </DataTableCard>
     </div>
   );
