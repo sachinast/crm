@@ -62,6 +62,7 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
   // Agent Performance live query state (PRD Point 16)
   const [agentPerformance, setAgentPerformance] = useState<AgentPerformanceItem[]>([]);
   const [loadingAgentPerf, setLoadingAgentPerf] = useState(false);
+  const [hideZeroBookings, setHideZeroBookings] = useState(true);
 
   useEffect(() => {
     if (activeTab === "agent_performance") {
@@ -73,6 +74,10 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
         .finally(() => setLoadingAgentPerf(false));
     }
   }, [activeTab, startDate, endDate]);
+
+  const displayedAgents = useMemo(() => {
+    return agentPerformance.filter((a) => !hideZeroBookings || a.bookings_count > 0);
+  }, [agentPerformance, hideZeroBookings]);
 
   const isWithinDateRange = useCallback(
     (dateStr: string) => {
@@ -142,7 +147,7 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
   function exportCSV() {
     if (activeTab === "agent_performance") {
       const headers = ["#", "Agent Name", "Agent Email", "Total Bookings", "Charged Bookings", "Total Revenue ($)"];
-      const rows = agentPerformance.map((item, idx) => [
+      const rows = displayedAgents.map((item, idx) => [
         idx + 1,
         `"${item.agent_name.replace(/"/g, '""')}"`,
         `"${item.agent_email}"`,
@@ -188,6 +193,8 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
     <div className="space-y-4">
       {/* Main Report Table & Redesigned Symmetrical Filter Bar */}
       <DataTableCard
+        overflowHidden={false}
+        className="!overflow-visible min-h-[300px]"
         headerContent={
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 w-full py-1">
             {/* Left: Tab Navigation */}
@@ -263,6 +270,23 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
                 }}
               />
 
+              {/* Toggle: Hide 0-Booking Agents (PRD Point 16) */}
+              {activeTab === "agent_performance" && (
+                <button
+                  type="button"
+                  onClick={() => setHideZeroBookings(!hideZeroBookings)}
+                  className={`rounded-xl border px-3 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    hideZeroBookings
+                      ? "border-accent/50 bg-accent-soft text-accent shadow-xs"
+                      : "border-hairline bg-surface-raised text-ink-muted hover:text-ink"
+                  }`}
+                  title="Toggle active agents vs all registered agents"
+                >
+                  <Filter size={13} />
+                  <span>{hideZeroBookings ? "Active Agents Only" : "Show All Agents"}</span>
+                </button>
+              )}
+
               {/* Service Type Dropdown Filter (hidden on agent performance tab) */}
               {activeTab !== "agent_performance" && (
                 <div className="w-36">
@@ -295,15 +319,17 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
       >
         {activeTab === "agent_performance" ? (
           /* Agent Performance Table (Point 16) */
-          <div className="space-y-4">
+          <div className="space-y-4 min-h-[220px]">
             {loadingAgentPerf ? (
               <div className="py-16 text-center text-sm text-ink-muted flex items-center justify-center gap-2">
                 <Loader2 size={18} className="animate-spin text-accent" />
                 <span>Aggregating agent performance across date range...</span>
               </div>
-            ) : agentPerformance.length === 0 ? (
+            ) : displayedAgents.length === 0 ? (
               <div className="py-16 text-center text-sm text-ink-muted">
-                No performance data found for the selected date range.
+                {hideZeroBookings
+                  ? "No active agent bookings found for the selected date range. Click 'Show All Agents' to view all."
+                  : "No performance data found for the selected date range."}
               </div>
             ) : (
               <table className="table-modern w-full">
@@ -333,7 +359,7 @@ export default function ReportsClient({ leads }: { leads: ReportLeadItem[] }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {agentPerformance.map((item, index) => {
+                  {displayedAgents.map((item, index) => {
                     const convRate =
                       item.bookings_count > 0
                         ? Math.round((item.charged_bookings_count / item.bookings_count) * 100)

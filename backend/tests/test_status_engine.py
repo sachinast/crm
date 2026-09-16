@@ -13,7 +13,7 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
@@ -41,6 +41,7 @@ async def _create_user(email: str, password: str, role: str) -> uuid.UUID:
 
 async def _delete_user(user_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as db:
+        await db.execute(delete(StatusHistory).where(StatusHistory.changed_by == user_id))
         user = await db.get(User, user_id)
         if user is not None:
             await db.delete(user)
@@ -207,9 +208,11 @@ async def test_full_standard_flow(api_client, agent, billing, auditor):
     assert qc_done.status_code == 200
     assert qc_done.json()["status"] == "qc_done"
 
-    # Terminal on the happy path — nothing left to transition to.
+    # After qc_done, post-fulfillment tags (refund, chargeback, rdr, partial refund) remain available
     available = await api_client.get(f"/leads/{lead_id}/available-transitions", headers=_auth(auditor_token))
-    assert available.json() == []
+    avail_statuses = {item["status"] for item in available.json()}
+    assert "tag_refund" in avail_statuses
+    assert "tag_chargeback" in avail_statuses
 
     await _delete_lead(uuid.UUID(lead_id))
 

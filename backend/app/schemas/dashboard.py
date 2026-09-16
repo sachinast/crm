@@ -95,3 +95,22 @@ class AgentPerformanceItem(BaseModel):
     bookings_count: int
     charged_bookings_count: int
     total_revenue: float
+
+
+class DailyChargedItem(BaseModel):
+    lead_id: uuid.UUID
+    lead_name: str
+    booking_reference: str | None = None
+    agent_name: str | None = None
+    amount: float
+    currency: str = "USD"
+    charged_at: datetime
+    transaction_id: str | None = None
+    payment_method: str | None = None
+
+
+class DailyChargedResponse(BaseModel):
+    date: str
+    total_charged_count: int
+    total_charged_amount: float
+    items: list[DailyChargedItem]

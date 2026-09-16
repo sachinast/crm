@@ -369,14 +369,21 @@ async def add_lead_remark(
         result = await db.execute(select(CarBooking).where(CarBooking.lead_id == lead.id))
         booking = result.scalar_one_or_none()
         if booking is None:
+            from datetime import date
             booking = CarBooking(
                 lead_id=lead.id,
                 booking_reference=f"CRM-{str(lead.id).replace('-', '')[:7].upper()}",
                 booking_platform="CRM Portal",
+                car_provider="Default Provider",
+                renter_dob=date(1990, 1, 1),
+                transmission="Automatic",
+                vehicle_type="Sedan",
                 pickup_location="TBD",
-                dropoff_location="TBD",
+                return_location="TBD",
                 pickup_datetime=datetime.now(timezone.utc),
-                dropoff_datetime=datetime.now(timezone.utc),
+                return_datetime=datetime.now(timezone.utc),
+                prepaid_amount=0,
+                pay_at_counter_amount=0,
                 remarks_history=[],
             )
             db.add(booking)

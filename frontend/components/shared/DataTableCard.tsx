@@ -5,6 +5,7 @@ interface DataTableCardProps {
   headerContent?: React.ReactNode;
   footerContent?: React.ReactNode;
   className?: string;
+  overflowHidden?: boolean;
 }
 
 export default function DataTableCard({
@@ -12,13 +13,14 @@ export default function DataTableCard({
   headerContent,
   footerContent,
   className = "",
+  overflowHidden = false,
 }: DataTableCardProps) {
   return (
     <div
-      className={`card p-0 overflow-hidden ${className}`}
+      className={`card p-0 ${overflowHidden ? "overflow-hidden" : "overflow-visible"} ${className}`}
     >
       {headerContent && (
-        <div className="border-b border-[var(--hairline)] bg-[var(--surface-raised)] p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="border-b border-[var(--hairline)] bg-[var(--surface-raised)] p-4 sm:flex sm:items-center sm:justify-between sm:gap-4 rounded-t-2xl">
           {headerContent}
         </div>
       )}

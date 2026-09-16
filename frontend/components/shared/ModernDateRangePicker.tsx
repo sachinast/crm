@@ -94,7 +94,7 @@ export default function ModernDateRangePicker({
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-80 rounded-2xl border border-hairline bg-surface p-4 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
+        <div className="absolute right-0 top-full mt-2 z-[100] w-84 rounded-2xl border border-hairline bg-surface p-4 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-hairline pb-2.5">
             <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Banknote,
@@ -27,6 +27,8 @@ import {
   ArrowUpRight,
   AlertCircle,
   FolderOpen,
+  Calendar,
+  Loader2,
 } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
@@ -306,6 +308,42 @@ export default function DashboardClientView({
   const [widgetModalFilter, setWidgetModalFilter] = useState<"all" | "breached">("all");
   const [queueMetrics, setQueueMetrics] = useState<QueueMetricItem[]>([]);
 
+  // Daily Charged Tracker State (PRD Point 17)
+  const [dailyChargedDate, setDailyChargedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isDailyChargedModalOpen, setIsDailyChargedModalOpen] = useState(false);
+  const [dailyChargedData, setDailyChargedData] = useState<{
+    date: string;
+    total_charged_count: number;
+    total_charged_amount: number;
+    items: Array<{
+      lead_id: string;
+      lead_name: string;
+      booking_reference: string | null;
+      agent_name: string | null;
+      amount: number;
+      currency: string;
+      charged_at: string;
+      transaction_id: string | null;
+      payment_method: string | null;
+    }>;
+  } | null>(null);
+  const [loadingDailyCharged, setLoadingDailyCharged] = useState(false);
+
+  const fetchDailyCharged = useCallback((dateStr: string) => {
+    setLoadingDailyCharged(true);
+    fetch(`/api/dashboard/daily-charged?date=${dateStr}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setDailyChargedData(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDailyCharged(false));
+  }, []);
+
+  useEffect(() => {
+    fetchDailyCharged(dailyChargedDate);
+  }, [dailyChargedDate, fetchDailyCharged]);
+
   useEffect(() => {
     fetch("/api/dashboard/queue-metrics")
       .then((res) => (res.ok ? res.json() : []))
@@ -538,10 +576,22 @@ export default function DashboardClientView({
             </div>
 
             {isSuperAdminOrAdmin && (
-              <Link href="/leads" className="btn-secondary">
-                <span>View All Leads</span>
-                <ChevronRight size={14} />
-              </Link>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsDailyChargedModalOpen(true)}
+                  className="btn-secondary flex items-center gap-1.5 text-xs font-semibold"
+                  title="Open Daily Charged Bookings Tracker"
+                >
+                  <CreditCard size={14} className="text-emerald-500" />
+                  <span>Daily Charged Tracker</span>
+                </button>
+
+                <Link href="/leads" className="btn-secondary">
+                  <span>View All Leads</span>
+                  <ChevronRight size={14} />
+                </Link>
+              </>
             )}
             {isAgent && (
               <Link href="/leads" className="btn-secondary">
@@ -945,43 +995,61 @@ export default function DashboardClientView({
           </div>
 
           {/* Card 5: Daily Bookings Charged (PRD Point 17) */}
-          <div className="card flex flex-col justify-between p-5 space-y-3 border-amber-500/30 bg-amber-500/5">
+          <div
+            onClick={() => setIsDailyChargedModalOpen(true)}
+            className="card flex flex-col justify-between p-5 space-y-3 border-amber-500/30 bg-amber-500/5 cursor-pointer hover:border-amber-500 hover:shadow-md transition-all group"
+            title="Click to inspect itemized daily charged bookings"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                 Daily Bookings Charged
               </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 group-hover:scale-105 transition-transform">
                 <CheckCheck size={16} />
               </div>
             </div>
             <div>
               <p className="text-2xl font-extrabold text-ink font-mono tracking-tight">
-                {summary.daily_charged_bookings_count ?? 0}{" "}
+                {dailyChargedData?.total_charged_count ?? summary.daily_charged_bookings_count ?? 0}{" "}
                 <span className="text-sm font-normal text-ink-muted">charged</span>
               </p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Completed today
-              </p>
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-ink-muted font-mono text-[11px]">
+                  {dailyChargedDate === new Date().toISOString().slice(0, 10) ? "Completed today" : dailyChargedDate}
+                </span>
+                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                  Inspect &rarr;
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Card 6: Daily Charged Amount (PRD Point 17) */}
-          <div className="card flex flex-col justify-between p-5 space-y-3 border-emerald-500/30 bg-emerald-500/5">
+          <div
+            onClick={() => setIsDailyChargedModalOpen(true)}
+            className="card flex flex-col justify-between p-5 space-y-3 border-emerald-500/30 bg-emerald-500/5 cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all group"
+            title="Click to inspect itemized daily charged revenue"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 Daily Charged Amount
               </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 group-hover:scale-105 transition-transform">
                 <CreditCard size={16} />
               </div>
             </div>
             <div>
               <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
-                {currency(summary.daily_charged_amount ?? 0)}
+                {currency(dailyChargedData?.total_charged_amount ?? summary.daily_charged_amount ?? 0)}
               </p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Total charged today
-              </p>
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-ink-muted font-mono text-[11px]">
+                  {dailyChargedDate === new Date().toISOString().slice(0, 10) ? "Total charged today" : `Date: ${dailyChargedDate}`}
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                  Inspect &rarr;
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1282,6 +1350,189 @@ export default function DashboardClientView({
               <button
                 type="button"
                 onClick={() => setSelectedWidgetModal(null)}
+                className="btn-secondary px-4 py-1.5 font-semibold text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DAILY CHARGED BOOKINGS TRACKER MODAL (PRD Point 17)                       */}
+      {/* ========================================================================= */}
+      {isDailyChargedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-backdrop backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="card p-0 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border-hairline overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-hairline bg-surface-raised shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-ink">
+                    Daily Charged Bookings Tracker
+                  </h2>
+                  <p className="text-xs text-ink-muted">
+                    Point 17: Interactive operational ledger of all bookings charged by date.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDailyChargedModalOpen(false)}
+                className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Date Selection Filter Bar */}
+            <div className="px-6 py-3 border-b border-hairline bg-surface flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    setDailyChargedDate(todayStr);
+                  }}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                    dailyChargedDate === new Date().toISOString().slice(0, 10)
+                      ? "bg-accent text-white shadow-xs"
+                      : "border border-hairline bg-surface-raised text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const y = new Date();
+                    y.setDate(y.getDate() - 1);
+                    setDailyChargedDate(y.toISOString().slice(0, 10));
+                  }}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                    (() => {
+                      const y = new Date();
+                      y.setDate(y.getDate() - 1);
+                      return dailyChargedDate === y.toISOString().slice(0, 10);
+                    })()
+                      ? "bg-accent text-white shadow-xs"
+                      : "border border-hairline bg-surface-raised text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  Yesterday
+                </button>
+
+                <div className="flex items-center gap-1.5 pl-2 border-l border-hairline">
+                  <label className="text-xs font-medium text-ink-muted">Date:</label>
+                  <input
+                    type="date"
+                    value={dailyChargedDate}
+                    onChange={(e) => setDailyChargedDate(e.target.value)}
+                    className="input py-1 px-2.5 text-xs font-mono font-medium w-36"
+                  />
+                </div>
+              </div>
+
+              {/* KPI Badges for Selected Date */}
+              <div className="flex items-center gap-3 font-mono text-xs">
+                <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2.5 py-1 font-bold">
+                  {dailyChargedData?.total_charged_count ?? 0} Bookings Charged
+                </span>
+                <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 font-bold">
+                  {currency(dailyChargedData?.total_charged_amount ?? 0)} Revenue
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Content / Table */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-[250px]">
+              {loadingDailyCharged ? (
+                <div className="py-16 text-center text-sm text-ink-muted flex items-center justify-center gap-2">
+                  <Loader2 size={18} className="animate-spin text-accent" />
+                  <span>Loading charged bookings for {dailyChargedDate}...</span>
+                </div>
+              ) : !dailyChargedData || dailyChargedData.items.length === 0 ? (
+                <div className="py-16 text-center space-y-2">
+                  <p className="text-sm font-semibold text-ink">
+                    No bookings charged on {dailyChargedDate}
+                  </p>
+                  <p className="text-xs text-ink-muted max-w-sm mx-auto">
+                    Try selecting Yesterday or another prior date above where card transactions were processed.
+                  </p>
+                </div>
+              ) : (
+                <table className="table-modern w-full">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Ref #
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Customer
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Agent
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Charged Time
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Amount
+                      </th>
+                      <th className="w-16 px-3 py-2 text-center text-xs font-bold uppercase tracking-wider text-ink-faint">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {dailyChargedData.items.map((item) => (
+                      <tr key={item.transaction_id || item.lead_id} className="hover:bg-surface-raised transition-colors">
+                        <td className="px-3 py-3 font-mono text-xs font-bold text-accent">
+                          {item.booking_reference || `CRM-${item.lead_id.slice(0, 8).toUpperCase()}`}
+                        </td>
+                        <td className="px-4 py-3 font-bold text-xs text-ink">
+                          {item.lead_name}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-ink-muted">
+                          {item.agent_name}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-ink-muted">
+                          {new Date(item.charged_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                          {currency(item.amount)}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <Link
+                            href={`/leads/${item.lead_id}`}
+                            className="btn-secondary p-1.5 text-xs text-accent hover:bg-accent-soft rounded-lg inline-flex items-center"
+                            title="Open Lead"
+                          >
+                            <ArrowUpRight size={14} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3 border-t border-hairline bg-surface-raised shrink-0 text-xs">
+              <span className="text-ink-muted">
+                Showing live charged card transactions from database
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDailyChargedModalOpen(false)}
                 className="btn-secondary px-4 py-1.5 font-semibold text-xs"
               >
                 Close

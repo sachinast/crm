@@ -24,6 +24,8 @@ from app.models.rbac import Role
 from app.models.user import User
 from app.schemas.dashboard import (
     AgentPerformanceItem,
+    DailyChargedItem,
+    DailyChargedResponse,
     DashboardSummary,
     LeaderboardEntry,
     QueueMetric,
@@ -76,6 +78,7 @@ def _format_time_diff(diff_seconds: int) -> str:
 @router.get("/summary", response_model=DashboardSummary)
 async def get_dashboard_summary(
     timeframe: str = Query("1W", description="Timeframe filter: 1D, 2D, 1W, 1M, 1Y"),
+    charged_date: str | None = Query(None, description="Optional target date for daily charged statistics (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_ip_whitelisted),
 ) -> DashboardSummary:
@@ -263,17 +266,27 @@ async def get_dashboard_summary(
 
     # Daily charged booking cards (PRD Point 17)
     if is_admin or current_user.role.has_permission("dashboard.revenue_stats"):
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if charged_date:
+            try:
+                target_start = datetime.fromisoformat(charged_date).replace(tzinfo=timezone.utc)
+            except Exception:
+                target_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            target_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        target_end = target_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+
         daily_charged_cnt = await db.scalar(
             select(func.count(PaymentTransaction.id)).where(
                 PaymentTransaction.outcome == "charged",
-                PaymentTransaction.created_at >= today_start,
+                PaymentTransaction.created_at >= target_start,
+                PaymentTransaction.created_at <= target_end,
             )
         )
         daily_charged_tot = await db.scalar(
             select(func.coalesce(func.sum(PaymentTransaction.total_amount), 0)).where(
                 PaymentTransaction.outcome == "charged",
-                PaymentTransaction.created_at >= today_start,
+                PaymentTransaction.created_at >= target_start,
+                PaymentTransaction.created_at <= target_end,
             )
         )
         summary.daily_charged_bookings_count = int(daily_charged_cnt or 0)
@@ -385,14 +398,16 @@ async def get_queue_metrics(
 async def get_agent_performance(
     start_date: str | None = Query(None, description="Start date in YYYY-MM-DD format"),
     end_date: str | None = Query(None, description="End date in YYYY-MM-DD format"),
+    only_with_bookings: bool = Query(False, description="Filter out agents who have zero bookings"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_ip_whitelisted),
 ) -> list[AgentPerformanceItem]:
     """PRD Point 16: Agent performance report with booking counts and revenue,
-    filterable by date range."""
-    # Find all agents
-    agent_roles = await db.execute(select(Role.id).where(Role.name.in_(["agent", "cr_booking"])))
+    filterable by date range. Strictly queries sales/intake agents only."""
+    agent_roles = await db.execute(select(Role.id).where(Role.name == "agent"))
     agent_role_ids = list(agent_roles.scalars().all())
+    if not agent_role_ids:
+        return []
 
     agents = (
         await db.execute(
@@ -418,6 +433,9 @@ async def get_agent_performance(
                 pass
 
         total_bookings = await db.scalar(lead_query) or 0
+
+        if only_with_bookings and total_bookings == 0:
+            continue
 
         # Charged transactions for this agent's leads
         charged_query = (
@@ -458,3 +476,69 @@ async def get_agent_performance(
 
     results.sort(key=lambda x: (x.bookings_count, x.total_revenue), reverse=True)
     return results
+
+
+@router.get("/daily-charged", response_model=DailyChargedResponse)
+async def get_daily_charged(
+    date: str | None = Query(None, description="Date in YYYY-MM-DD format (defaults to current date)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_ip_whitelisted),
+) -> DailyChargedResponse:
+    """PRD Point 17: Dashboard option to view itemized daily bookings charged and total charged amount."""
+    now = datetime.now(timezone.utc)
+    target_date_str = date or now.strftime("%Y-%m-%d")
+    try:
+        s_dt = datetime.fromisoformat(target_date_str).replace(tzinfo=timezone.utc)
+    except Exception:
+        s_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        target_date_str = s_dt.strftime("%Y-%m-%d")
+
+    e_dt = s_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    query = (
+        select(
+            PaymentTransaction,
+            Lead.id.label("lead_id"),
+            Lead.name.label("lead_name"),
+            Lead.booking_reference.label("booking_reference"),
+            User.name.label("agent_name"),
+        )
+        .join(Lead, Lead.id == PaymentTransaction.lead_id)
+        .outerjoin(User, User.id == Lead.agent_id)
+        .where(
+            PaymentTransaction.outcome == "charged",
+            PaymentTransaction.created_at >= s_dt,
+            PaymentTransaction.created_at <= e_dt,
+        )
+        .order_by(PaymentTransaction.created_at.desc())
+    )
+
+    rows = (await db.execute(query)).all()
+
+    items: list[DailyChargedItem] = []
+    total_amount = 0.0
+
+    for tx, l_id, l_name, b_ref, ag_name in rows:
+        amount = float(tx.total_amount or 0.0)
+        total_amount += amount
+        items.append(
+            DailyChargedItem(
+                lead_id=l_id,
+                lead_name=l_name or "Unknown Customer",
+                booking_reference=b_ref or (tx.custom_fields.get("booking_reference") if tx.custom_fields else None),
+                agent_name=ag_name or "Unassigned",
+                amount=amount,
+                currency=tx.currency or "USD",
+                charged_at=tx.created_at,
+                transaction_id=tx.gateway_transaction_id or str(tx.id),
+                payment_method=tx.payment_method,
+            )
+        )
+
+    return DailyChargedResponse(
+        date=target_date_str,
+        total_charged_count=len(items),
+        total_charged_amount=float(total_amount),
+        items=items,
+    )
+
