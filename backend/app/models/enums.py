@@ -21,6 +21,7 @@ class BookingStatus(str, enum.Enum):
     tag_rdr = "tag_rdr"
     tag_chargeback = "tag_chargeback"
     tag_partial_refund = "tag_partial_refund"
+    tag_agent = "tag_agent"
 
 
 class PiiField(str, enum.Enum):

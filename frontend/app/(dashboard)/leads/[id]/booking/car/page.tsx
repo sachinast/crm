@@ -12,6 +12,7 @@ interface Lead {
   id: string;
   name: string;
   service_type: string | null;
+  status: string;
 }
 
 type CarBooking = CarBookingValue & { total_amount: number };
@@ -23,9 +24,8 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
 
   const currentUser = await getCurrentUser();
   const role = (currentUser?.role || "").toLowerCase();
-  const isAgentOrAdmin =
-    role === "admin" || role === "super_admin" || role === "superadmin" || role === "agent";
-  const readOnly = !isAgentOrAdmin;
+  const isAdmin = role === "admin" || role === "super_admin" || role === "superadmin";
+  const isAgentOrAdmin = isAdmin || role === "agent";
 
   let lead: Lead;
   try {
@@ -34,6 +34,10 @@ export default async function CarBookingPage({ params }: { params: Promise<{ id:
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   }
+
+  const isQcDone = lead.status === "qc_done";
+  const isTerminal = ["tag_refund", "tag_rdr", "tag_chargeback"].includes(lead.status);
+  const readOnly = !isAgentOrAdmin || (isQcDone && !isAdmin) || isTerminal;
 
   if (lead.service_type !== "car") {
     redirect(`/leads/${id}`);

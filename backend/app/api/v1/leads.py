@@ -453,6 +453,24 @@ async def update_lead(
     """Update lead customer details with a mandatory reason for full audit trail."""
     lead = await get_visible_lead_or_404(db, current_user, lead_id)
 
+    # Check if lead is in QC Done or terminal status
+    admin_role_names = {"admin", "super_admin", "superadmin"}
+    user_role_name = (
+        getattr(current_user.role, "name", str(current_user.role or "")).lower()
+        if hasattr(current_user, "role") and current_user.role
+        else ""
+    )
+    if lead.status == BookingStatus.qc_done and user_role_name not in admin_role_names:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Once QC is completed, this lead is read-only for all users except administrators.",
+        )
+    if lead.status in (BookingStatus.tag_refund, BookingStatus.tag_rdr, BookingStatus.tag_chargeback):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"This lead is closed at terminal status '{lead.status.value}' and cannot be modified.",
+        )
+
     client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
         request.client.host if request.client else "0.0.0.0"
     )
@@ -477,6 +495,27 @@ async def update_lead(
             "new": payload.service_type.value,
         }
         lead.service_type = payload.service_type
+
+    # Synchronize updated contact details to booking
+    booking = await get_booking_for_lead(db, lead)
+    if booking:
+        if "name" in changed_fields:
+            if hasattr(booking, "driver_name"):
+                booking.driver_name = lead.name
+            if hasattr(booking, "primary_guest_name"):
+                booking.primary_guest_name = lead.name
+        if "phone" in changed_fields:
+            if hasattr(booking, "driver_phone"):
+                booking.driver_phone = lead.phone
+            if hasattr(booking, "guest_phone"):
+                booking.guest_phone = lead.phone
+            if hasattr(booking, "contact_phone"):
+                booking.contact_phone = lead.phone
+        if "email" in changed_fields:
+            if hasattr(booking, "guest_email"):
+                booking.guest_email = lead.email
+            if hasattr(booking, "contact_email"):
+                booking.contact_email = lead.email
 
     # Audit log in ActivityLog
     log_activity(

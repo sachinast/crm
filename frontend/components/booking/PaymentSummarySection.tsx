@@ -62,9 +62,9 @@ export default function PaymentSummarySection({
   const [newRemark, setNewRemark] = useState("");
 
   const remarksList = data.remarks_history ?? [];
-  const companyAmt = Number(data.company_amount) || 0;
+  const chargeAmt = Number(data.charge_amount) || Number(data.company_amount) || 0;
   const platformAmt = Number(data.platform_amount) || 0;
-  const totalCalculatedAmount = companyAmt + platformAmt;
+  const totalCalculatedAmount = chargeAmt + platformAmt;
 
   const cardNumber = data.card_number ?? "";
   const cardExpiry = data.card_expiry ?? "";
@@ -162,22 +162,15 @@ export default function PaymentSummarySection({
           {/* Card & Billing Information Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Billing Address" required={!readOnly}>
-              {readOnly ? (
-                <input
-                  readOnly
-                  disabled
-                  value={data.billing_address ?? ""}
-                  className="input bg-surface-sunken cursor-not-allowed border-hairline"
-                  placeholder="Billing Street, City, State, ZIP"
-                />
-              ) : (
-                <AddressAutocomplete
-                  value={data.billing_address ?? ""}
-                  onChange={(val) => onChange({ billing_address: val })}
-                  placeholder="Billing Street, City, State, ZIP"
-                  required
-                />
-              )}
+              <input
+                required={!readOnly}
+                readOnly={readOnly}
+                disabled={readOnly}
+                value={data.billing_address ?? ""}
+                onChange={(e) => !readOnly && onChange({ billing_address: e.target.value })}
+                className={`input ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
+                placeholder="Billing Street, City, State, ZIP"
+              />
             </Field>
 
             <div>
@@ -461,7 +454,7 @@ export default function PaymentSummarySection({
                     type="number"
                     min={0}
                     step="0.01"
-                    value={data.charge_amount ?? companyAmt}
+                    value={data.charge_amount ?? data.company_amount ?? 0}
                     onChange={(e) => {
                       if (readOnly) return;
                       const v = Number(e.target.value);
@@ -473,20 +466,6 @@ export default function PaymentSummarySection({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Company Amount" required={!readOnly}>
-                  <input
-                    readOnly={readOnly}
-                    disabled={readOnly}
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={data.company_amount ? data.company_amount : ""}
-                    placeholder="0.00"
-                    onChange={(e) => !readOnly && onChange({ company_amount: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className={`input font-mono font-medium ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
-                  />
-                </Field>
-
                 <Field label="Platform Amount" required={!readOnly}>
                   <input
                     readOnly={readOnly}
@@ -500,20 +479,16 @@ export default function PaymentSummarySection({
                     className={`input font-mono font-bold text-ink ${readOnly ? "bg-surface-sunken cursor-not-allowed border-hairline" : ""}`}
                   />
                 </Field>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-start-2">
-                  <Field label="Total Amount">
-                    <input
-                      readOnly
-                      type="text"
-                      value={totalCalculatedAmount > 0 ? totalCalculatedAmount.toFixed(2) : ""}
-                      placeholder="0.00"
-                      className="input font-mono font-extrabold text-accent bg-surface-sunken border-hairline cursor-not-allowed text-base"
-                    />
-                  </Field>
-                </div>
+                <Field label="Total Amount">
+                  <input
+                    readOnly
+                    type="text"
+                    value={totalCalculatedAmount > 0 ? totalCalculatedAmount.toFixed(2) : ""}
+                    placeholder="0.00"
+                    className="input font-mono font-extrabold text-accent bg-surface-sunken border-hairline cursor-not-allowed text-base"
+                  />
+                </Field>
               </div>
             </div>
 

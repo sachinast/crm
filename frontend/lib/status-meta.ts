@@ -14,6 +14,7 @@ export const STATUS_COLOR_HINTS: Record<string, string> = {
   tag_rdr: "slate",
   tag_chargeback: "dark_red",
   tag_partial_refund: "amber",
+  tag_agent: "blue",
   dropped: "faint_slate",
   booked_shared_client: "sky",
   // Common operational fallbacks

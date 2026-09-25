@@ -181,24 +181,36 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   }
 
   const roleNormalized = (currentUser?.role || "").toLowerCase();
+  const isAdmin =
+    roleNormalized === "admin" ||
+    roleNormalized === "super_admin" ||
+    roleNormalized === "superadmin";
+
+  const isQcDone = lead.status === "qc_done";
+  const isTerminalStatus = ["tag_refund", "tag_rdr", "tag_chargeback"].includes(lead.status);
+  const isReadOnlyForUser = (isQcDone && !isAdmin) || isTerminalStatus;
+
   const isAgentOrAdmin =
     Boolean(currentUser) &&
-    (roleNormalized === "admin" ||
-      roleNormalized === "super_admin" ||
-      roleNormalized === "superadmin" ||
-      roleNormalized === "agent");
+    (isAdmin || roleNormalized === "agent");
 
   const canModify =
+    !isReadOnlyForUser &&
     Boolean(currentUser) &&
     (isAgentOrAdmin || roleNormalized === "change_dep" || roleNormalized === "cs") &&
     hasPermission(currentUser, "modifications.manage", "cancellations.manage") &&
     booking !== null;
 
   const canProcessPayment =
+    !isReadOnlyForUser &&
     (roleNormalized === "billing" || isAgentOrAdmin) &&
     allTransitions.some((t) => t.status === "card_charged" || t.status === "card_declined");
-  const transitions = allTransitions.filter((t) => t.status !== "card_charged" && t.status !== "card_declined");
-  const canEditCustomFields = isAgentOrAdmin && hasPermission(currentUser, "leads.create");
+
+  const transitions = isReadOnlyForUser
+    ? []
+    : allTransitions.filter((t) => t.status !== "card_charged" && t.status !== "card_declined");
+
+  const canEditCustomFields = !isReadOnlyForUser && isAgentOrAdmin && hasPermission(currentUser, "leads.create");
 
   return (
     <LeadDetailWorkspace

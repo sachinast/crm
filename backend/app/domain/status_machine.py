@@ -58,6 +58,7 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
             {
                 BookingStatus.tag_change_dep,
                 BookingStatus.tag_cr_booking,
+                BookingStatus.tag_agent,
                 BookingStatus.tag_auditor,
                 BookingStatus.tag_refund,
                 BookingStatus.tag_rdr,
@@ -73,6 +74,7 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
         next=frozenset(
             {
                 BookingStatus.tag_auditor,
+                BookingStatus.tag_agent,
                 BookingStatus.transferred_to_billing,
                 BookingStatus.tag_refund,
                 BookingStatus.tag_rdr,
@@ -84,6 +86,22 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
     BookingStatus.tag_cr_booking: Transition(
         next=frozenset(
             {
+                BookingStatus.tag_auditor,
+                BookingStatus.tag_agent,
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_refund,
+                BookingStatus.tag_rdr,
+                BookingStatus.tag_chargeback,
+                BookingStatus.tag_partial_refund,
+            }
+        ),
+    ),
+    BookingStatus.tag_agent: Transition(
+        next=frozenset(
+            {
+                BookingStatus.transferred_to_billing,
+                BookingStatus.tag_change_dep,
+                BookingStatus.tag_cr_booking,
                 BookingStatus.tag_auditor,
                 BookingStatus.tag_refund,
                 BookingStatus.tag_rdr,
@@ -98,6 +116,7 @@ TRANSITIONS: dict[BookingStatus, Transition] = {
                 BookingStatus.qc_done,
                 BookingStatus.tag_change_dep,
                 BookingStatus.tag_cr_booking,
+                BookingStatus.tag_agent,
                 BookingStatus.transferred_to_billing,
                 BookingStatus.tag_refund,
                 BookingStatus.tag_rdr,

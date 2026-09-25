@@ -376,8 +376,16 @@ export default function HotelBookingFields({
               <ModernDateTimePicker
                 required
                 mode="date"
+                minDate={new Date().toISOString().split("T")[0]}
                 value={value.check_in_date}
-                onChange={(v) => onChange({ ...value, check_in_date: v })}
+                onChange={(v) => {
+                  const shouldAdjust = value.check_out_date && value.check_out_date < v;
+                  onChange({
+                    ...value,
+                    check_in_date: v,
+                    ...(shouldAdjust ? { check_out_date: v } : {}),
+                  });
+                }}
                 placeholder="Select check-in date…"
               />
             </Field>
@@ -386,6 +394,7 @@ export default function HotelBookingFields({
               <ModernDateTimePicker
                 required
                 mode="date"
+                minDate={value.check_in_date || new Date().toISOString().split("T")[0]}
                 value={value.check_out_date}
                 onChange={(v) => onChange({ ...value, check_out_date: v })}
                 placeholder="Select check-out date…"

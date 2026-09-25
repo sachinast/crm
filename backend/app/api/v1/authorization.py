@@ -84,30 +84,35 @@ async def send_lead_auth_email(
             )
 
         # 3. Extract booking fields safely
-        booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"EC{str(lead.id)[:6].upper()}"
-        car_provider = (getattr(booking, "car_provider", "Car Rental") if booking else "Car Rental") or "Car Rental"
+        service_type_str = lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car")
+        booking_ref = (getattr(booking, "booking_reference", "") if booking else "") or f"CRM-{str(lead.id).replace('-', '')[:6].upper()}"
+        car_provider = (
+            getattr(booking, "car_provider", "")
+            or getattr(booking, "airline", "")
+            or getattr(booking, "hotel_name", "")
+            or "Travel Desk"
+        )
         booking_platform = (getattr(booking, "booking_platform", "Direct") if booking else "Direct") or "Direct"
         agency_ref = (getattr(booking, "agency_reference", "done") if booking else "done") or "done"
         
         prepaid = _safe_float(getattr(booking, "prepaid_amount", 0.0) if booking else 0.0)
         pay_at_counter = _safe_float(getattr(booking, "pay_at_counter_amount", 0.0) if booking else 0.0)
-        total = _safe_float(getattr(booking, "total_amount", 0.0) if booking else 0.0)
+        total = _safe_float(getattr(booking, "total_amount", 0.0) if booking else (prepaid + pay_at_counter))
         
         card_type = (getattr(booking, "card_type", "Credit Card") if booking else "Credit Card") or "Credit Card"
         card_num = (getattr(booking, "card_number", "") if booking else "") or ""
         card_holder = (getattr(booking, "card_holder_name", "") if booking else "") or lead.name
-        customer_dob = (getattr(booking, "customer_dob", "") if booking else "") or ""
+        customer_dob = (getattr(booking, "renter_dob", "") if booking else "") or (getattr(booking, "customer_dob", "") if booking else "") or ""
 
-        vehicle_type = (getattr(booking, "vehicle_type", "") if booking else "") or "Economy"
-        car_model = (getattr(booking, "car_model", "") if booking else "") or ""
-        driver_name = (getattr(booking, "driver_name", "") if booking else "") or lead.name
-        pickup_datetime = getattr(booking, "pickup_datetime", None) if booking else None
-        pickup_location = (getattr(booking, "pickup_location", "") if booking else "") or ""
-        return_datetime = getattr(booking, "return_datetime", None) if booking else None
-        return_location = (getattr(booking, "return_location", "") if booking else "") or ""
+        vehicle_type = (getattr(booking, "vehicle_type", "") if booking else "") or (getattr(booking, "cabin_class", "") if booking else "") or (getattr(booking, "room_type", "") if booking else "") or "Standard"
+        car_model = (getattr(booking, "car_model", "") if booking else "") or (getattr(booking, "flight_number", "") if booking else "") or (getattr(booking, "hotel_name", "") if booking else "") or ""
+        driver_name = (getattr(booking, "driver_name", "") if booking else "") or (getattr(booking, "primary_guest_name", "") if booking else "") or lead.name
+        pickup_datetime = getattr(booking, "pickup_datetime", None) or getattr(booking, "departure_datetime", None) or getattr(booking, "check_in_date", None) if booking else None
+        pickup_location = (getattr(booking, "pickup_location", "") if booking else "") or (getattr(booking, "origin", "") if booking else "") or (getattr(booking, "location", "") if booking else "") or ""
+        return_datetime = getattr(booking, "return_datetime", None) or getattr(booking, "check_out_date", None) if booking else None
+        return_location = (getattr(booking, "return_location", "") if booking else "") or (getattr(booking, "destination", "") if booking else "") or ""
 
-        agent_name = (getattr(current_user, "name", "") if current_user else "") or (getattr(current_user, "email", "") if current_user else "") or "E-Booking Desk Specialist"
-        service_type_str = lead.service_type.value if hasattr(lead.service_type, "value") else str(lead.service_type or "car")
+        agent_name = (getattr(current_user, "name", "") if current_user else "") or (getattr(current_user, "email", "") if current_user else "") or "Booking Specialist"
 
         # 4. Generate HTML content
         html_content = generate_authorization_email_html(
@@ -138,11 +143,12 @@ async def send_lead_auth_email(
             template_type=template_type,
         )
 
-        subject = f"Car Booking Authorisation: {booking_ref}"
+        service_title = service_type_str.capitalize()
+        subject = f"{service_title} Booking Authorisation: {booking_ref}"
         if template_type == "modification":
-            subject = f"Car Rental Modification Payment Authorization: {booking_ref}"
+            subject = f"{service_title} Reservation Modification Payment Authorization: {booking_ref}"
         elif template_type == "cancellation":
-            subject = f"Car Rental Cancellation Authorization: {booking_ref}"
+            subject = f"{service_title} Reservation Cancellation Authorization: {booking_ref}"
 
         # 5. Dispatch email
         sent, email_msg = await send_customer_email(lead.email, subject, html_content)

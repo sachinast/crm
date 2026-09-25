@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -294,6 +294,16 @@ function EditLeadModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setName(lead.name);
+      setPhone(lead.phone);
+      setEmail(lead.email);
+      setServiceType(lead.service_type || "car");
+      setError(null);
+    }
+  }, [isOpen, lead]);
+
   const PRESET_EDIT_REASONS = [
     "Customer requested detail update",
     "Typo / spelling correction",
@@ -319,10 +329,10 @@ function EditLeadModal({
       reason: reason.trim(),
     };
 
-    if (phone && !phone.includes("*")) {
+    if (phone.trim()) {
       payload.phone = phone.trim();
     }
-    if (email && !email.includes("*")) {
+    if (email.trim()) {
       payload.email = email.trim();
     }
 
@@ -342,7 +352,7 @@ function EditLeadModal({
           service_type: serviceType,
         });
         onClose();
-        router.push(`/leads/${lead.id}/booking/${serviceType || "car"}`);
+        router.refresh();
       } else {
         const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail;
         setError(detail || "Failed to update lead details.");
@@ -756,8 +766,14 @@ export default function LeadDetailWorkspace({
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
   const roleNormalized = (currentUser?.role || "").toLowerCase();
+  const isAdmin = ["admin", "super_admin", "superadmin"].includes(roleNormalized);
+  const isQcDone = leadState.status === "qc_done";
+  const isTerminalStatus = ["tag_refund", "tag_rdr", "tag_chargeback"].includes(leadState.status);
+  const isClosedOrReadOnly = (isQcDone && !isAdmin) || isTerminalStatus;
+
   const canViewUnmaskedCard = ["billing", "admin", "super_admin", "superadmin"].includes(roleNormalized);
   const canSendConfirmationEmail =
+    !isClosedOrReadOnly &&
     ["agent", "cr_booking", "cs", "change_dep", "admin", "super_admin", "superadmin"].includes(roleNormalized) &&
     (leadState.status === "card_charged" ||
       ["tag_cr_booking", "tag_change_dep", "tag_auditor", "qc_done"].includes(leadState.status) ||
@@ -767,19 +783,15 @@ export default function LeadDetailWorkspace({
 
   const isAgentOrAdmin =
     Boolean(currentUser) &&
-    (roleNormalized === "admin" ||
-      roleNormalized === "super_admin" ||
-      roleNormalized === "superadmin" ||
-      roleNormalized === "agent");
+    (isAdmin || roleNormalized === "agent");
 
-  const canManageLeadActions = isAgentOrAdmin;
+  const canManageLeadActions = !isClosedOrReadOnly && isAgentOrAdmin;
 
   const isChangesRoleOrAdmin =
-    roleNormalized === "change_dep" ||
-    roleNormalized === "admin" ||
-    roleNormalized === "super_admin" ||
-    roleNormalized === "superadmin" ||
-    leadState.status === "tag_change_dep";
+    !isClosedOrReadOnly &&
+    (roleNormalized === "change_dep" ||
+      isAdmin ||
+      leadState.status === "tag_change_dep");
 
   const ServiceIcon = leadState.service_type ? SERVICE_ICON[leadState.service_type] : null;
   const authUrl = typeof window !== "undefined" ? `${window.location.origin}/authorize/${leadState.id}` : `/authorize/${leadState.id}`;
@@ -826,6 +838,28 @@ export default function LeadDetailWorkspace({
 
   return (
     <div className="w-full space-y-4">
+      {/* Closed Lead / Terminal Status Warning Banner */}
+      {isTerminalStatus && (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 flex items-center justify-between gap-3 text-xs text-rose-600 dark:text-rose-400 font-semibold shadow-xs">
+          <div className="flex items-center gap-2">
+            <Ban size={16} />
+            <span>Lead Closed ({formatStatus(leadState.status)}) — This is a terminal closed status. No further workflow actions can be taken on this lead.</span>
+          </div>
+          <span className="uppercase font-mono text-[10px] bg-rose-500/20 px-2.5 py-0.5 rounded-md border border-rose-500/30">CLOSED</span>
+        </div>
+      )}
+
+      {/* QC Completed Read-Only Banner */}
+      {isQcDone && !isAdmin && (
+        <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 flex items-center justify-between gap-3 text-xs text-cyan-600 dark:text-cyan-400 font-semibold shadow-xs">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} />
+            <span>QC Completed — This lead is locked in read-only mode for all users except administrators.</span>
+          </div>
+          <span className="uppercase font-mono text-[10px] bg-cyan-500/20 px-2.5 py-0.5 rounded-md border border-cyan-500/30">LOCKED</span>
+        </div>
+      )}
+
       {/* Top Breadcrumb & Executive Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-3">
         <div>
@@ -839,7 +873,7 @@ export default function LeadDetailWorkspace({
           <div className="mt-1 flex items-center gap-3">
             <h1 className="text-xl font-black tracking-tight text-ink">{leadState.name}</h1>
             <StatusBadge status={leadState.status} />
-            {!isAgentOrAdmin && (
+            {(!isAgentOrAdmin || isClosedOrReadOnly) && (
               <span className="rounded-md border border-hairline bg-surface-raised px-2 py-0.5 text-[10px] font-bold text-ink-muted uppercase font-mono tracking-wider">
                 Read-Only
               </span>
@@ -1040,7 +1074,7 @@ export default function LeadDetailWorkspace({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {isAgentOrAdmin ? (
+                  {isAgentOrAdmin && !isClosedOrReadOnly ? (
                     <button
                       type="button"
                       onClick={() => setConfirmRedirectService(leadState.service_type)}
@@ -1098,7 +1132,7 @@ export default function LeadDetailWorkspace({
                     <p className="text-[11px] font-mono text-accent">CRMID: {crmId}</p>
                   </div>
                 </div>
-                {isAgentOrAdmin ? (
+                {isAgentOrAdmin && !isClosedOrReadOnly ? (
                   <button
                     type="button"
                     onClick={() => setConfirmRedirectService(leadState.service_type)}

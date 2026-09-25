@@ -35,27 +35,35 @@ function parseDateValue(val: string | null | undefined): {
   hours: number;
   minutes: number;
 } | null {
-  if (!val) return null;
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    // Attempt parsing "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm"
-    const match = val.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
-    if (!match) return null;
+  if (!val || typeof val !== "string") return null;
+  const trimmed = val.trim();
+  if (!trimmed) return null;
+
+  // 1. Direct regex for "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" (avoids UTC timezone shift issues)
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
+  if (match) {
     return {
       year: parseInt(match[1], 10),
       month: parseInt(match[2], 10) - 1,
       day: parseInt(match[3], 10),
-      hours: match[4] ? parseInt(match[4], 10) : 12,
+      hours: match[4] ? parseInt(match[4], 10) : 10,
       minutes: match[5] ? parseInt(match[5], 10) : 0,
     };
   }
-  return {
-    year: d.getFullYear(),
-    month: d.getMonth(),
-    day: d.getDate(),
-    hours: d.getHours(),
-    minutes: d.getMinutes(),
-  };
+
+  // 2. Fallback parse
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      day: d.getDate(),
+      hours: d.getHours(),
+      minutes: d.getMinutes(),
+    };
+  }
+
+  return null;
 }
 
 export default function ModernDateTimePicker({
@@ -65,6 +73,8 @@ export default function ModernDateTimePicker({
   placeholder,
   required = false,
   className = "",
+  minDate,
+  maxDate,
 }: ModernDateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,6 +85,9 @@ export default function ModernDateTimePicker({
   const [viewMonth, setViewMonth] = useState<number>(() => parsed?.month ?? new Date().getMonth());
   const [selectedHours, setSelectedHours] = useState<number>(() => parsed?.hours ?? 10);
   const [selectedMinutes, setSelectedMinutes] = useState<number>(() => parsed?.minutes ?? 0);
+
+  const minDateKey = useMemo(() => (minDate ? minDate.split("T")[0] : null), [minDate]);
+  const maxDateKey = useMemo(() => (maxDate ? maxDate.split("T")[0] : null), [maxDate]);
 
   // Sync view state when value changes from outside
   useEffect(() => {
@@ -111,6 +124,7 @@ export default function ModernDateTimePicker({
       dateKey: string;
       isToday: boolean;
       isSelected: boolean;
+      isDisabled: boolean;
     }> = [];
 
     const today = new Date();
@@ -122,12 +136,16 @@ export default function ModernDateTimePicker({
       const m = viewMonth === 0 ? 11 : viewMonth - 1;
       const y = viewMonth === 0 ? viewYear - 1 : viewYear;
       const dateKey = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const isDisabled = Boolean(
+        (minDateKey && dateKey < minDateKey) || (maxDateKey && dateKey > maxDateKey)
+      );
       days.push({
         dayNumber: d,
         monthOffset: -1,
         dateKey,
         isToday: dateKey === todayStr,
         isSelected: false,
+        isDisabled,
       });
     }
 
@@ -137,12 +155,16 @@ export default function ModernDateTimePicker({
       const isSelected = parsed
         ? parsed.year === viewYear && parsed.month === viewMonth && parsed.day === d
         : false;
+      const isDisabled = Boolean(
+        (minDateKey && dateKey < minDateKey) || (maxDateKey && dateKey > maxDateKey)
+      );
       days.push({
         dayNumber: d,
         monthOffset: 0,
         dateKey,
         isToday: dateKey === todayStr,
         isSelected,
+        isDisabled,
       });
     }
 
@@ -152,19 +174,25 @@ export default function ModernDateTimePicker({
       const m = viewMonth === 11 ? 0 : viewMonth + 1;
       const y = viewMonth === 11 ? viewYear + 1 : viewYear;
       const dateKey = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const isDisabled = Boolean(
+        (minDateKey && dateKey < minDateKey) || (maxDateKey && dateKey > maxDateKey)
+      );
       days.push({
         dayNumber: d,
         monthOffset: 1,
         dateKey,
         isToday: dateKey === todayStr,
         isSelected: false,
+        isDisabled,
       });
     }
 
     return days;
-  }, [viewYear, viewMonth, parsed]);
+  }, [viewYear, viewMonth, parsed, minDateKey, maxDateKey]);
 
-  function handleSelectDay(day: number, monthOffset: -1 | 0 | 1) {
+  function handleSelectDay(day: number, monthOffset: -1 | 0 | 1, isDisabled?: boolean) {
+    if (isDisabled) return;
+
     let targetYear = viewYear;
     let targetMonth = viewMonth + monthOffset;
     if (targetMonth < 0) {
@@ -178,14 +206,18 @@ export default function ModernDateTimePicker({
     const yStr = String(targetYear);
     const mStr = String(targetMonth + 1).padStart(2, "0");
     const dStr = String(day).padStart(2, "0");
+    const dateKey = `${yStr}-${mStr}-${dStr}`;
+
+    if (minDateKey && dateKey < minDateKey) return;
+    if (maxDateKey && dateKey > maxDateKey) return;
 
     if (mode === "date") {
-      onChange(`${yStr}-${mStr}-${dStr}`);
+      onChange(dateKey);
       setIsOpen(false);
     } else {
       const hrStr = String(selectedHours).padStart(2, "0");
       const minStr = String(selectedMinutes).padStart(2, "0");
-      onChange(`${yStr}-${mStr}-${dStr}T${hrStr}:${minStr}`);
+      onChange(`${dateKey}T${hrStr}:${minStr}`);
     }
   }
 
@@ -208,20 +240,24 @@ export default function ModernDateTimePicker({
     const y = today.getFullYear();
     const m = today.getMonth();
     const d = today.getDate();
-    setViewYear(y);
-    setViewMonth(m);
-
     const yStr = String(y);
     const mStr = String(m + 1).padStart(2, "0");
     const dStr = String(d).padStart(2, "0");
+    const todayKey = `${yStr}-${mStr}-${dStr}`;
+
+    if (minDateKey && todayKey < minDateKey) return;
+    if (maxDateKey && todayKey > maxDateKey) return;
+
+    setViewYear(y);
+    setViewMonth(m);
 
     if (mode === "date") {
-      onChange(`${yStr}-${mStr}-${dStr}`);
+      onChange(todayKey);
       setIsOpen(false);
     } else {
       const hrStr = String(selectedHours).padStart(2, "0");
       const minStr = String(selectedMinutes).padStart(2, "0");
-      onChange(`${yStr}-${mStr}-${dStr}T${hrStr}:${minStr}`);
+      onChange(`${todayKey}T${hrStr}:${minStr}`);
     }
   }
 
@@ -233,9 +269,8 @@ export default function ModernDateTimePicker({
   // Display text formatted cleanly
   const displayLabel = useMemo(() => {
     if (!parsed) return "";
-    const dateObj = new Date(parsed.year, parsed.month, parsed.day);
-    const monthShort = dateObj.toLocaleDateString("en-US", { month: "short" });
-    const dayFormatted = `${monthShort} ${parsed.day}, ${parsed.year}`;
+    const monthName = MONTH_NAMES[parsed.month]?.slice(0, 3) || "";
+    const dayFormatted = `${monthName} ${parsed.day}, ${parsed.year}`;
 
     if (mode === "date") return dayFormatted;
 
@@ -381,15 +416,18 @@ export default function ModernDateTimePicker({
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => handleSelectDay(cd.dayNumber, cd.monthOffset)}
+                  disabled={cd.isDisabled}
+                  onClick={() => handleSelectDay(cd.dayNumber, cd.monthOffset, cd.isDisabled)}
                   className={`h-8 w-8 mx-auto flex items-center justify-center rounded-xl font-medium transition-all ${
-                    cd.isSelected
-                      ? "bg-accent text-white font-bold shadow-xs scale-105"
-                      : cd.isToday
-                        ? "border border-accent/60 text-accent font-bold bg-accent-soft"
-                        : cd.monthOffset !== 0
-                          ? "text-ink-muted opacity-30 hover:opacity-80"
-                          : "text-ink hover:bg-surface-raised"
+                    cd.isDisabled
+                      ? "opacity-20 cursor-not-allowed text-ink-muted line-through"
+                      : cd.isSelected
+                        ? "bg-accent text-white font-bold shadow-xs scale-105 cursor-pointer"
+                        : cd.isToday
+                          ? "border border-accent/60 text-accent font-bold bg-accent-soft cursor-pointer"
+                          : cd.monthOffset !== 0
+                            ? "text-ink-muted opacity-40 hover:opacity-80 cursor-pointer"
+                            : "text-ink hover:bg-surface-raised cursor-pointer"
                   }`}
                 >
                   {cd.dayNumber}

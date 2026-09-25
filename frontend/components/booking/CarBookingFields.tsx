@@ -176,6 +176,11 @@ export default function CarBookingFields({
 
   const totalBookingCost = (Number(value.prepaid_amount) || 0) + (Number(value.pay_at_counter_amount) || 0);
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const minPickupDate = todayStr;
+  const minReturnDate = value.pickup_datetime ? value.pickup_datetime.split("T")[0] : todayStr;
+
   return (
     <fieldset disabled={disabled} className="col-span-full space-y-6">
       {/* ========================================================================= */}
@@ -397,8 +402,16 @@ export default function CarBookingFields({
                 <ModernDateTimePicker
                   required
                   mode="datetime"
+                  minDate={minPickupDate}
                   value={value.pickup_datetime}
-                  onChange={(v) => onChange({ ...value, pickup_datetime: v })}
+                  onChange={(v) => {
+                    const shouldAdjustReturn = value.return_datetime && value.return_datetime < v;
+                    onChange({
+                      ...value,
+                      pickup_datetime: v,
+                      ...(shouldAdjustReturn ? { return_datetime: v } : {}),
+                    });
+                  }}
                   placeholder="Select pick-up date & time…"
                 />
               </Field>
@@ -437,6 +450,7 @@ export default function CarBookingFields({
                 <ModernDateTimePicker
                   required
                   mode="datetime"
+                  minDate={minReturnDate}
                   value={value.return_datetime}
                   onChange={(v) => onChange({ ...value, return_datetime: v })}
                   placeholder="Select return date & time…"

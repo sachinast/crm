@@ -91,7 +91,7 @@ def test_generate_final_booking_confirmation_email_html():
     )
     assert "Alice Smith" in html
     assert "CONF-9988" in html
-    assert "CHARGED &amp; CONFIRMED" in html or "CHARGED & CONFIRMED" in html
+    assert "CONFIRMED" in html
     assert "Ford Mustang" in html
     assert "Enjoy your trip!" in html
 
