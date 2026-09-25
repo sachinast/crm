@@ -52,7 +52,7 @@ def upgrade() -> None:
                     conn.execute(
                         sa.text(
                             "INSERT INTO status_role_permissions (status, role_id, kind) "
-                            "SELECT :status_val::booking_status, r.id, :kind "
+                            "SELECT CAST(:status_val AS booking_status), r.id, :kind "
                             "FROM roles r WHERE r.name = :r_name "
                             "ON CONFLICT (status, role_id, kind) DO NOTHING"
                         ),

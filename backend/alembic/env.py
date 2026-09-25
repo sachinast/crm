@@ -15,6 +15,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import get_settings  # noqa: E402
 from app.db.base import Base  # noqa: E402 (imports all models so they register on Base.metadata)
+from app.models.enums import BookingStatus  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -90,9 +91,10 @@ async def run_async_migrations() -> None:
             raw_conn = await raw_wrapper.get_raw_connection()
             driver = getattr(raw_conn, "driver_connection", None)
             if driver is not None:
-                await driver.execute(
-                    "ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'tag_partial_refund'"
-                )
+                for status_item in BookingStatus:
+                    await driver.execute(
+                        f"ALTER TYPE booking_status ADD VALUE IF NOT EXISTS '{status_item.value}'"
+                    )
     except Exception:
         pass
 
